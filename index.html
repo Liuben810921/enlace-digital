@@ -91,7 +91,46 @@ function productArt(p, variant=0){
  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img"><ellipse cx="200" cy="264" rx="137" ry="13" fill="#c6d5d8" opacity=".5"/>${body}</svg>`;
  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 }
-function productImage(p,variant=0){let src=p.photos?.length?p.photos[Math.min(variant,p.photos.length-1)]:productArt(p,variant);return `<img class="product-photo" src="${src}" alt="Imagen de ${esc(p.name)}" loading="lazy">`}
+// Encuadre visual no destructivo: solo para las fotos principales del catálogo.
+const catalogPhotoCache=new Map();
+function normalizeCatalogPhoto(img){
+ if(!img.closest('.art.art-click')||img.dataset.normalizedPhoto)return;
+ img.dataset.normalizedPhoto='1';
+ const original=img.currentSrc||img.src;
+ if(catalogPhotoCache.has(original)){img.src=catalogPhotoCache.get(original);return}
+ try{
+  const source=document.createElement('canvas'),maxSide=480;
+  const w=img.naturalWidth,h=img.naturalHeight;
+  if(!w||!h)return;
+  const scale=Math.min(1,maxSide/Math.max(w,h));
+  source.width=Math.max(1,Math.round(w*scale));source.height=Math.max(1,Math.round(h*scale));
+  const ctx=source.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0,source.width,source.height);
+  const sw=source.width,sh=source.height,pixels=ctx.getImageData(0,0,sw,sh).data;
+  const white=(x,y)=>{const i=(y*sw+x)*4;return pixels[i]>239&&pixels[i+1]>239&&pixels[i+2]>239&&pixels[i+3]>240};
+  // No modificar fotografías cuyo fondo no sea blanco en las esquinas.
+  if(!white(0,0)||!white(sw-1,0)||!white(0,sh-1)||!white(sw-1,sh-1))return;
+  let left=sw,top=sh,right=-1,bottom=-1;
+  for(let y=0;y<sh;y+=2)for(let x=0;x<sw;x+=2){
+   if(!white(x,y)){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
+  }
+  if(right<left||bottom<top)return;
+  const bw=right-left+2,bh=bottom-top+2;
+  // Mantener un margen alrededor del objeto y nunca cortar píxeles detectados.
+  const pad=Math.max(8,Math.round(Math.max(bw,bh)*.07));
+  const x0=Math.max(0,left-pad),y0=Math.max(0,top-pad);
+  const x1=Math.min(sw,right+2+pad),y1=Math.min(sh,bottom+2+pad);
+  if((x1-x0)>=sw*.96&&(y1-y0)>=sh*.96)return;
+  const out=document.createElement('canvas');out.width=480;out.height=480;
+  const oc=out.getContext('2d');oc.fillStyle='#ffffff';oc.fillRect(0,0,480,480);
+  const ratio=Math.min(480/(x1-x0),480/(y1-y0));
+  const dw=(x1-x0)*ratio,dh=(y1-y0)*ratio;
+  oc.drawImage(source,x0,y0,x1-x0,y1-y0,(480-dw)/2,(480-dh)/2,dw,dh);
+  const normalized=out.toDataURL('image/jpeg',.88);
+  catalogPhotoCache.set(original,normalized);img.src=normalized;
+ }catch(e){/* Conservar la fotografía original si no puede procesarse. */}
+}
+function productImage(p,variant=0){let src=p.photos?.length?p.photos[Math.min(variant,p.photos.length-1)]:productArt(p,variant);return `<img class="product-photo" src="${src}" alt="Imagen de ${esc(p.name)}" loading="lazy" onload="normalizeCatalogPhoto(this)">`}
 let productHistoryOpen=false;let productScrollPosition=0;
 window.addEventListener("popstate",()=>{if(productHistoryOpen){productHistoryOpen=false;document.getElementById("overlay").classList.add("hidden");requestAnimationFrame(()=>window.scrollTo(0,productScrollPosition))}});
 function openProduct(id){
