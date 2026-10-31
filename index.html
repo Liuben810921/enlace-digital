@@ -333,16 +333,14 @@ header .top{position:relative;z-index:1}
 header .brand-identity{overflow:visible!important}
 header .ed-approved-logo{mix-blend-mode:screen;filter:contrast(1.38) brightness(1.07);-webkit-mask-image:radial-gradient(ellipse 72% 67% at 50% 50%,#000 57%,transparent 100%);mask-image:radial-gradient(ellipse 72% 67% at 50% 50%,#000 57%,transparent 100%)}
 
-/* Identidad aprobada: dar al logotipo espacio propio en móviles */
+/* Encabezado móvil compacto: sin desbordamiento horizontal */
 @media(max-width:650px){
- header .top{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto auto!important;column-gap:8px!important;row-gap:9px!important;padding:12px 14px!important;align-items:center!important}
- header .brand-identity{grid-column:1/-1!important;grid-row:1!important;justify-content:center!important;width:100%!important;min-width:0!important;overflow:visible!important}
- header .ed-approved-logo{width:min(100%,390px)!important;max-width:390px!important;height:auto!important;max-height:105px!important;object-fit:contain!important;object-position:center!important;flex:none!important}
- header .headbtn{grid-row:2!important;white-space:nowrap!important}
- header .search{grid-column:1/-1!important;grid-row:3!important;width:100%!important;min-width:0!important;margin:0!important}
+ header .top{display:flex!important;flex-wrap:wrap!important;gap:8px!important;padding:10px 12px!important;width:100%!important;box-sizing:border-box!important}
+ header .brand-identity{flex:1 1 100%!important;width:100%!important;max-width:100%!important;justify-content:center!important;overflow:hidden!important;min-width:0!important}
+ header .ed-approved-logo{width:min(100%,320px)!important;max-width:100%!important;max-height:94px!important;height:auto!important;object-fit:contain!important;flex:0 1 auto!important}
+ header .headbtn{flex:1 1 0!important;min-width:0!important;white-space:nowrap!important;font-size:clamp(10px,2.7vw,13px)!important;padding:8px 4px!important}
+ header .search{flex:1 1 100%!important;min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important;font-size:clamp(13px,3.5vw,16px)!important}
 }
-@media(max-width:390px){header .top{padding:10px!important;column-gap:5px!important}header .ed-approved-logo{width:min(100%,350px)!important;max-height:94px!important}}
-
 /* Logotipo transparente: sin filtros, máscaras ni mezclas que produzcan un recuadro */
 header .ed-approved-logo{mix-blend-mode:normal!important;filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;background:transparent!important;opacity:1!important}
 header .brand-identity{background:transparent!important;box-shadow:none!important}
