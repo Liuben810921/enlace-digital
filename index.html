@@ -333,14 +333,6 @@ header .top{position:relative;z-index:1}
 header .brand-identity{overflow:visible!important}
 header .ed-approved-logo{mix-blend-mode:screen;filter:contrast(1.38) brightness(1.07);-webkit-mask-image:radial-gradient(ellipse 72% 67% at 50% 50%,#000 57%,transparent 100%);mask-image:radial-gradient(ellipse 72% 67% at 50% 50%,#000 57%,transparent 100%)}
 
-/* Encabezado móvil compacto: sin desbordamiento horizontal */
-@media(max-width:650px){
- header .top{display:flex!important;flex-wrap:wrap!important;gap:8px!important;padding:10px 12px!important;width:100%!important;box-sizing:border-box!important}
- header .brand-identity{flex:1 1 100%!important;width:100%!important;max-width:100%!important;justify-content:center!important;overflow:hidden!important;min-width:0!important}
- header .ed-approved-logo{width:min(100%,320px)!important;max-width:100%!important;max-height:94px!important;height:auto!important;object-fit:contain!important;flex:0 1 auto!important}
- header .headbtn{flex:1 1 0!important;min-width:0!important;white-space:nowrap!important;font-size:clamp(10px,2.7vw,13px)!important;padding:8px 4px!important}
- header .search{flex:1 1 100%!important;min-width:0!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin:0!important;font-size:clamp(13px,3.5vw,16px)!important}
-}
 /* Logotipo transparente: sin filtros, máscaras ni mezclas que produzcan un recuadro */
 header .ed-approved-logo{mix-blend-mode:normal!important;filter:none!important;-webkit-mask-image:none!important;mask-image:none!important;background:transparent!important;opacity:1!important}
 header .brand-identity{background:transparent!important;box-shadow:none!important}
