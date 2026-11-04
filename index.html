@@ -634,7 +634,17 @@ const barrios={'Playa':['Miramar','Siboney','Santa Fe','Jaimanitas','Buenavista'
 let state;try{state=JSON.parse(localStorage.getItem('enlace_demo_v1'))}catch(e){}if(!state||!Array.isArray(state.products))state={products:seed,categories:initialCats,fees:{},adjustment:10,rate:500,zelle:true};const categoryMigrationKey='enlace_categories_telegram_20261028';if(localStorage.getItem(categoryMigrationKey)!=='done'){state.categories=[...new Set([...initialCats,...(Array.isArray(state.categories)?state.categories:[])])];localStorage.setItem('enlace_demo_v1',JSON.stringify(state));localStorage.setItem(categoryMigrationKey,'done');}const catalogResetKey='enlace_catalog_reset_20261024';if(localStorage.getItem(catalogResetKey)!=='done'){state.products=[];localStorage.setItem('enlace_demo_v1',JSON.stringify(state));localStorage.setItem(catalogResetKey,'done');}const techDefaults={1:{power:2600,capacity:3840},2:{power:1000,capacity:768},3:{power:1800,capacity:1024},4:{power:1800,capacity:1056},5:{processor:'Intel Core i5 (ejemplo)',ram:16,diskType:'SSD',storage:512},6:{ram:4,storage:128},12:{processor:'AMD Ryzen 5 (ejemplo)',ram:8,diskType:'SSD',storage:256}};
 state.products.forEach(p=>{if(techDefaults[p.id]&&!p.tech)p.tech={...techDefaults[p.id]};if(p.id===6&&p.name==='Celular de muestra')p.name='Samsung Galaxy A16 (ejemplo)';});
 function techType(p){let c=(p.cat||'').toLowerCase();return c.includes('energía')?'power':c.includes('laptop')?'laptop':c.includes('celular')?'phone':'other'}
-function catalogProductName(p){const full=String(p.name||'');return techType(p)==='laptop'?full.replace(/^\s*laptops?\s+/i,'').trim()||full:full}
+function catalogProductName(p){
+ const full=String(p.name||'').trim(),type=techType(p);
+ if(type==='laptop')return full.replace(/^\\s*laptops?\\s+/i,'').trim()||full;
+ if(type!=='phone')return full;
+ // Eliminar solo la pareja RAM/almacenamiento al final, cuando coincida con la ficha.
+ const t=p.tech||{},ram=Number(String(t.ram??'').replace(/[^\\d.]/g,'')),storage=Number(String(t.storage??'').replace(/[^\\d.]/g,''));
+ if(!ram||!storage)return full;
+ const suffix=full.match(/(?:\\s*[-–|,(]\\s*|\\s+)(\\d+)\\s*(?:GB)?\\s*\\/\\s*(\\d+)\\s*(?:GB)?\\s*\\)?\\s*$/i);
+ if(!suffix||Number(suffix[1])!==ram||Number(suffix[2])!==storage)return full;
+ return full.slice(0,suffix.index).trim()||full;
+}
 function techItems(p){let t=p.tech||{},type=techType(p);if(type==='power')return [['Potencia continua',t.power,'W'],['Capacidad de batería',t.capacity,'Wh']].filter(x=>x[1]!==undefined&&x[1]!=='');if(type==='laptop')return [['Procesador',t.processor,''],['RAM',t.ram,'GB'],['Disco',t.diskType,''],['Capacidad',t.storage,'GB']].filter(x=>x[1]!==undefined&&x[1]!=='');if(type==='phone')return [['RAM',t.ram,'GB'],['Almacenamiento',t.storage,'GB']].filter(x=>x[1]!==undefined&&x[1]!=='');return []}
 
 // Los colores se leen exclusivamente de las variantes del producto, nunca se inventan.
