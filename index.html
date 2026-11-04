@@ -153,6 +153,19 @@
  #products .product-name,#deptProducts .product-name{font-size:clamp(13px,3.6vw,16px)!important;font-weight:850!important}
  #products .price,#deptProducts .price{font-size:clamp(16px,4vw,19px)!important;line-height:28px!important}
 }
+
+/* Referencia ejecutiva: colores sólidos sin contorno y azul turquesa unificado */
+#products .catalog-color-dot,#deptProducts .catalog-color-dot{
+ width:15px!important;height:15px!important;flex:0 0 15px!important;
+ border:0!important;outline:0!important;box-shadow:none!important;
+ border-radius:50%!important;
+}
+#products .catalog-colors,#deptProducts .catalog-colors{gap:6px!important}
+#products .price,#deptProducts .price{color:#075b75!important;font-weight:850!important}
+#products .catalog-actions .primary,#deptProducts .catalog-actions .primary{
+ background:#075b75!important;color:#fff!important;border:0!important;
+}
+#products .catalog-actions .primary:hover,#deptProducts .catalog-actions .primary:hover{background:#064a60!important}
 /* Colores opcionales en tarjetas: solo variantes configuradas y disponibles */
 .catalog-colors{display:flex;align-items:center;justify-content:center;gap:5px;min-height:24px;padding:3px 5px;font-size:10px;color:#435566;white-space:nowrap}
 .catalog-color-dot{width:12px;height:12px;flex:0 0 12px;border-radius:50%;border:1px solid #9eabb8;box-shadow:0 0 0 1px #fff}
