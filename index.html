@@ -615,31 +615,10 @@ function catalogColors(p){
 
 /* Extraer un tono representativo del panel trasero del dispositivo cuando la foto lo permita.
    Si la imagen no admite lectura (CORS), se conserva el color derivado del nombre. */
-function edRefreshCatalogDots(){
- document.querySelectorAll('.catalog-color-dot[data-variant-photo]:not([data-color-checked])').forEach(dot=>{
-  dot.dataset.colorChecked='1';const url=dot.dataset.variantPhoto;if(!url)return;
-  const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{
-   try{
-    const canvas=document.createElement('canvas');canvas.width=80;canvas.height=80;
-    const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,80,80);
-    const data=ctx.getImageData(0,0,80,80).data;const pixels=[];
-    // Región izquierda central: suele corresponder a la cubierta trasera en fotos frontales/traseras.
-    for(let y=23;y<60;y+=3)for(let x=13;x<37;x+=3){
-     const k=(y*80+x)*4,r=data[k],g=data[k+1],b=data[k+2];
-     const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
-     if(data[k+3]<230||mx>245&&mn>245||mx<23||mx-mn>115)continue;
-     pixels.push([r,g,b]);
-    }
-    if(pixels.length<15)return;
-    const med=c=>pixels.map(p=>p[c]).sort((a,b)=>a-b)[Math.floor(pixels.length/2)];
-    const rgb=[med(0),med(1),med(2)];
-    const hex='#'+rgb.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
-    // Mantener visible un círculo claro sobre el fondo blanco.
-    dot.style.background=hex;
-   }catch(e){/* Fotos externas sin CORS: usar el nombre de la variante */ }
-  };img.onerror=()=>{};img.src=url;
- });
-}
+// Los círculos usan el color estable de la variante desde el primer render.
+// No se modifica el color después de cargar imágenes: evita parpadeos.
+function edRefreshCatalogDots(){}
+
 function techBadge(p){let t=p.tech||{};if(techType(p)==='laptop'){const cpu=String(t.processor||'No especificado').replace(/\s*[,;|/-]?\s*\b\d+(?:[.,]\d+)?\s*GHz\b/gi,'').trim()||'No especificado';const ram=t.ram!=null&&t.ram!==''?esc(t.ram)+' GB':'No especificada';const storage=t.storage!=null&&t.storage!==''?esc(t.storage)+' GB':'No especificado';return '<span class="tech-chip laptop-processor"><small>Procesador</small><strong>'+esc(cpu)+'</strong></span><span class="laptop-specs"><span class="tech-chip laptop-ram"><small>Memoria RAM</small><strong>'+ram+'</strong></span><span class="tech-chip laptop-storage"><small>Almacenamiento</small><strong>'+storage+'</strong>'+(t.diskType?'<small>'+esc(t.diskType)+'</small>':'')+'</span></span>';}const items=techItems(p).map(([label,v,unit])=>'<span class="tech-chip"><small>'+esc(label)+'</small><strong>'+esc(v)+(unit?' '+unit:'')+'</strong></span>').join('');return techType(p)==='phone'&&items?'<span class="catalog-phone-specs">'+items+'</span>':items}
 function techFields(cat,tech={}){let typ=techType({cat});let fs=typ==='power'?[['power','Potencia de salida continua (W)','number'],['capacity','Capacidad de batería (Wh)','number']]:typ==='laptop'?[['processor','Procesador','text'],['ram','RAM (GB)','number'],['diskType','Tipo de disco (SSD/HDD)','text'],['storage','Capacidad de disco (GB)','number']]:typ==='phone'?[['ram','RAM (GB)','number'],['storage','Almacenamiento (GB)','number']]:[];return fs.map(([key,label,type])=>`<div class="field"><label>${label}</label><input data-tech="${key}" type="${type}" value="${esc(tech[key]??'')}" placeholder="${label}"></div>`).join('')}
 function readTech(){let t={};document.querySelectorAll('[data-tech]').forEach(el=>{let v=el.value.trim();if(v!=='')t[el.dataset.tech]=el.type==='number'?Number(v):v});return t}
