@@ -166,6 +166,21 @@
  background:#075b75!important;color:#fff!important;border:0!important;
 }
 #products .catalog-actions .primary:hover,#deptProducts .catalog-actions .primary:hover{background:#064a60!important}
+
+/* Ajuste de proporciones aprobado: misma tarjeta, mayor aprovechamiento interior */
+#products .product .details,#deptProducts .product .details{padding-left:10px!important;padding-right:10px!important}
+#products .product .catalog-actions,#deptProducts .product .catalog-actions{width:100%!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:5px!important}
+#products .product .catalog-actions button,#deptProducts .product .catalog-actions button{width:100%!important;min-width:0!important;padding-left:4px!important;padding-right:4px!important;box-sizing:border-box!important}
+#products .product-name,#deptProducts .product-name,#products .price,#deptProducts .price{
+ font-size:16px!important;font-weight:850!important;letter-spacing:-.025em!important;
+}
+#products .product-name,#deptProducts .product-name{color:#112d3e!important}
+#products .price,#deptProducts .price{color:#075b75!important}
+@media(max-width:650px){
+ #products .product .details,#deptProducts .product .details{padding-left:9px!important;padding-right:9px!important}
+ #products .product .catalog-actions button,#deptProducts .product .catalog-actions button{font-size:clamp(10px,2.7vw,13px)!important}
+ #products .product-name,#deptProducts .product-name,#products .price,#deptProducts .price{font-size:clamp(13px,3.55vw,16px)!important}
+}
 /* Colores opcionales en tarjetas: solo variantes configuradas y disponibles */
 .catalog-colors{display:flex;align-items:center;justify-content:center;gap:5px;min-height:24px;padding:3px 5px;font-size:10px;color:#435566;white-space:nowrap}
 .catalog-color-dot{width:12px;height:12px;flex:0 0 12px;border-radius:50%;border:1px solid #9eabb8;box-shadow:0 0 0 1px #fff}
