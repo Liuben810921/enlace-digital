@@ -835,25 +835,40 @@ function filterInventory(){let search=document.getElementById('inventorySearch')
 function toggleNewProduct(open){if(open){pendingNewPhotos=[];newPhotosBusy=false;pendingNewColors=[];newColorPhotosBusy=false;}let el=document.getElementById('inventoryNew');if(!el)return;el.classList.toggle('hidden',!open);if(open){renderNewColorEditor();updateNewQtyHelp();el.scrollIntoView({behavior:'smooth',block:'start'})}}
 function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){let p=state.products.find(x=>x.id===id);if(!p)return;p[k]=k==='qty'?(v===''?null:Math.max(0,Math.floor(Number(v)||0))):Math.max(0,Number(v)||0);save();adminTab('inventory');renderShop()}function updateNewQtyHelp(){const supplier=document.getElementById('porigin')?.value==='proveedor',help=document.getElementById('qtyHelp'),qty=document.getElementById('pqty');if(help)help.textContent=supplier?'Proveedor: sin control obligatorio de existencias.':'Producto propio: introduce existencias para que pueda comprarse.';if(qty)qty.closest('.field').style.display=supplier?'none':''}
 function edSuggestDepartment(description){
- const text=String(description||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
- const head=text.slice(0,220);
+ const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const text=normalize(description),head=text.split(/\n/).slice(0,3).join(' ').slice(0,300);
  const rules=[
- [/\b(bocina|bocinas|altavoz|altavoces|parlante|parlantes|speaker|speakers|soundbar|barra de sonido|auriculares|audifonos|headphones|earbuds|subwoofer|amplificador|microfono|jbl flip|jbl go|jbl clip|jbl charge)\b/,/audio|musica/],
- [/\b(funda|forro|case|protector de pantalla|cargador de celular|cable usb|mica de pantalla)\b/,/accesorios de celulares/],
+ [/\b(estacion(?:es)? de energia|power station|anker solix|bluetti|ecoflow|pecron|aferiy|panel(?:es)? solar(?:es)?|inversor(?:es)? solar(?:es)?|generador solar)\b/,/solar|energia/],
+ [/\b(bocina|bocinas|altavoz|altavoces|parlante|speaker|soundbar|auriculares|audifonos|headphones|earbuds|subwoofer|amplificador|microfono|jbl flip|jbl go|jbl clip|jbl charge)\b/,/audio|musica/],
+ [/\b(funda|forro|protector de pantalla|cargador de celular|cable usb|mica de pantalla)\b/,/accesorios de celulares/],
  [/\b(laptop|notebook|portatil|ideapad|thinkpad|vivobook|inspiron|pavilion|latitude|macbook)\b/,/laptop/],
  [/\b(celular|smartphone|telefono movil|iphone|galaxy a\d|galaxy s\d|redmi note|poco x\d)\b/,/^celulares$/],
- [/\b(estacion de energia|power station|panel solar|inversor solar|bluetti|ecoflow|pecron)\b/,/solar|energia/],
  [/\b(tablet|tableta|ipad)\b/,/tablet/],
  [/\b(playstation|xbox|nintendo switch|consola de videojuegos)\b/,/consola/],
  [/\b(taladro|atornillador|sierra circular|amoladora|herramientas electricas)\b/,/ferreteria|herramientas/],
  [/\b(telescopio|microscopio|astronomia)\b/,/ciencia|astronomia/],
  [/\b(smartwatch|reloj inteligente)\b/,/smart.watch|reloj inteligente/]
  ];
- const normalize=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
- for(const source of [head,text])for(const [pattern,category] of rules){if(pattern.test(source)){const found=state.categories.find(c=>category.test(normalize(c)));if(found)return found;}}
+ for(const [pattern,category] of rules){if(pattern.test(head)){const found=state.categories.find(c=>category.test(normalize(c)));if(found)return found}}
+ for(const [pattern,category] of rules){if(pattern.test(text)){const found=state.categories.find(c=>category.test(normalize(c)));if(found)return found}}
  return '';
 }
-function edExtraSpecs(d,cat){let t={};const number=(r)=>{let m=d.match(r);return m?Number(m[1].replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.')):null};const add=(k,r)=>{let n=number(r);if(n>0&&Number.isFinite(n))t[k]=n};if(techType({cat})==='power'){add('capacity',/(?:capacidad(?: de bateria)?|battery capacity)\s*[:=\-]?\s*([\d.,]+)\s*wh/i);add('power',/(?:potencia(?: de salida)? continua|potencia nominal|rated power|continuous output|salida ac)\s*[:=\-]?\s*([\d.,]+)\s*w/i);add('peakPower',/(?:potencia pico|potencia maxima|peak power|surge power)\s*[:=\-]?\s*([\d.,]+)\s*w/i);add('solarInput',/(?:entrada solar|solar input|carga solar maxima)\s*[:=\-]?\s*([\d.,]+)\s*w/i);add('cycles',/(?:ciclos de vida|ciclos de carga|life cycles)\s*[:=\-]?\s*([\d.,]+)/i);if(/lifepo4|lifepo₄|\blfp\b/i.test(d))t.batteryType='LiFePO4';else if(/ion(?:es)? de litio|lithium.ion/i.test(d))t.batteryType='Ion de litio'}if(/audio|música/i.test(cat)){add('audioPower',/(?:potencia rms|rms power|potencia de audio)\s*[:=\-]?\s*([\d.,]+)\s*w/i);let m=d.match(/bluetooth\s*(?:v|version)?\s*([345](?:\.\d)?)/i);if(m)t.bluetooth=m[1]}if(/ferreter|herramienta/i.test(cat))add('toolPower',/(?:potencia|motor)\s*[:=\-]?\s*([\d.,]+)\s*w/i);if(/electrodom|hogar/i.test(cat))add('appliancePower',/(?:potencia|consumo)\s*[:=\-]?\s*([\d.,]+)\s*w/i);return t}
+function edExtraSpecs(d,cat){
+ const t={};const number=s=>Number(String(s).replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.'));
+ const add=(key,patterns)=>{for(const pattern of patterns){const m=d.match(pattern);if(m){const n=number(m[1]);if(Number.isFinite(n)&&n>0){t[key]=n;return}}}};
+ if(techType({cat})==='power'){
+ add('capacity',[/\bcapacidad(?:\s+de\s+bater[ií]a)?\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i,/\bbattery capacity\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i]);
+ add('power',[/\bpotencia(?:\s+de\s+salida)?\s+(?:continua|nominal)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i,/\b(?:rated power|continuous output|salida ac)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i]);
+ add('peakPower',[/\b(?:pico de potencia|potencia pico|potencia m[aá]xima|peak power|surge power)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i]);
+ add('solarInput',[/\b(?:recarga solar|entrada solar|carga solar m[aá]xima|solar input)\s*[:=\-]?\s*(?:admite\s+)?(?:hasta\s+)?([\d.,]+)\s*w\b/i]);
+ add('cycles',[/\b(?:m[aá]s de\s+)?([\d.,]+)\s*ciclos\b/i,/\b(?:ciclos de vida|ciclos de carga|life cycles)\s*[:=\-]?\s*([\d.,]+)/i]);
+ if(/lifepo4|lifepo₄|\blfp\b/i.test(d))t.batteryType='LiFePO4';else if(/ion(?:es)? de litio|lithium.ion/i.test(d))t.batteryType='Ion de litio';
+ }
+ if(/audio|música/i.test(cat)){add('audioPower',[/\b(?:potencia rms|rms power|potencia de audio)\s*[:=\-]?\s*([\d.,]+)\s*w/i]);const m=d.match(/bluetooth\s*(?:v|version)?\s*([345](?:\.\d)?)/i);if(m)t.bluetooth=m[1]}
+ if(/ferreter|herramienta/i.test(cat))add('toolPower',[/\b(?:potencia|motor)\s*[:=\-]?\s*([\d.,]+)\s*w/i]);
+ if(/electrodom|hogar/i.test(cat))add('appliancePower',[/\b(?:potencia|consumo)\s*[:=\-]?\s*([\d.,]+)\s*w/i]);
+ return t;
+}
 function extractProductData(){
  const d=document.getElementById('pdesc').value.trim(),feedback=document.getElementById('extractFeedback');
  if(!d){feedback.textContent='Primero pega la descripción del proveedor.';return}
