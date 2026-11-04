@@ -128,6 +128,19 @@
  #products .product.phone-product .catalog-phone-specs .tech-chip small,#deptProducts .product.phone-product .catalog-phone-specs .tech-chip small{font-size:clamp(8px,2.15vw,10px)!important;white-space:nowrap!important;letter-spacing:-.025em;overflow:visible!important;word-break:normal!important}
  #products .product.phone-product .catalog-phone-specs .tech-chip strong,#deptProducts .product.phone-product .catalog-phone-specs .tech-chip strong{font-size:11px!important;white-space:nowrap!important}
 }
+
+/* Refinamiento aprobado: tarjetas compactas de dos columnas, imagen protagonista */
+#products .product,#deptProducts .product{box-shadow:0 5px 16px rgba(19,47,64,.075)}
+#products .product .art,#deptProducts .product .art{width:100%;overflow:hidden;background:#f6f8fa}
+#products .product .art .product-photo,#deptProducts .product .art .product-photo{padding:0!important;width:100%!important;height:100%!important;max-width:100%;max-height:100%;object-fit:contain!important;object-position:center!important}
+#products .product-name,#deptProducts .product-name{font-weight:850!important;color:#10243a!important}
+#products .catalog-color-dot,#deptProducts .catalog-color-dot{width:15px;height:15px;flex:0 0 15px;border:1px solid rgba(31,47,65,.35);box-shadow:0 0 0 1px #fff,0 1px 2px #1c30401a}
+#products .catalog-colors,#deptProducts .catalog-colors{min-height:25px;gap:6px}
+@media(max-width:650px){
+ #products .product-name,#deptProducts .product-name{font-size:13px!important;font-weight:850!important;letter-spacing:-.02em}
+ #products .product.phone-product .catalog-phone-specs .tech-chip small,#deptProducts .product.phone-product .catalog-phone-specs .tech-chip small{font-size:clamp(8px,2.05vw,10px)!important}
+ #products .product.phone-product .catalog-phone-specs .tech-chip strong,#deptProducts .product.phone-product .catalog-phone-specs .tech-chip strong{font-weight:800}
+}
 /* Colores opcionales en tarjetas: solo variantes configuradas y disponibles */
 .catalog-colors{display:flex;align-items:center;justify-content:center;gap:5px;min-height:24px;padding:3px 5px;font-size:10px;color:#435566;white-space:nowrap}
 .catalog-color-dot{width:12px;height:12px;flex:0 0 12px;border-radius:50%;border:1px solid #9eabb8;box-shadow:0 0 0 1px #fff}
