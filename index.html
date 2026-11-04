@@ -636,12 +636,13 @@ state.products.forEach(p=>{if(techDefaults[p.id]&&!p.tech)p.tech={...techDefault
 function techType(p){let c=(p.cat||'').toLowerCase();return c.includes('energía')?'power':c.includes('laptop')?'laptop':c.includes('celular')?'phone':'other'}
 function catalogProductName(p){
  const full=String(p.name||'').trim(),type=techType(p);
- if(type==='laptop')return full.replace(/^\\s*laptops?\\s+/i,'').trim()||full;
+ if(type==='laptop')return full.replace(/^\s*laptops?\s+/i,'').trim()||full;
  if(type!=='phone')return full;
- // Eliminar solo la pareja RAM/almacenamiento al final, cuando coincida con la ficha.
- const t=p.tech||{},ram=Number(String(t.ram??'').replace(/[^\\d.]/g,'')),storage=Number(String(t.storage??'').replace(/[^\\d.]/g,''));
+ const t=p.tech||{};
+ const ram=Number(String(t.ram??'').replace(/[^\d.]/g,''));
+ const storage=Number(String(t.storage??'').replace(/[^\d.]/g,''));
  if(!ram||!storage)return full;
- const suffix=full.match(/(?:\\s*[-–|,(]\\s*|\\s+)(\\d+)\\s*(?:GB)?\\s*\\/\\s*(\\d+)\\s*(?:GB)?\\s*\\)?\\s*$/i);
+ const suffix=full.match(/\s+(\d+)\s*(?:GB)?\s*\/\s*(\d+)\s*(?:GB)?\s*$/i);
  if(!suffix||Number(suffix[1])!==ram||Number(suffix[2])!==storage)return full;
  return full.slice(0,suffix.index).trim()||full;
 }
