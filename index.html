@@ -619,6 +619,31 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 #products .product.no-tech-product .details,#deptProducts .product.no-tech-product .details{
  grid-template-rows:var(--ed-name-height,22px) 0px 40px 36px!important;
 }
+/* Regla definitiva al final de la cascada: el título no puede centrarse en la
+   reserva de dos líneas. Evita que declaraciones posteriores de display:block
+   anulen el anclaje superior. */
+#products .product .details > button.product-name,
+#deptProducts .product .details > button.product-name{
+ display:flex!important;
+ flex-direction:column!important;
+ justify-content:flex-start!important;
+ align-items:flex-start!important;
+ align-content:flex-start!important;
+ vertical-align:top!important;
+ padding:0!important;
+ margin:0!important;
+}
+#products .product .details > button.product-name > .ed-product-name-text,
+#deptProducts .product .details > button.product-name > .ed-product-name-text{
+ display:-webkit-box!important;
+ -webkit-box-orient:vertical!important;
+ -webkit-line-clamp:2!important;
+ line-clamp:2!important;
+ flex:0 0 auto!important;
+ align-self:stretch!important;
+ margin:0!important;
+ padding:0!important;
+}
 </style><dialog id="aboutDialog" class="about-dialog"><button class="about-close" type="button" aria-label="Cerrar ventana" onclick="document.getElementById(&quot;aboutDialog&quot;).close()">✕</button><section class="philosophy" id="nuestra-filosofia" aria-labelledby="filosofia-titulo"><div class="philosophy-intro"><span class="philosophy-eyebrow">QUIÉNES SOMOS · NUESTRA FILOSOFÍA</span><h2 id="filosofia-titulo">La confianza es nuestra primera conexión.</h2><p>En ENLACE DIGITAL creemos que una buena relación comercial comienza con algo fundamental: <strong>la confianza.</strong></p><p>Nuestra filosofía nace de años de experiencia atendiendo personalmente a nuestros clientes, construyendo relaciones basadas en la honestidad, el respeto y la profesionalidad.</p><p>Creemos en hablar con claridad, ofrecer información verdadera y ayudar a cada persona a encontrar lo que realmente necesita.</p><p>Para nosotros, vender un producto o prestar un servicio no es simplemente completar una operación. Es establecer una conexión que puede convertirse en una relación de confianza duradera.</p><p>Hoy acercamos tecnología, productos y soluciones a nuestros clientes. Mañana seguiremos ampliando nuestras posibilidades, pero manteniendo siempre los mismos principios.</p><strong class="philosophy-signature">Todo comienza con una conexión.</strong></div><div class="philosophy-values"><div><span>01</span><strong>Honestidad</strong><small>Información clara y verdadera, siempre.</small></div><div><span>02</span><strong>Confianza</strong><small>Relaciones que perduran más allá de una compra.</small></div><div><span>03</span><strong>Compromiso</strong><small>Atención profesional antes y después de cada venta.</small></div></div></section></dialog><div class="category-drawer" id="categoryDrawer" onclick="if(event.target===this)closeCategories()"><div class="category-panel"><div class="category-head"><div><h2>Todos los departamentos</h2><p style="color:#667b84;margin:7px 0 0">Encuentra rápidamente lo que necesitas</p></div><button class="category-close" onclick="closeCategories()" aria-label="Cerrar departamentos">✕</button></div><div class="category-grid-modal" id="categoryGridModal"></div></div></div><div id="overlay" class="modalback hidden" onclick="if(event.target===this)closeModal()"><div id="modal" class="modal"></div></div>
 <script>
 
