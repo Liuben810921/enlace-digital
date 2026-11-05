@@ -564,6 +564,19 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 #products .product>.details,#deptProducts .product>.details{
   margin-top:0!important;min-width:0!important;
 }
+/* Corrección del origen de texto: el botón del título es un contenedor flex
+   anclado arriba, incluso cuando la fila reserva dos líneas para ambos productos. */
+#products .product .details>.product-name,#deptProducts .product .details>.product-name{
+ display:flex!important;flex-direction:column!important;
+ align-items:flex-start!important;justify-content:flex-start!important;
+ box-sizing:border-box!important;
+ padding:0!important;margin:0!important;
+}
+#products .product .details>.product-name>.ed-product-name-text,
+#deptProducts .product .details>.product-name>.ed-product-name-text{
+ flex:0 0 auto!important;align-self:stretch!important;
+ margin:0!important;padding:0!important;
+}
 /* Anclaje estructural: los nombres comparten el mismo origen vertical de la ficha. */
 #products .product .details::before,#deptProducts .product .details::before{content:'';display:block;grid-row:1;min-height:0;pointer-events:none!important}
 #products .product .details .tech-row,#deptProducts .product .details .tech-row{grid-row:2!important}
