@@ -1132,34 +1132,12 @@ function edRenderOfficialClients(){
   const rec=edRecipientsCache.filter(r=>r.cliente_numero===c.numero),orders=edRealOrdersCache.filter(o=>o.cliente_numero===c.numero);
   const search=esc([c.nombre,c.telefono,c.correo,...rec.map(x=>x.nombre+' '+x.telefono)].join(' ').toLowerCase());
   return '<div class="inventory-card ed-official-client" data-search="'+search+'" style="margin-bottom:12px"><strong>'+esc(c.codigo||String(c.numero))+' · '+esc(c.nombre)+'</strong><p class="note">Teléfono: '+esc(c.telefono||'Sin registrar')+' · '+esc(c.correo||'')+'</p><p class="note">Dirección del comprador: '+esc(c.direccion_habitual||'No indicada (puede residir en el extranjero)')+'</p><h4>Destinatarios ('+rec.length+')</h4>'+
-  (rec.length?rec.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono)+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion)+(x.referencias?' · '+esc(x.referencias):'')+'</p><button class="secondary" onclick="edRecipientForm('+c.numero+','+x.id+')">Editar destinatario</button></div>').join(''):'<p class="note">No hay destinatarios registrados.</p>')+
-  '<button class="secondary" onclick="edRecipientForm('+c.numero+')">+ Añadir destinatario</button><h4>Pedidos oficiales ('+orders.length+')</h4>'+
+  (rec.length?rec.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono)+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion)+(x.referencias?' · '+esc(x.referencias):'')+'</p></div>').join(''):'<p class="note">No hay destinatarios registrados.</p>')+
+  '<h4>Pedidos oficiales ('+orders.length+')</h4>'+
   (orders.length?orders.map(o=>'<p class="note">#'+o.id+' · '+esc(o.destinatario_nombre)+' · '+money(o.total_usd)+' USD · '+esc(o.estado)+' · '+esc(o.entrega_direccion)+'</p>').join(''):'<p class="note">Todavía no hay pedidos oficiales. Los pedidos de prueba no se incluyen aquí.</p>')+'</div>';
  }).join(''):'<p class="note">No hay fichas de clientes oficiales disponibles.</p>');
 }
 function edFilterOfficialClients(){let q=(document.getElementById('edOfficialClientSearch')?.value||'').toLowerCase();document.querySelectorAll('.ed-official-client').forEach(el=>el.style.display=el.dataset.search.includes(q)?'':'none')}
-function edRecipientForm(customerId,recipientId){
- if(!edAdminAuthorized||!['principal','admin'].includes(edAdminRole))return alert('No tienes permisos para editar destinatarios.');
- const r=edRecipientsCache.find(x=>x.id===recipientId&&x.cliente_numero===customerId)||{};
- const field=(label,id,value)=>'<div class="field"><label>'+label+'</label><input id="'+id+'" value="'+esc(value||'')+'"></div>';
- modal('<h2>'+(recipientId?'Editar':'Agregar')+' destinatario</h2><p class="note">Asociado al cliente #'+customerId+'. La información se guarda en Supabase.</p>'+
- field('Nombre completo *','edRecName',r.nombre)+field('Teléfono cubano *','edRecPhone',r.telefono)+
- field('Provincia *','edRecProvince',r.provincia||'La Habana')+field('Municipio *','edRecMunicipality',r.municipio)+field('Barrio o reparto','edRecNeighborhood',r.barrio)+
- '<div class="field"><label>Dirección completa *</label><textarea id="edRecAddress" rows="3">'+esc(r.direccion||'')+'</textarea></div>'+
- field('Referencias adicionales','edRecReferences',r.referencias)+
- '<button class="primary" id="edRecSave" style="width:100%" onclick="edSaveRecipient('+customerId+','+(recipientId||'null')+')">Guardar destinatario</button>');
-}
-async function edSaveRecipient(customerId,recipientId){
- if(!edAdminAuthorized||!['principal','admin'].includes(edAdminRole))return;
- const val=id=>document.getElementById(id).value.trim();
- const row={cliente_numero:customerId,nombre:val('edRecName'),telefono:val('edRecPhone'),provincia:val('edRecProvince'),municipio:val('edRecMunicipality'),barrio:val('edRecNeighborhood'),direccion:val('edRecAddress'),referencias:val('edRecReferences')};
- if(row.nombre.length<2||!edCubanPhone(row.telefono)||!row.provincia||!row.municipio||row.direccion.length<8)return alert('Revisa nombre, teléfono cubano, provincia, municipio y dirección completa.');
- row.telefono=edCubanPhone(row.telefono);
- const btn=document.getElementById('edRecSave');btn.disabled=true;btn.textContent='Guardando…';
- try{await edApi('/rest/v1/clientes_destinatarios'+(recipientId?'?id=eq.'+recipientId:''),{method:recipientId?'PATCH':'POST',headers:{...edHeaders(await edToken()),Prefer:'return=representation'},body:JSON.stringify(recipientId?Object.fromEntries(Object.entries(row).filter(([k])=>k!=='cliente_numero')):row)});closeModal();await edLoadOfficialClients();}
- catch(e){alert('No se pudo guardar: '+e.message);btn.disabled=false;btn.textContent='Guardar destinatario'}
-}
-
 function adminClients(){let list=clients(),orders=[];try{orders=JSON.parse(localStorage.getItem('enlace_demo_orders')||'[]')}catch(e){}return `<div class="panel" id="edOfficialClients"><h3>Clientes oficiales · Supabase</h3><p class="note">Cargando fichas, destinatarios asociados e historial de pedidos oficiales…</p></div><div class="panel"><h3>Clientes registrados · Demo</h3><p class="note">Solo datos de este navegador. En producción esta sección requerirá acceso exclusivo de administración y una base de datos segura.</p><input id="clientSearch" placeholder="Buscar por nombre, teléfono o número" oninput="document.querySelectorAll('.client-card').forEach(x=>x.style.display=x.dataset.search.includes(this.value.toLowerCase())?'':'none')" style="width:100%;padding:12px;border:1px solid #cbd8e1;border-radius:9px">${list.length?list.map(c=>`<div class="inventory-card client-card" data-search="${esc((c.id+' '+c.name+' '+c.user+' '+c.contact).toLowerCase())}"><strong>${esc(c.id)} · ${esc(c.name)}</strong><p class="note">Teléfono: ${esc(c.contact||'')}</p><p class="note">Dirección: ${esc([c.address,c.b,c.m].filter(Boolean).join(', '))}</p><p>Pedidos de prueba: <strong>${orders.filter(o=>o.clientId===c.id).length}</strong></p>${orders.filter(o=>o.clientId===c.id).map(o=>`<p class="note">${esc(o.id)} · ${money(o.total)} USD · ${esc(o.status)}</p>`).join('')}</div>`).join(''):'<p>No hay clientes registrados todavía.</p>'}</div>`}
 const DEMO_ORDER_STATES=['Pendiente','Confirmado','En preparación','En reparto','Entregado','Cancelado'];
 function demoOrders(){try{return JSON.parse(localStorage.getItem('enlace_demo_orders')||'[]')}catch(e){return []}}
