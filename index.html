@@ -854,7 +854,16 @@ function edSuggestDepartment(description){
  return '';
 }
 function edExtraSpecs(d,cat){
- const t={};const number=s=>Number(String(s).replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',','.'));
+ const t={};const number=value=>{
+  const raw=String(value).trim().replace(/\s/g,'');
+  if(!/^\d[\d.,]*$/.test(raw))return NaN;
+  const comma=raw.lastIndexOf(','),dot=raw.lastIndexOf('.');
+  if(comma>=0&&dot>=0){const decimal=comma>dot?',':'.';return Number(raw.replace(new RegExp('\\'+(decimal===','?'.':','),'g'),'').replace(decimal,'.'))}
+  const sep=comma>=0?',':'.';
+  const parts=raw.split(sep);
+  if(parts.length>1&&parts.slice(1).every(x=>x.length===3))return Number(parts.join(''));
+  return Number(raw.replace(',','.'));
+ };
  const add=(key,patterns)=>{for(const pattern of patterns){const m=d.match(pattern);if(m){const n=number(m[1]);if(Number.isFinite(n)&&n>0){t[key]=n;return}}}};
  if(techType({cat})==='power'){
  add('capacity',[/\bcapacidad(?:\s+de\s+bater[ií]a)?\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i,/\bbattery capacity\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i]);
@@ -868,6 +877,14 @@ function edExtraSpecs(d,cat){
  if(/ferreter|herramienta/i.test(cat))add('toolPower',[/\b(?:potencia|motor)\s*[:=\-]?\s*([\d.,]+)\s*w/i]);
  if(/electrodom|hogar/i.test(cat))add('appliancePower',[/\b(?:potencia|consumo)\s*[:=\-]?\s*([\d.,]+)\s*w/i]);
  return t;
+}
+function edCommercialName(description){
+ const first=String(description||'').split(/[\n;,]/)[0].trim();
+ if(!first)return '';
+ let name=first.replace(/^(?:(?:estaci[oó]n de energ[ií]a|generador solar|bocina(?: bluetooth)?(?: port[aá]til)?|altavoz(?: bluetooth)?|tel[eé]fono(?: celular)?|celular|smartphone|laptop|computadora port[aá]til|tablet|tableta|consola de videojuegos|power station)\s+)+/i,'').trim();
+ name=name.replace(/\s+(?:procesador|potencia|ram|bater[ií]a|capacidad|pantalla|almacenamiento|memoria|ssd|hdd)\b.*$/i,'').trim();
+ if(name.length>85)name=name.slice(0,85).replace(/\s+\S*$/,'');
+ return name.length>=3?name:first.slice(0,85).trim();
 }
 function extractProductData(){
  const d=document.getElementById('pdesc').value.trim(),feedback=document.getElementById('extractFeedback');
@@ -924,8 +941,7 @@ function extractProductData(){
    if(m)tech.storage=Number(m[1]);
  }
  if(edSuggestDepartment(d))cat=edSuggestDepartment(d);Object.assign(tech,edExtraSpecs(d,cat));if(cat){let sel=document.getElementById('pcat');sel.value=cat;sel.onchange()}
- let name=d.split(/[\n;,]/)[0].replace(/\s+(?:procesador|potencia|ram|bater[ií]a|capacidad|pantalla|almacenamiento|memoria|ssd|hdd)\b.*$/i,'').trim();
- if(name.length>85)name=name.slice(0,85).replace(/\s+\S*$/,'');
+ let name=edCommercialName(d);
  if(name&&name.length>=3)document.getElementById('pname').value=name;
  for(let [k,v] of Object.entries(tech)){let el=document.querySelector('#newTechFields [data-tech="'+k+'"]');if(el&&v!==''&&Number.isFinite(v)||el&&typeof v==='string'&&v)el.value=v}
  let count=Object.keys(tech).filter(k=>tech[k]!==''&&tech[k]!=null).length;
@@ -990,6 +1006,8 @@ function extractEditedProductData(){
  const catSel=document.getElementById('editCat');
  const suggestedCat=cat&&cat!==catSel.value?cat:'';
  let changes=[];
+ const proposedName=edCommercialName(d),nameField=document.getElementById('editName');
+ if(proposedName&&nameField&&proposedName!==nameField.value.trim())changes.push('Nombre: '+nameField.value+' → '+proposedName);
  if(suggestedCat)changes.push('Departamento: '+suggestedCat);
  for(const [k,v] of Object.entries(tech)){
    const el=document.querySelector('#editTech [data-tech="'+k+'"]');
@@ -997,6 +1015,7 @@ function extractEditedProductData(){
  }
  if(!changes.length){feedback.textContent='No se detectaron características nuevas o diferentes. Se conservaron los datos existentes.';return}
  if(!confirm('Cambios propuestos:\\n'+changes.join('\\n')+'\\n\\n¿Aplicarlos al editor? Aún tendrás que pulsar Guardar cambios.')){feedback.textContent='Extracción cancelada. No se modificaron campos.';return}
+ if(proposedName&&nameField)nameField.value=proposedName;
  if(suggestedCat){catSel.value=suggestedCat;refreshEditTechFromCurrent()}
  let count=0;
  for(const [k,v] of Object.entries(tech)){
