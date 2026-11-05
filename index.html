@@ -543,6 +543,27 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 .detail-color-options .detail-color-choice.active,.detail-color-options .detail-color-choice[aria-pressed="true"]{background:#cedee8!important;border:1px solid #8caebe!important;color:#163c50!important;font-weight:700!important;box-shadow:inset 0 0 0 1px #9ab7c5!important}
 .detail-color-options .detail-color-choice:not(.active){background:#eaf1f6!important;border:1px solid transparent!important;font-weight:400!important;box-shadow:none!important}
  .ed-customer-dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid #8796a1;vertical-align:middle;margin-right:7px;flex-shrink:0}.ed-palette{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin:9px 0}.ed-tone{height:37px;border:1px solid #9ca3af;border-radius:9px;min-width:0;padding:0}.ed-tone.chosen{outline:3px solid #168ca0;outline-offset:2px}.ed-tone-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}.ed-tone-row input[type=color]{width:52px;height:38px;padding:2px}.ed-tone-row button{font-size:12px}@media(max-width:420px){.ed-palette{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* Alineación estructural de tarjetas: la zona fotográfica tiene la misma altura en cada fila.
+   No se desplazan títulos individualmente; el contenido conserva sus dimensiones. */
+#products .product,#deptProducts .product{
+  display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+  align-items:stretch!important;min-width:0!important;
+}
+#products .product>.art,#deptProducts .product>.art{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  box-sizing:border-box!important;flex-shrink:0!important;
+  margin-top:0!important;margin-bottom:0!important;
+}
+@media(max-width:650px){
+ #products .product>.art,#deptProducts .product>.art{
+  height:clamp(112px,31vw,165px)!important;
+  min-height:clamp(112px,31vw,165px)!important;
+  max-height:clamp(112px,31vw,165px)!important;
+ }
+}
+#products .product>.details,#deptProducts .product>.details{
+  margin-top:0!important;min-width:0!important;
+}
 /* Anclaje estructural: los nombres comparten el mismo origen vertical de la ficha. */
 #products .product .details::before,#deptProducts .product .details::before{content:'';display:block;grid-row:1;min-height:0;pointer-events:none!important}
 #products .product .details .tech-row,#deptProducts .product .details .tech-row{grid-row:2!important}
@@ -756,16 +777,7 @@ function normalizeSearch(s){return String(s||'').toLowerCase().normalize('NFD').
     const title=card.querySelector('.product-name');
     if(title)title.style.removeProperty('transform');
    }
-   // Alinear el inicio visual real de los títulos, independientemente de la
-   // altura calculada por el navegador para imágenes y contenedores.
-   const titles=group.map(({card})=>card.querySelector('.product-name')).filter(Boolean);
-   if(titles.length>1){
-    const top=Math.min(...titles.map(el=>el.getBoundingClientRect().top));
-    for(const el of titles){
-     const delta=top-el.getBoundingClientRect().top;
-     if(Math.abs(delta)>0.5)el.style.setProperty('transform','translateY('+delta.toFixed(2)+'px)','important');
-    }
-   }
+   // Los títulos comparten origen gracias a la estructura uniforme de las tarjetas.
   }
  }
 }
