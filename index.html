@@ -543,19 +543,19 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 .detail-color-options .detail-color-choice.active,.detail-color-options .detail-color-choice[aria-pressed="true"]{background:#cedee8!important;border:1px solid #8caebe!important;color:#163c50!important;font-weight:700!important;box-shadow:inset 0 0 0 1px #9ab7c5!important}
 .detail-color-options .detail-color-choice:not(.active){background:#eaf1f6!important;border:1px solid transparent!important;font-weight:400!important;box-shadow:none!important}
  .ed-customer-dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid #8796a1;vertical-align:middle;margin-right:7px;flex-shrink:0}.ed-palette{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin:9px 0}.ed-tone{height:37px;border:1px solid #9ca3af;border-radius:9px;min-width:0;padding:0}.ed-tone.chosen{outline:3px solid #168ca0;outline-offset:2px}.ed-tone-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}.ed-tone-row input[type=color]{width:52px;height:38px;padding:2px}.ed-tone-row button{font-size:12px}@media(max-width:420px){.ed-palette{grid-template-columns:repeat(4,minmax(0,1fr))}}
-/* El botón ocupa la fila, pero el texto se ancla arriba sin centrado nativo. */
+/* Anclaje estructural: los nombres comparten el mismo origen vertical de la ficha. */
+#products .product .details,#deptProducts .product .details{position:relative!important}
 #products .product .details .product-name,#deptProducts .product .details .product-name{
- display:block!important;position:relative!important;
- padding:0!important;margin:0!important;
- vertical-align:top!important;
+ position:absolute!important;top:9px!important;left:9px!important;right:9px!important;
+ width:auto!important;max-width:none!important;z-index:1;
+ margin:0!important;padding:0!important;border:0!important;
+ display:block!important;text-align:left!important;
 }
 #products .product .details .ed-product-name-text,#deptProducts .product .details .ed-product-name-text{
  display:-webkit-box!important;-webkit-box-orient:vertical!important;
  -webkit-line-clamp:2!important;line-clamp:2!important;
- overflow:hidden!important;white-space:normal!important;
- text-align:left!important;line-height:22px!important;
- max-height:44px!important;width:100%!important;
- position:absolute!important;top:0!important;left:0!important;
+ white-space:normal!important;overflow:hidden!important;
+ line-height:22px!important;text-align:left!important;
 }
 /* Filas adaptativas: un renglón si ambos nombres caben; dos si alguno necesita dos. */
 #products .product .details,#deptProducts .product .details{
@@ -566,10 +566,9 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
  gap:5px!important;
 }
 #products .product .details .product-name,#deptProducts .product .details .product-name{
- display:-webkit-box!important;-webkit-box-orient:vertical!important;
- -webkit-line-clamp:2!important;line-clamp:2!important;
+ display:block!important;position:absolute!important;top:9px!important;left:9px!important;right:9px!important;
  white-space:normal!important;overflow:hidden!important;
- text-overflow:ellipsis!important;width:100%!important;max-width:100%!important;
+ text-overflow:ellipsis!important;width:auto!important;max-width:none!important;
  height:var(--ed-name-height,22px)!important;min-height:0!important;
  line-height:22px!important;align-self:start!important;text-align:left!important;
  align-items:flex-start!important;justify-content:flex-start!important;
