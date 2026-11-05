@@ -751,7 +751,21 @@ function normalizeSearch(s){return String(s||'').toLowerCase().normalize('NFD').
   }
   for(const group of rows.values()){
    const height=group.some(x=>x.lineCount>1)?'44px':'22px';
-   for(const {card} of group)if(card.style.getPropertyValue('--ed-name-height')!==height)card.style.setProperty('--ed-name-height',height);
+   for(const {card} of group){
+    if(card.style.getPropertyValue('--ed-name-height')!==height)card.style.setProperty('--ed-name-height',height);
+    const title=card.querySelector('.product-name');
+    if(title)title.style.removeProperty('transform');
+   }
+   // Alinear el inicio visual real de los títulos, independientemente de la
+   // altura calculada por el navegador para imágenes y contenedores.
+   const titles=group.map(({card})=>card.querySelector('.product-name')).filter(Boolean);
+   if(titles.length>1){
+    const top=Math.min(...titles.map(el=>el.getBoundingClientRect().top));
+    for(const el of titles){
+     const delta=top-el.getBoundingClientRect().top;
+     if(Math.abs(delta)>0.5)el.style.setProperty('transform','translateY('+delta.toFixed(2)+'px)','important');
+    }
+   }
   }
  }
 }
