@@ -539,7 +539,11 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 
 /* Cierre anclado a la esquina real: separado del contenido desplazable */
 #modal.modal{position:relative!important;padding:0!important;overflow:hidden!important;max-height:90vh!important;isolation:isolate}
-#modal.modal>.edit-product .edit-save-bar{position:sticky;bottom:-14px;z-index:25;display:flex;justify-content:flex-end;gap:10px;align-items:center;background:#fff;padding:12px 8px;box-shadow:0 -5px 18px #10243a1c;border-top:1px solid #e7edf2;margin-top:18px}.edit-save-bar .primary{min-width:140px}@media(max-width:650px){.edit-save-bar .primary{flex:1}}
+#modal.modal:has(>.edit-save-bar){display:flex!important;flex-direction:column!important;overflow:hidden!important}
+#modal.modal>.modal-scroll{flex:1 1 auto;min-height:0;max-height:none!important;overflow-y:auto!important;padding-bottom:18px!important}
+#modal.modal>.edit-save-bar{flex:0 0 auto;display:flex;align-items:center;gap:10px;justify-content:flex-end;padding:12px 18px;background:#fff;border-top:1px solid #e1e8ee;box-shadow:0 -5px 16px #10243a18;z-index:35}
+#modal.modal>.edit-save-bar .primary{min-width:150px}
+@media(max-width:650px){#modal.modal>.edit-save-bar .primary{flex:1}}
 .modal-scroll{overflow-y:auto;overflow-x:hidden;max-height:90vh;padding:24px;overscroll-behavior:contain;scrollbar-width:thin}
 #modal.modal>.x{position:absolute!important;top:0!important;right:0!important;left:auto!important;float:none!important;margin:0!important;transform:none!important;z-index:30!important;border-radius:0 18px 0 14px!important}
 @media(max-width:650px){#modal.modal>.modal-scroll{padding:14px}#modal.modal>.x{border-radius:0 18px 0 14px!important}}
@@ -1245,6 +1249,8 @@ function createProduct(){if(!edInventoryLoaded||!edAdminAuthorized)return alert(
  <h3>Características técnicas destacadas</h3><div class="grid2" id="editTech">${techFields(p.cat,p.tech||{})}</div>
  <div class="field"><label>Descripción completa y especificaciones</label><textarea id="editDesc" rows="5" style="width:100%;padding:12px;border:1px solid #cbd8e1;border-radius:9px">${esc(p.desc||'')}</textarea><button class="secondary" type="button" onclick="extractEditedProductData()">✦ Extraer características</button><p class="note" id="editExtractFeedback">Se revisarán los cambios antes de aplicarlos. Los datos no detectados se conservarán.</p></div>
  <div class="edit-save-bar"><button class="secondary" onclick="closeModal()">Cancelar</button><button id="editSaveButton" class="primary" onclick="saveEditedProduct(${id})">Guardar cambios</button></div></div>`,true);
+ const editFooter=document.querySelector('#modal .modal-scroll .edit-save-bar');
+ if(editFooter)document.getElementById('modal').appendChild(editFooter);
  renderPhotoGallery(id);renderColorEditor(id);toggleEditStock();edToggleSupplierAlias("edit");edLoadSupplierAlias(id);
 }
 function renderPhotoGallery(id){let p=state.products.find(x=>x.id===id),el=document.getElementById('editPhotoGallery');if(!p||!el)return;el.innerHTML=(p.photos||[]).map((src,i)=>`<div class="edit-photo"><img src="${src}" alt="Foto ${i+1}"><small>${i===0?'Principal':'Foto '+(i+1)}</small><div><button class="secondary" onclick="movePhoto(${id},${i},-1)" ${i===0?'disabled':''} aria-label="Mover antes">←</button><button class="secondary" onclick="movePhoto(${id},${i},1)" ${i===(p.photos.length-1)?'disabled':''} aria-label="Mover después">→</button><button class="secondary" onclick="removePhoto(${id},${i})" aria-label="Eliminar foto">✕</button></div></div>`).join('')||'<p class="note">Todavía no hay fotografías reales.</p>'}
