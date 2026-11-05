@@ -868,16 +868,8 @@ function edExtraSpecs(d,cat){
  if(techType({cat})==='power'){
  add('capacity',[/\bcapacidad(?:\s+de\s+bater[ií]a)?\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i,/\bbattery capacity\s*[:=\-]?\s*([\d.,]+)\s*wh\b/i]);
  add('power',[/\bpotencia(?:\s+de\s+salida)?\s+(?:continua|nominal)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i,/\b(?:rated power|continuous output|salida ac)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i,/\bpotencia\s+de\s+salida\s*[:=\-]\s*([\d.,]+)\s*w\b/i]);
- // X-Boost es una tecnología de asistencia, no una especificación de pico convencional.
- // Un pico explícitamente asociado a X-Boost queda en la descripción original.
- for(const pattern of [/\b(?:pico de potencia|potencia pico|potencia m[aá]xima|peak power|surge power)\s*[:=\-]?\s*([\d.,]+)\s*w\b/ig,/\bpico\s*[:=\-]?\s*([\d.,]+)\s*w\b/ig]){
-  for(const match of d.matchAll(pattern)){
-   const context=d.slice(match.index,Math.min(d.length,match.index+match[0].length+55)).split(/[\n;)]/)[0];
-   if(/x[\s-]?boost/i.test(context))continue;
-   const n=number(match[1]);if(Number.isFinite(n)&&n>0){t.peakPower=n;break}
-  }
-  if(t.peakPower)break;
- }
+ // La potencia pico anunciada con X-Boost utiliza el campo existente peakPower.
+ add('peakPower',[/\b(?:pico de potencia|potencia pico|potencia m[aá]xima|peak power|surge power)\s*[:=\-]?\s*([\d.,]+)\s*w\b/i,/\bpico\s*[:=\-]?\s*([\d.,]+)\s*w\b/i]);
  add('solarInput',[/\b(?:recarga solar|entrada solar|carga solar m[aá]xima|solar input)\s*[:=\-]?\s*(?:admite\s+)?(?:hasta\s+)?([\d.,]+)\s*w\b/i,/\b(?:recarga|carga)\s+(?:m[uú]ltiple|solar)[^\n]{0,110}?solar\s*\(?\s*(?:hasta\s+)?([\d.,]+)\s*w\b/i,/\bsolar\s*\(\s*(?:hasta\s+)?([\d.,]+)\s*w\b/i]);
  add('cycles',[/\b(?:m[aá]s de\s+)?([\d.,]+)\s*ciclos\b/i,/\b(?:ciclos de vida|ciclos de carga|life cycles)\s*[:=\-]?\s*([\d.,]+)/i]);
  if(/lifepo4|lifepo₄|\blfp\b/i.test(d))t.batteryType='LiFePO4';else if(/ion(?:es)? de litio|lithium.ion/i.test(d))t.batteryType='Ion de litio';
