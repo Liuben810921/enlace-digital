@@ -544,6 +544,10 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
 .detail-color-options .detail-color-choice:not(.active){background:#eaf1f6!important;border:1px solid transparent!important;font-weight:400!important;box-shadow:none!important}
  .ed-customer-dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid #8796a1;vertical-align:middle;margin-right:7px;flex-shrink:0}.ed-palette{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin:9px 0}.ed-tone{height:37px;border:1px solid #9ca3af;border-radius:9px;min-width:0;padding:0}.ed-tone.chosen{outline:3px solid #168ca0;outline-offset:2px}.ed-tone-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}.ed-tone-row input[type=color]{width:52px;height:38px;padding:2px}.ed-tone-row button{font-size:12px}@media(max-width:420px){.ed-palette{grid-template-columns:repeat(4,minmax(0,1fr))}}
 /* Anclaje estructural: los nombres comparten el mismo origen vertical de la ficha. */
+#products .product .details::before,#deptProducts .product .details::before{content:'';display:block;grid-row:1;min-height:0;pointer-events:none!important}
+#products .product .details .tech-row,#deptProducts .product .details .tech-row{grid-row:2!important}
+#products .product .details .price,#deptProducts .product .details .price{grid-row:3!important}
+#products .product .details .catalog-actions,#deptProducts .product .details .catalog-actions{grid-row:4!important}
 #products .product .details,#deptProducts .product .details{position:relative!important}
 #products .product .details .product-name,#deptProducts .product .details .product-name{
  position:absolute!important;top:9px!important;left:9px!important;right:9px!important;
