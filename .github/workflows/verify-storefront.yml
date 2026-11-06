@@ -5,6 +5,7 @@ on:
     paths:
       - index.html
       - .github/workflows/verify-storefront.yml
+      - tests/customer-order-flow.cjs
   pull_request:
     paths:
       - index.html
@@ -59,6 +60,8 @@ jobs:
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
           console.log('Inline JavaScript syntax and customer safeguards verified');
           NODE
+      - name: Execute mocked customer order flow tests
+        run: node tests/customer-order-flow.cjs
       - name: Verify deployed customer endpoint rejects invalid sessions
         shell: bash
         run: |
