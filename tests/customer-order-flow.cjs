@@ -28,12 +28,12 @@ const ctx={
 vm.createContext(ctx);vm.runInContext(code,ctx);
 (async()=>{\nel('edDeliveryChoice').value='7';
 for(const [key,value] of Object.entries({Name:recipient.nombre,Phone:recipient.telefono,Province:recipient.provincia,Municipality:recipient.municipio,Neighborhood:recipient.barrio,Address:recipient.direccion,References:''}))el('edDelivery'+key).value=value;
-await await ctx.edOfficialOrderPreview();assert.match(rendered,/Vista previa de pedido oficial/);assert.match(rendered,/200 USD/);assert.match(rendered,/Calle Uno 100/);assert.equal(requests.length,0);
-el('edDeliveryAddress').value='Calle editada 200';ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/cambios sin guardar/);
-el('edDeliveryAddress').value=recipient.direccion;stock={removed:0,adjusted:1};ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/carrito cambió/);stock={removed:0,adjusted:0};
-ctx.state.products[0].price=NaN;ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/precios no válidos/);ctx.state.products[0].price=100;
+await ctx.edOfficialOrderPreview();assert.match(rendered,/Vista previa de pedido oficial/);assert.match(rendered,/200 USD/);assert.match(rendered,/Calle Uno 100/);assert.equal(requests.length,0);
+el('edDeliveryAddress').value='Calle editada 200';await ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/cambios sin guardar/);
+el('edDeliveryAddress').value=recipient.direccion;stock={removed:0,adjusted:1};await ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/carrito cambió/);stock={removed:0,adjusted:0};
+ctx.state.products[0].price=NaN;await ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/precios no válidos/);ctx.state.products[0].price=100;
 ctx.edCustomerSession=null;await ctx.edOfficialOrderPreview();assert.equal(rendered,'LOGIN');ctx.edCustomerSession={token:'x'};
-(async()=>{
+{
  el('edDeliveryAddress').value='Calle Dos 200';
  await ctx.edOfficialRecipientSave();
  assert.equal(requests[0].action,'recipient-save');assert.equal(requests[0].payload.id,7);
@@ -42,4 +42,5 @@ ctx.edCustomerSession=null;await ctx.edOfficialOrderPreview();assert.equal(rende
  assert.equal(requests[0].action,'profile');
  assert.equal(ctx.edCustomerRecipients.length,1);
  console.log('PASS: preview, stale stock, invalid price, unsaved address, login gate, recipient save, session restore, no order writes');
+}
 })().catch(e=>{console.error(e);process.exitCode=1});
