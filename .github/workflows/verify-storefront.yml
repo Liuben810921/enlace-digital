@@ -52,6 +52,8 @@ jobs:
           assert(preview.includes('validateCart()')&&preview.includes('availability.removed||availability.adjusted'),'Preview must reject stale stock');
           assert(preview.includes('lines.length!==cart.length')&&preview.includes('Number.isFinite(Number(x.product.price))'),'Preview must reject invalid line items and prices');
           assert(preview.includes('!edCustomerSession||!edCustomerProfile'),'Preview must require customer session');
+          assert(preview.includes('Tienes cambios sin guardar en el destinatario'),'Preview must reject unsaved recipient changes');
+          assert(preview.includes("Object.entries(pending).some"),'Preview must compare recipient form with saved record');
           assert(!/edCustomerRequest\\(|fetch\\(|\\.insert\\(|\.update\\(/.test(preview),'Order preview must not write to a backend');
           assert(html.includes('Ver pedido preparado (sin enviar)'),'Order preview button missing');
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
