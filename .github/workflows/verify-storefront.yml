@@ -1,0 +1,42 @@
+name: Verify storefront JavaScript
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - .github/workflows/verify-storefront.yml
+  pull_request:
+    paths:
+      - index.html
+      - .github/workflows/verify-storefront.yml
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check inline JavaScript syntax and customer safeguards
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const vm=require('vm');
+          const assert=require('assert');
+          const html=fs.readFileSync('index.html','utf8');
+          const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]);
+          assert(scripts.length,'Missing inline scripts');
+          for(const [i,code] of scripts.entries()){
+            try {new vm.Script(code,{filename:'inline-script-'+i+'.js'});}
+            catch(e){console.error(e);process.exitCode=1;}
+          }
+          assert(html.includes('const ED_REAL_CHECKOUT_ENABLED=false;'),'Real checkout must remain disabled');
+          assert(html.includes('async function edRestoreCustomerSession()'),'Session restoration must be async');
+          assert(!html.includes('async async function'),'Invalid duplicate async');
+          assert(html.includes("edCustomerRequest('register'"),'Missing registration');
+          assert(html.includes("edCustomerRequest('login'"),'Missing login');
+          assert(html.includes("edCustomerRequest('profile'"),'Missing authenticated profile');
+          assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
+          console.log('Inline JavaScript syntax and customer safeguards verified');
+          NODE
