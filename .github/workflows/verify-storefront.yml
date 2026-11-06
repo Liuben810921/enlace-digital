@@ -39,6 +39,8 @@ jobs:
           assert(html.includes("edCustomerRequest('profile'"),'Missing authenticated profile');
           assert(html.includes("edCustomerRequest('recipient-save'"),'Missing recipient update');
           assert(html.includes('officialRecipientAddress'),'Missing mandatory signup address');
+          assert(html.includes('Elegir o corregir destinatario oficial'),'Missing official recipient checkout entry');
+          assert(html.includes('SIMULACIÓN LOCAL: no se realizan cobros'),'Demo checkout isolation lost');
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
           console.log('Inline JavaScript syntax and customer safeguards verified');
           NODE
