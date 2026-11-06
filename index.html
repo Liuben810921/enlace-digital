@@ -1113,7 +1113,8 @@ function edOfficialOrderPreview(){
   if(status)status.textContent='El carrito cambió por disponibilidad. Revísalo antes de preparar el pedido.';
   renderFloatingCart();return;
  }
- if(!edCustomerSession||!edCustomerProfile)return edOfficialCustomerLogin();
+ try{edCustomerToken()}catch(e){return edOfficialCustomerLogin()}
+ if(!edCustomerProfile)return edOfficialCustomerLogin();
  const choice=document.getElementById('edDeliveryChoice')?.value;
  const recipient=edCustomerRecipients.find(r=>String(r.id)===choice);
  if(!recipient)return document.getElementById('edDeliveryStatus').textContent='Guarda primero el nuevo destinatario antes de revisar el pedido.';
