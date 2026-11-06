@@ -40,3 +40,11 @@ jobs:
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
           console.log('Inline JavaScript syntax and customer safeguards verified');
           NODE
+      - name: Verify deployed customer endpoint rejects invalid sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-cliente-auth"
+          status=$(curl --retry 2 --max-time 20 --silent --show-error --output /tmp/customer-response.json --write-out '%{http_code}' -H 'Content-Type: application/json' --data '{"action":"session","token":"invalid"}' "$url")
+          test "$status" = "401" || { echo "Expected 401 for invalid session; got $status"; cat /tmp/customer-response.json; exit 1; }
+          echo "Invalid session correctly rejected"
