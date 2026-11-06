@@ -1087,7 +1087,37 @@ function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No hay destinatarios asociados a esta cuenta. Para nuevas cuentas se exige un destinatario inicial; los adicionales se registrarán durante futuras compras oficiales.</p>')+
- '<button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
+ '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Seleccionar o corregir destinatario para próxima compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
+}
+function edOfficialRecipientCheckout(){
+ if(!edCustomerProfile)return edOfficialCustomerLogin();
+ const options=edCustomerRecipients.map(r=>'<option value="'+r.id+'">'+esc(r.nombre+' · '+r.municipio+' · '+r.direccion)+'</option>').join('');
+ modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="new">Enviar a otro destinatario</option></select></div>'+
+ ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ '<button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar destinatario</button><p id="edDeliveryStatus" class="note" role="status"></p>');
+ if(!edCustomerRecipients.length)document.getElementById('edDeliveryChoice').value='new';
+ edOfficialRecipientSelect();
+}
+function edOfficialRecipientSelect(){
+ const choice=document.getElementById('edDeliveryChoice').value;
+ const r=edCustomerRecipients.find(x=>String(x.id)===choice)||{};
+ const keys={Name:r.nombre,Phone:r.telefono,Province:r.provincia||'La Habana',Municipality:r.municipio,Neighborhood:r.barrio,Address:r.direccion,References:r.referencias};
+ Object.entries(keys).forEach(([k,v])=>document.getElementById('edDelivery'+k).value=v||'');
+ document.getElementById('edDeliverySave').textContent=choice==='new'?'Guardar nuevo destinatario':'Guardar cambios del destinatario';
+}
+async function edOfficialRecipientSave(){
+ const v=k=>document.getElementById('edDelivery'+k).value.trim();
+ const choice=document.getElementById('edDeliveryChoice').value;
+ const recipient={name:v('Name'),phone:edCubanPhone(v('Phone')),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
+ const status=document.getElementById('edDeliveryStatus'),btn=document.getElementById('edDeliverySave');
+ if(recipient.name.length<2||!recipient.phone||recipient.province.length<2||recipient.municipality.length<2||recipient.address.length<8){status.textContent='Completa nombre, teléfono cubano, provincia, municipio y dirección.';return}
+ btn.disabled=true;status.textContent='Guardando…';
+ try{
+  await edCustomerRequest('recipient-save',{token:await edCustomerToken(),id:choice==='new'?null:Number(choice),recipient});
+  const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
+  edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];
+  edOfficialRecipientCheckout();document.getElementById('edDeliveryStatus').textContent='Destinatario guardado correctamente.';
+ }catch(e){status.textContent=e.message;btn.disabled=false}
 }
 function edValidCustomerName(raw){
  const parts=String(raw||'').trim().split(/\s+/).filter(Boolean);
