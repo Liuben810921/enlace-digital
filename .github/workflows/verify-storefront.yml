@@ -37,6 +37,8 @@ jobs:
           assert(html.includes("edCustomerRequest('register'"),'Missing registration');
           assert(html.includes("edCustomerRequest('login'"),'Missing login');
           assert(html.includes("edCustomerRequest('profile'"),'Missing authenticated profile');
+          assert(html.includes("edCustomerRequest('recipient-save'"),'Missing recipient update');
+          assert(html.includes('officialRecipientAddress'),'Missing mandatory signup address');
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
           console.log('Inline JavaScript syntax and customer safeguards verified');
           NODE
@@ -48,3 +50,9 @@ jobs:
           status=$(curl --retry 2 --max-time 20 --silent --show-error --output /tmp/customer-response.json --write-out '%{http_code}' -H 'Content-Type: application/json' --data '{"action":"session","token":"invalid"}' "$url")
           test "$status" = "401" || { echo "Expected 401 for invalid session; got $status"; cat /tmp/customer-response.json; exit 1; }
           echo "Invalid session correctly rejected"
+          status=$(curl --retry 2 --max-time 20 --silent --show-error --output /tmp/recipient-response.json --write-out '%{http_code}' -H 'Content-Type: application/json' --data '{"action":"recipient-save","token":"invalid","recipient":{"name":"Test"}}' "$url")
+          test "$status" = "401" || { echo "Expected 401 for unauthenticated recipient write; got $status"; cat /tmp/recipient-response.json; exit 1; }
+          echo "Unauthenticated recipient update correctly rejected"
+          status=$(curl --retry 2 --max-time 20 --silent --show-error --output /tmp/unknown-response.json --write-out '%{http_code}' -H 'Content-Type: application/json' --data '{"action":"unsupported-action"}' "$url")
+          test "$status" = "400" || { echo "Expected 400 for unknown action; got $status"; cat /tmp/unknown-response.json; exit 1; }
+          echo "Unknown action correctly rejected"
