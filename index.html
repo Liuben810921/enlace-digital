@@ -1116,7 +1116,11 @@ function edOfficialOrderPreview(){
  if(!edCustomerSession||!edCustomerProfile)return edOfficialCustomerLogin();
  const choice=document.getElementById('edDeliveryChoice')?.value;
  const recipient=edCustomerRecipients.find(r=>String(r.id)===choice);
- if(!recipient)return document.getElementById('edDeliveryStatus').textContent='Selecciona un destinatario guardado antes de revisar el pedido.';
+ if(!recipient)return document.getElementById('edDeliveryStatus').textContent='Guarda primero el nuevo destinatario antes de revisar el pedido.';
+ const pending={Name:recipient.nombre,Phone:recipient.telefono,Province:recipient.provincia,Municipality:recipient.municipio,Neighborhood:recipient.barrio,Address:recipient.direccion,References:recipient.referencias};
+ if(Object.entries(pending).some(([key,value])=>(document.getElementById('edDelivery'+key)?.value||'').trim()!==String(value||'').trim())){
+  return document.getElementById('edDeliveryStatus').textContent='Tienes cambios sin guardar en el destinatario. Guárdalos antes de revisar el pedido.';
+ }
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)})).filter(x=>x.product&&Number.isInteger(x.line.qty)&&x.line.qty>0);
  if(!lines.length)return document.getElementById('edDeliveryStatus').textContent='Añade productos al carrito para preparar el pedido.';
  if(lines.length!==cart.length||lines.some(x=>!Number.isFinite(Number(x.product.price))||Number(x.product.price)<0)){
