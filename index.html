@@ -1086,7 +1086,7 @@ async function edLoadCustomerRecipients(){
 function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
- (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">Todavía no tienes destinatarios registrados. Se incorporarán al completar compras oficiales, cuando sean habilitadas.</p>')+
+ (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No hay destinatarios asociados a esta cuenta. Para nuevas cuentas se exige un destinatario inicial; los adicionales se registrarán durante futuras compras oficiales.</p>')+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
 }
 function edValidCustomerName(raw){
