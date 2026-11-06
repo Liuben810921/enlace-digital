@@ -1047,7 +1047,7 @@ async function edCustomerToken(){
  if(Date.now()>=edCustomerSession.expires_at){edClearCustomerSession();throw Error('Tu sesión ha caducado. Inicia sesión de nuevo.')}
  return edCustomerSession.token;
 }
-async async function edRestoreCustomerSession(){
+async function edRestoreCustomerSession(){
  try{
   const saved=JSON.parse(localStorage.getItem(ED_CUSTOMER_SESSION_KEY)||'null');
   if(!saved?.token||!saved?.expires_at||Date.now()>=saved.expires_at){edClearCustomerSession();return}
