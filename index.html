@@ -1052,8 +1052,9 @@ async function edRestoreCustomerSession(){
   const saved=JSON.parse(localStorage.getItem(ED_CUSTOMER_SESSION_KEY)||'null');
   if(!saved?.token||!saved?.expires_at||Date.now()>=saved.expires_at){edClearCustomerSession();return}
   edCustomerSession=saved;
-  const r=await edCustomerRequest('session',{token:saved.token});
+  const r=await edCustomerRequest('profile',{token:saved.token});
   edCustomerProfile=r.cliente;
+  edCustomerRecipients=r.destinatarios||[];
  }catch(e){edClearCustomerSession()}
 }
 async function edCustomerLogout(){
