@@ -1101,10 +1101,24 @@ async function edOfficialRecipientCheckout(selectedId=null){
  const options=edCustomerRecipients.map(r=>'<option value="'+r.id+'">'+esc(r.nombre+' · '+r.municipio+' · '+r.direccion)+'</option>').join('');
  modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="new">Enviar a otro destinatario</option></select></div>'+
  ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
- '<button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar destinatario</button><p id="edDeliveryStatus" class="note" role="status"></p>');
+ '<button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOrderPreview()">Ver pedido preparado (sin enviar)</button><p id="edDeliveryStatus" class="note" role="status"></p>');
  const selected=selectedId!==null&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))?String(selectedId):(!edCustomerRecipients.length?'new':null);
  if(selected!==null)document.getElementById('edDeliveryChoice').value=selected;
  edOfficialRecipientSelect();
+}
+function edOfficialOrderPreview(){
+ const choice=document.getElementById('edDeliveryChoice')?.value;
+ const recipient=edCustomerRecipients.find(r=>String(r.id)===choice);
+ if(!recipient)return document.getElementById('edDeliveryStatus').textContent='Selecciona un destinatario guardado antes de revisar el pedido.';
+ const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)})).filter(x=>x.product&&Number.isInteger(x.line.qty)&&x.line.qty>0);
+ if(!lines.length)return document.getElementById('edDeliveryStatus').textContent='Añade productos al carrito para preparar el pedido.';
+ const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
+ modal('<h2>Vista previa de pedido oficial</h2><p class="alert">SOLO VISTA PREVIA. No se registra ni envía ningún pedido, no se cobra y no se descuenta inventario.</p>'+
+ '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
+ '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
+ lines.map(x=>'<div class="row"><span>'+esc(x.product.name)+(x.line.color?' · '+esc(x.line.color):'')+' × '+x.line.qty+'</span><strong>'+money(Number(x.product.price)*x.line.qty)+' USD</strong></div>').join('')+
+ '<p><strong>Total de productos: '+money(total)+' USD</strong></p><p class="note">La mensajería y las condiciones de pago se definirán en la compra oficial. Esta pantalla no confirma pedidos.</p>'+
+ '<button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout('+Number(recipient.id)+')">Volver al destinatario</button>');
 }
 function edOfficialRecipientSelect(){
  const choice=document.getElementById('edDeliveryChoice').value;
