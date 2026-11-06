@@ -1083,15 +1083,28 @@ async function edCustomerSaveRecipient(id){
   await edLoadCustomerRecipients();
  }catch(e){alert('No se pudo guardar: '+e.message);btn.disabled=false;btn.textContent='Guardar destinatario'}
 }
+function edValidCustomerName(raw){
+ const parts=String(raw||'').trim().split(/\s+/).filter(Boolean);
+ return parts.length>=2&&parts.every(p=>/^[\\p{L}][\\p{L}\\p{M}'’.-]*$/u.test(p));
+}
 function officialCustomerSignup(){
-modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Registro permanente en Supabase, independiente de los pedidos de prueba.</p><div class="field"><label>Nombre completo *</label><input id="officialName" autocomplete="name"></div><div class="field"><label>Correo electrónico *</label><input id="officialEmail" type="email" autocomplete="email"></div><div class="field"><label>Teléfono *</label><input id="officialPhone" type="tel" autocomplete="tel"></div><div class="field"><label>Dirección en Cuba (opcional)</label><textarea id="officialAddress" rows="3" placeholder="Provincia, municipio, barrio, calle, número y referencias"></textarea></div><div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div><button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
+ modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Tu teléfono es obligatorio. El correo electrónico es opcional. Las compras reales siguen desactivadas.</p><div class="field"><label>Nombre y al menos un apellido *</label><input id="officialName" autocomplete="name" placeholder="Ej.: John Smith"></div><div class="field"><label>Teléfono / WhatsApp *</label><input id="officialPhone" type="tel" autocomplete="tel"></div><div class="field"><label>Correo electrónico (opcional)</label><input id="officialEmail" type="email" autocomplete="email"></div><div class="field"><label>Dirección en Cuba (opcional)</label><textarea id="officialAddress" rows="3" placeholder="Solo si resides en Cuba"></textarea></div><div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div><button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
 }
 async function submitOfficialCustomerSignup(){
-const name=document.getElementById('officialName').value.trim(),email=document.getElementById('officialEmail').value.trim(),phone=document.getElementById('officialPhone').value.trim(),address=document.getElementById('officialAddress').value.trim(),password=document.getElementById('officialPassword').value,btn=document.getElementById('officialSignupBtn'),status=document.getElementById('officialSignupStatus');
-if(name.length<5||!email.includes('@')||!edNormalizePhone(phone)||password.length<8)return alert('Completa nombre, correo, teléfono válido y una contraseña de al menos 8 caracteres.');
-btn.disabled=true;status.textContent='Registrando…';
-try{const result=await edApi('/auth/v1/signup',{method:'POST',headers:edHeaders(),body:JSON.stringify({email,password,data:{nombre:name,telefono:edNormalizePhone(phone),direccion:address}})});if(!result?.user?.id)throw Error('No se pudo confirmar el registro');status.textContent='Solicitud registrada. Verifica tu correo si recibes un enlace. La activación oficial está pendiente de validación.';btn.textContent='Solicitud enviada';}
-catch(e){status.textContent='No se pudo completar el registro: '+e.message;btn.disabled=false;}
+ const name=document.getElementById('officialName').value.trim(),email=document.getElementById('officialEmail').value.trim(),phone=edNormalizePhone(document.getElementById('officialPhone').value),address=document.getElementById('officialAddress').value.trim(),password=document.getElementById('officialPassword').value,btn=document.getElementById('officialSignupBtn'),status=document.getElementById('officialSignupStatus');
+ if(!edValidCustomerName(name))return alert('Introduce tu nombre y al menos un apellido. El segundo apellido es opcional.');
+ if(!phone)return alert('Introduce un teléfono válido, incluyendo el código del país cuando corresponda.');
+ if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return alert('Corrige el correo electrónico o déjalo vacío.');
+ if(password.length<8)return alert('La contraseña debe tener al menos 8 caracteres.');
+ btn.disabled=true;status.textContent='Registrando…';
+ try{
+  const payload={password,data:{nombre:name,telefono:phone,direccion:address}};
+  if(email)payload.email=email;else payload.phone=phone;
+  const result=await edApi('/auth/v1/signup',{method:'POST',headers:edHeaders(),body:JSON.stringify(payload)});
+  if(!result?.user?.id)throw Error('No se pudo confirmar el registro');
+  status.textContent=email?'Solicitud registrada. Confirma tu correo si recibes un enlace. Las compras reales siguen desactivadas.':'Solicitud registrada. Si recibes un código SMS, verifica tu teléfono para activar el acceso. Las compras reales siguen desactivadas.';
+  btn.textContent='Solicitud enviada';
+ }catch(e){status.textContent='No se pudo completar el registro: '+e.message+(email?'':' Comprueba que la autenticación telefónica esté habilitada.');btn.disabled=false;}
 }
 function loginDemo(){modal(`<h2>Entrar a mi cuenta</h2><p class="note">Cuenta de demostración guardada en este navegador.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="loginUser" autocomplete="username"></div><div class="field"><label>Contraseña</label><input id="loginPass" type="password" autocomplete="current-password"></div><button class="primary" style="width:100%" onclick="doLogin()">Entrar y continuar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="checkout()">← Volver</button>`)}
 function doLogin(){let u=document.getElementById('loginUser').value.trim().toLowerCase(),pw=document.getElementById('loginPass').value,c=clients().find(x=>(edNormalizePhone(x.contact)===edNormalizePhone(u)||String(x.contact||'').trim().toLowerCase()===u)&&x.password===pw);if(!c)return alert('Teléfono o contraseña incorrectos.');localStorage.setItem(SESSION_KEY,c.id);checkout()}
