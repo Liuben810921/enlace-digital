@@ -26,7 +26,8 @@ const ctx={
  edCustomerProfileRestore:null
 };
 vm.createContext(ctx);vm.runInContext(code,ctx);
-(async()=>{\nel('edDeliveryChoice').value='7';
+(async()=>{
+el('edDeliveryChoice').value='7';
 for(const [key,value] of Object.entries({Name:recipient.nombre,Phone:recipient.telefono,Province:recipient.provincia,Municipality:recipient.municipio,Neighborhood:recipient.barrio,Address:recipient.direccion,References:''}))el('edDelivery'+key).value=value;
 await ctx.edOfficialOrderPreview();assert.match(rendered,/Vista previa de pedido oficial/);assert.match(rendered,/200 USD/);assert.match(rendered,/Calle Uno 100/);assert.equal(requests.length,0);
 el('edDeliveryAddress').value='Calle editada 200';await ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/cambios sin guardar/);
