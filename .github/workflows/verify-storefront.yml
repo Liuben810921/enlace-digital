@@ -33,6 +33,9 @@ jobs:
           }
           assert(html.includes('const ED_REAL_CHECKOUT_ENABLED=false;'),'Real checkout must remain disabled');
           assert(html.includes('async function edRestoreCustomerSession()'),'Session restoration must be async');
+          const restore=html.split('async function edRestoreCustomerSession(){')[1].split('async function edCustomerLogout()')[0];
+          assert(restore.includes("edCustomerRequest('profile',{token:saved.token})"),'Restored session must load profile and recipients');
+          assert(restore.includes('edCustomerRecipients=r.destinatarios||[]'),'Restored recipients missing');
           assert(!html.includes('async async function'),'Invalid duplicate async');
           assert(html.includes("edCustomerRequest('register'"),'Missing registration');
           assert(html.includes("edCustomerRequest('login'"),'Missing login');
