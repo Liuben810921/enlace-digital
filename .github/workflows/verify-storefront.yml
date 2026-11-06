@@ -49,6 +49,9 @@ jobs:
           const preview=html.split('function edOfficialOrderPreview(){')[1].split('function edOfficialRecipientSelect(){')[0];
           assert(preview.includes('SOLO VISTA PREVIA'),'Official order preview must clearly prohibit submission');
           assert(preview.includes('edCustomerProfile.nombre')&&preview.includes('recipient.direccion')&&preview.includes('x.product.price'),'Order preview must include buyer, address, and priced items');
+          assert(preview.includes('validateCart()')&&preview.includes('availability.removed||availability.adjusted'),'Preview must reject stale stock');
+          assert(preview.includes('lines.length!==cart.length')&&preview.includes('Number.isFinite(Number(x.product.price))'),'Preview must reject invalid line items and prices');
+          assert(preview.includes('!edCustomerSession||!edCustomerProfile'),'Preview must require customer session');
           assert(!/edCustomerRequest\\(|fetch\\(|\\.insert\\(|\.update\\(/.test(preview),'Order preview must not write to a backend');
           assert(html.includes('Ver pedido preparado (sin enviar)'),'Order preview button missing');
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
