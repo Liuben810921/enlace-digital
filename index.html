@@ -1089,8 +1089,14 @@ function edRenderCustomerRecipients(){
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No hay destinatarios asociados a esta cuenta. Para nuevas cuentas se exige un destinatario inicial; los adicionales se registrarán durante futuras compras oficiales.</p>')+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Seleccionar o corregir destinatario para próxima compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
 }
-function edOfficialRecipientCheckout(selectedId=null){
+async function edOfficialRecipientCheckout(selectedId=null){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
+ if(!edCustomerRecipients.length){
+  try{
+   const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
+   edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];
+  }catch(e){if(/sesi[oó]n|caducad/i.test(e.message))return edOfficialCustomerLogin();alert('No se pudieron cargar los destinatarios: '+e.message);return}
+ }
  const options=edCustomerRecipients.map(r=>'<option value="'+r.id+'">'+esc(r.nombre+' · '+r.municipio+' · '+r.direccion)+'</option>').join('');
  modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="new">Enviar a otro destinatario</option></select></div>'+
  ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
