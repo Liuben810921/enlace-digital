@@ -47,12 +47,12 @@ jobs:
           assert(html.includes('async function edOfficialRecipientCheckout(selectedId=null)'),'Missing async recipient selection');
           assert(html.includes("edCustomerRequest('profile',{token:await edCustomerToken()})"),'Recipient profile refresh missing');
           assert(html.includes('SIMULACIÓN LOCAL: no se realizan cobros'),'Demo checkout isolation lost');
-          const preview=html.split('function edOfficialOrderPreview(){')[1].split('function edOfficialRecipientSelect(){')[0];
+          const preview=html.split('async function edOfficialOrderPreview(){')[1].split('function edOfficialRecipientSelect(){')[0];
           assert(preview.includes('SOLO VISTA PREVIA'),'Official order preview must clearly prohibit submission');
           assert(preview.includes('edCustomerProfile.nombre')&&preview.includes('recipient.direccion')&&preview.includes('x.product.price'),'Order preview must include buyer, address, and priced items');
           assert(preview.includes('validateCart()')&&preview.includes('availability.removed||availability.adjusted'),'Preview must reject stale stock');
           assert(preview.includes('lines.length!==cart.length')&&preview.includes('Number.isFinite(Number(x.product.price))'),'Preview must reject invalid line items and prices');
-          assert(preview.includes('!edCustomerSession||!edCustomerProfile'),'Preview must require customer session');
+          assert(preview.includes('await edCustomerToken()')&&preview.includes('!edCustomerProfile'),'Preview must require a non-expired customer session');
           assert(preview.includes('Tienes cambios sin guardar en el destinatario'),'Preview must reject unsaved recipient changes');
           assert(preview.includes("Object.entries(pending).some"),'Preview must compare recipient form with saved record');
           assert(!/edCustomerRequest\\(|fetch\\(|\\.insert\\(|\.update\\(/.test(preview),'Order preview must not write to a backend');
