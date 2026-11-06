@@ -4,7 +4,7 @@ const html=fs.readFileSync('index.html','utf8');
 const source=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
 function extract(start,end){const a=source.indexOf(start);assert(a>=0,start);const b=source.indexOf(end,a+start.length);assert(b>a,end);return source.slice(a,b);}
 const code=[
- extract('function edOfficialOrderPreview(){','function edOfficialRecipientSelect(){'),
+ extract('async function edOfficialOrderPreview(){','function edOfficialRecipientSelect(){'),
  extract('async function edOfficialRecipientSave(){','function edValidCustomerName('),
  extract('async function edRestoreCustomerSession(){','async function edCustomerLogout(){')
 ].join('\n');
@@ -26,13 +26,13 @@ const ctx={
  edCustomerProfileRestore:null
 };
 vm.createContext(ctx);vm.runInContext(code,ctx);
-el('edDeliveryChoice').value='7';
+(async()=>{\nel('edDeliveryChoice').value='7';
 for(const [key,value] of Object.entries({Name:recipient.nombre,Phone:recipient.telefono,Province:recipient.provincia,Municipality:recipient.municipio,Neighborhood:recipient.barrio,Address:recipient.direccion,References:''}))el('edDelivery'+key).value=value;
-ctx.edOfficialOrderPreview();assert.match(rendered,/Vista previa de pedido oficial/);assert.match(rendered,/200 USD/);assert.match(rendered,/Calle Uno 100/);assert.equal(requests.length,0);
+await await ctx.edOfficialOrderPreview();assert.match(rendered,/Vista previa de pedido oficial/);assert.match(rendered,/200 USD/);assert.match(rendered,/Calle Uno 100/);assert.equal(requests.length,0);
 el('edDeliveryAddress').value='Calle editada 200';ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/cambios sin guardar/);
 el('edDeliveryAddress').value=recipient.direccion;stock={removed:0,adjusted:1};ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/carrito cambió/);stock={removed:0,adjusted:0};
 ctx.state.products[0].price=NaN;ctx.edOfficialOrderPreview();assert.match(el('edDeliveryStatus').textContent,/precios no válidos/);ctx.state.products[0].price=100;
-ctx.edCustomerSession=null;ctx.edOfficialOrderPreview();assert.equal(rendered,'LOGIN');ctx.edCustomerSession={token:'x'};
+ctx.edCustomerSession=null;await ctx.edOfficialOrderPreview();assert.equal(rendered,'LOGIN');ctx.edCustomerSession={token:'x'};
 (async()=>{
  el('edDeliveryAddress').value='Calle Dos 200';
  await ctx.edOfficialRecipientSave();
