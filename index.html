@@ -1107,11 +1107,23 @@ async function edOfficialRecipientCheckout(selectedId=null){
  edOfficialRecipientSelect();
 }
 function edOfficialOrderPreview(){
+ const availability=validateCart();
+ if(availability.removed||availability.adjusted){
+  const status=document.getElementById('edDeliveryStatus');
+  if(status)status.textContent='El carrito cambió por disponibilidad. Revísalo antes de preparar el pedido.';
+  renderFloatingCart();return;
+ }
+ if(!edCustomerSession||!edCustomerProfile)return edOfficialCustomerLogin();
  const choice=document.getElementById('edDeliveryChoice')?.value;
  const recipient=edCustomerRecipients.find(r=>String(r.id)===choice);
  if(!recipient)return document.getElementById('edDeliveryStatus').textContent='Selecciona un destinatario guardado antes de revisar el pedido.';
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)})).filter(x=>x.product&&Number.isInteger(x.line.qty)&&x.line.qty>0);
  if(!lines.length)return document.getElementById('edDeliveryStatus').textContent='Añade productos al carrito para preparar el pedido.';
+ if(lines.length!==cart.length||lines.some(x=>!Number.isFinite(Number(x.product.price))||Number(x.product.price)<0)){
+  const status=document.getElementById('edDeliveryStatus');
+  if(status)status.textContent='Hay productos o precios no válidos. Revisa el carrito.';
+  return;
+ }
  const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
  modal('<h2>Vista previa de pedido oficial</h2><p class="alert">SOLO VISTA PREVIA. No se registra ni envía ningún pedido, no se cobra y no se descuenta inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
