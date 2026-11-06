@@ -1085,7 +1085,7 @@ async function edCustomerSaveRecipient(id){
 }
 function edValidCustomerName(raw){
  const parts=String(raw||'').trim().split(/\s+/).filter(Boolean);
- return parts.length>=2&&parts.every(p=>/^[\\p{L}][\\p{L}\\p{M}'’.-]*$/u.test(p));
+ return parts.length>=2&&parts.every(p=>/^[\p{L}][\p{L}\p{M}'’.-]*$/u.test(p));
 }
 function officialCustomerSignup(){
  modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Tu teléfono es obligatorio. El correo electrónico es opcional. Las compras reales siguen desactivadas.</p><div class="field"><label>Nombre y al menos un apellido *</label><input id="officialName" autocomplete="name" placeholder="Ej.: John Smith"></div><div class="field"><label>Teléfono / WhatsApp *</label><input id="officialPhone" type="tel" autocomplete="tel"></div><div class="field"><label>Correo electrónico (opcional)</label><input id="officialEmail" type="email" autocomplete="email"></div><div class="field"><label>Dirección en Cuba (opcional)</label><textarea id="officialAddress" rows="3" placeholder="Solo si resides en Cuba"></textarea></div><div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div><button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
