@@ -1024,40 +1024,70 @@ function currentClient(){let id=localStorage.getItem(SESSION_KEY);return clients
 
 
 /* Portal independiente de clientes oficiales: nunca escribe pedidos de demostración en Supabase. */
+document.addEventListener('DOMContentLoaded',()=>{edRestoreCustomerSession().catch(()=>{});});
+const ED_CUSTOMER_AUTH_URL='https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-cliente-auth';
+const ED_CUSTOMER_SESSION_KEY='ed_customer_secure_session_v1';
 let edCustomerSession=null,edCustomerProfile=null,edCustomerRecipients=[];
+async function edCustomerRequest(action,data={}){
+ const res=await fetch(ED_CUSTOMER_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data}),cache:'no-store'});
+ let json={};try{json=await res.json()}catch{}
+ if(!res.ok)throw Error(json.error||'No se pudo completar la operación.');
+ return json;
+}
+function edStoreCustomerSession(token,expiresIn){
+ edCustomerSession={token,expires_at:Date.now()+expiresIn*1000};
+ localStorage.setItem(ED_CUSTOMER_SESSION_KEY,JSON.stringify(edCustomerSession));
+}
+function edClearCustomerSession(){
+ edCustomerSession=null;edCustomerProfile=null;edCustomerRecipients=[];
+ localStorage.removeItem(ED_CUSTOMER_SESSION_KEY);
+}
 async function edCustomerToken(){
- if(!edCustomerSession?.access_token)throw Error('Inicia sesión en tu cuenta oficial.');
- if(Date.now()/1000>(edCustomerSession.expires_at||0)-60){
-  const next=await edApi('/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:edHeaders(),body:JSON.stringify({refresh_token:edCustomerSession.refresh_token})});
-  next.expires_at=Math.floor(Date.now()/1000)+next.expires_in;edCustomerSession=next;
- }
- return edCustomerSession.access_token;
+ if(!edCustomerSession?.token)throw Error('Inicia sesión en tu cuenta oficial.');
+ if(Date.now()>=edCustomerSession.expires_at){edClearCustomerSession();throw Error('Tu sesión ha caducado. Inicia sesión de nuevo.')}
+ return edCustomerSession.token;
+}
+async function edRestoreCustomerSession(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(ED_CUSTOMER_SESSION_KEY)||'null');
+  if(!saved?.token||!saved?.expires_at||Date.now()>=saved.expires_at){edClearCustomerSession();return}
+  edCustomerSession=saved;
+  const r=await edCustomerRequest('session',{token:saved.token});
+  edCustomerProfile=r.cliente;
+ }catch(e){edClearCustomerSession()}
+}
+async function edCustomerLogout(){
+ const token=edCustomerSession?.token;
+ edClearCustomerSession();
+ if(token)try{await edCustomerRequest('logout',{token})}catch(e){}
+ closeModal();
 }
 function edOfficialCustomerLogin(){
- modal('<h2>Mi cuenta oficial</h2><p class="note">Consulta tus destinatarios en Cuba. Este acceso es independiente de las compras de prueba.</p><div class="field"><label>Correo electrónico</label><input id="edCustomerEmail" type="email" autocomplete="email"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><p class="note" id="edCustomerLoginStatus"></p>');
+ modal('<h2>Mi cuenta oficial</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
 }
 async function edCustomerSignIn(){
- const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');btn.disabled=true;status.textContent='Verificando cuenta…';
+ const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');
+ const phone=edNormalizePhone(document.getElementById('edCustomerPhone').value),password=document.getElementById('edCustomerPassword').value;
+ if(!phone||!password){status.textContent='Introduce un teléfono válido y tu contraseña.';return}
+ btn.disabled=true;status.textContent='Verificando cuenta…';
  try{
-  const email=document.getElementById('edCustomerEmail').value.trim(),password=document.getElementById('edCustomerPassword').value;
-  const session=await edApi('/auth/v1/token?grant_type=password',{method:'POST',headers:edHeaders(),body:JSON.stringify({email,password})});
-  session.expires_at=Math.floor(Date.now()/1000)+session.expires_in;edCustomerSession=session;
+  const result=await edCustomerRequest('login',{phone,password});
+  edStoreCustomerSession(result.token,result.expires_in);
   await edLoadCustomerRecipients();
- }catch(e){edCustomerSession=null;status.textContent='No se pudo iniciar sesión: '+e.message;btn.disabled=false}
+ }catch(e){edClearCustomerSession();status.textContent=e.message;btn.disabled=false}
 }
 async function edLoadCustomerRecipients(){
- const headers=edHeaders(await edCustomerToken());
- const profile=await edApi('/rest/v1/clientes_oficiales?select=numero,nombre,codigo,telefono&limit=1',{headers});
- if(!profile.length)throw Error('Tu ficha oficial aún no está disponible. Contacta con administración.');
- edCustomerProfile=profile[0];
- edCustomerRecipients=await edApi('/rest/v1/clientes_destinatarios?select=*&cliente_numero=eq.'+edCustomerProfile.numero+'&order=creado_en.desc',{headers});
+ const token=await edCustomerToken();
+ const result=await edCustomerRequest('profile',{token});
+ edCustomerProfile=result.cliente;
+ edCustomerRecipients=result.destinatarios||[];
  edRenderCustomerRecipients();
 }
 function edRenderCustomerRecipients(){
- const c=edCustomerProfile;
+ const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
- (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono)+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion)+'</p><button class="secondary" onclick="edCustomerRecipientForm('+x.id+')">Editar</button></div>').join(''):'<p class="note">Todavía no tienes destinatarios registrados.</p>')+
- '<button class="primary" style="width:100%" onclick="edCustomerRecipientForm()">+ Añadir destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerSession=null;edCustomerProfile=null;edCustomerRecipients=[];closeModal()">Cerrar sesión oficial</button>');
+ (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">Todavía no tienes destinatarios registrados. Se incorporarán al completar compras oficiales, cuando sean habilitadas.</p>')+
+ '<button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
 }
 function edCustomerRecipientForm(id){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
@@ -1088,9 +1118,23 @@ function edValidCustomerName(raw){
  return parts.length>=2&&parts.every(p=>/^[\p{L}][\p{L}\p{M}'’.-]*$/u.test(p));
 }
 function officialCustomerSignup(){
- modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Tu teléfono es obligatorio. El correo electrónico es opcional. Estamos preparando el acceso seguro por teléfono sin SMS; el registro oficial permanecerá temporalmente cerrado para evitar cuentas incompletas.</p><div class="field"><label>Nombre y al menos un apellido *</label><input id="officialName" autocomplete="name" placeholder="Ej.: John Smith"></div><div class="field"><label>Teléfono / WhatsApp *</label><input id="officialPhone" type="tel" autocomplete="tel"></div><div class="field"><label>Correo electrónico (opcional, para recuperar tu contraseña)</label><input id="officialEmail" type="email" autocomplete="email"></div><div class="field"><label>Dirección en Cuba (opcional)</label><textarea id="officialAddress" rows="3" placeholder="Solo si resides en Cuba"></textarea></div><div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div><button id="officialSignupBtn" class="primary" style="width:100%" disabled>Registro oficial en preparación</button><p class="note" id="officialSignupStatus" role="status"></p>');
+ modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Sin SMS ni correo obligatorio. Las compras reales continúan desactivadas.</p><div class="field"><label>Nombre y al menos un apellido *</label><input id="officialName" autocomplete="name" placeholder="Ej.: Juan Pérez"></div><div class="field"><label>Teléfono / WhatsApp *</label><input id="officialPhone" type="tel" autocomplete="tel"></div><div class="field"><label>Correo electrónico (opcional, para futura recuperación)</label><input id="officialEmail" type="email" autocomplete="email"></div><p class="note">La recuperación por correo estará disponible después de verificar esa dirección. No se enviará ningún SMS.</p><div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div><div class="field"><label>Repetir contraseña *</label><input id="officialPasswordConfirm" type="password" autocomplete="new-password"></div><button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
 }
-async function submitOfficialCustomerSignup(){alert('El registro oficial por teléfono sin SMS está en preparación. No se crearán cuentas incompletas ni se enviarán códigos.');}
+async function submitOfficialCustomerSignup(){
+ const name=document.getElementById('officialName').value.trim(),phone=edNormalizePhone(document.getElementById('officialPhone').value),email=document.getElementById('officialEmail').value.trim(),password=document.getElementById('officialPassword').value,confirm=document.getElementById('officialPasswordConfirm').value;
+ const btn=document.getElementById('officialSignupBtn'),status=document.getElementById('officialSignupStatus');
+ if(!edValidCustomerName(name))return status.textContent='Introduce tu nombre y al menos un apellido.';
+ if(!phone)return status.textContent='Introduce un teléfono válido con código de país.';
+ if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return status.textContent='Corrige el correo o déjalo vacío.';
+ if(password.length<8||password.length>128)return status.textContent='La contraseña debe tener entre 8 y 128 caracteres.';
+ if(password!==confirm)return status.textContent='Las contraseñas no coinciden.';
+ btn.disabled=true;status.textContent='Creando tu cuenta…';
+ try{
+  const r=await edCustomerRequest('register',{name,phone,email,password});
+  status.textContent='Cuenta '+r.cliente.codigo+' creada correctamente. Ya puedes entrar con tu teléfono y contraseña.';
+  btn.textContent='Entrar a mi cuenta';btn.onclick=edOfficialCustomerLogin;btn.disabled=false;
+ }catch(e){status.textContent=e.message;btn.disabled=false}
+}
 function loginDemo(){modal(`<h2>Entrar a mi cuenta</h2><p class="note">Cuenta de demostración guardada en este navegador.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="loginUser" autocomplete="username"></div><div class="field"><label>Contraseña</label><input id="loginPass" type="password" autocomplete="current-password"></div><button class="primary" style="width:100%" onclick="doLogin()">Entrar y continuar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="checkout()">← Volver</button>`)}
 function doLogin(){let u=document.getElementById('loginUser').value.trim().toLowerCase(),pw=document.getElementById('loginPass').value,c=clients().find(x=>(edNormalizePhone(x.contact)===edNormalizePhone(u)||String(x.contact||'').trim().toLowerCase()===u)&&x.password===pw);if(!c)return alert('Teléfono o contraseña incorrectos.');localStorage.setItem(SESSION_KEY,c.id);checkout()}
 function logoutDemo(){localStorage.removeItem(SESSION_KEY);checkout()}
