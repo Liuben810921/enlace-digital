@@ -1047,7 +1047,7 @@ async function edCustomerToken(){
  if(Date.now()>=edCustomerSession.expires_at){edClearCustomerSession();throw Error('Tu sesión ha caducado. Inicia sesión de nuevo.')}
  return edCustomerSession.token;
 }
-async function edRestoreCustomerSession(){
+async async function edRestoreCustomerSession(){
  try{
   const saved=JSON.parse(localStorage.getItem(ED_CUSTOMER_SESSION_KEY)||'null');
   if(!saved?.token||!saved?.expires_at||Date.now()>=saved.expires_at){edClearCustomerSession();return}
@@ -1088,30 +1088,6 @@ function edRenderCustomerRecipients(){
  modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">Todavía no tienes destinatarios registrados. Se incorporarán al completar compras oficiales, cuando sean habilitadas.</p>')+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
-}
-function edCustomerRecipientForm(id){
- if(!edCustomerProfile)return edOfficialCustomerLogin();
- const r=edCustomerRecipients.find(x=>x.id===id)||{};
- const field=(label,key,value)=>'<div class="field"><label>'+label+'</label><input id="'+key+'" value="'+esc(value||'')+'"></div>';
- modal('<h2>'+(id?'Editar':'Nuevo')+' destinatario</h2>'+
- field('Nombre completo *','edCRecName',r.nombre)+field('Teléfono cubano *','edCRecPhone',r.telefono)+
- field('Provincia *','edCRecProvince',r.provincia||'La Habana')+field('Municipio *','edCRecMunicipality',r.municipio)+
- field('Barrio / reparto','edCRecNeighborhood',r.barrio)+
- '<div class="field"><label>Dirección completa *</label><textarea id="edCRecAddress" rows="3">'+esc(r.direccion||'')+'</textarea></div>'+
- field('Referencias','edCRecReferences',r.referencias)+
- '<button class="primary" id="edCRecSave" style="width:100%" onclick="edCustomerSaveRecipient('+(id||'null')+')">Guardar destinatario</button>');
-}
-async function edCustomerSaveRecipient(id){
- const val=k=>document.getElementById(k).value.trim();
- const row={cliente_numero:edCustomerProfile.numero,nombre:val('edCRecName'),telefono:val('edCRecPhone'),provincia:val('edCRecProvince'),municipio:val('edCRecMunicipality'),barrio:val('edCRecNeighborhood'),direccion:val('edCRecAddress'),referencias:val('edCRecReferences')};
- if(row.nombre.length<2||!edCubanPhone(row.telefono)||!row.provincia||!row.municipio||row.direccion.length<8)return alert('Revisa los datos y el teléfono cubano del destinatario.');
- row.telefono=edCubanPhone(row.telefono);
- const btn=document.getElementById('edCRecSave');btn.disabled=true;btn.textContent='Guardando…';
- try{
-  const body=id?Object.fromEntries(Object.entries(row).filter(([k])=>k!=='cliente_numero')):row;
-  await edApi('/rest/v1/clientes_destinatarios'+(id?'?id=eq.'+id+'&cliente_numero=eq.'+edCustomerProfile.numero:''),{method:id?'PATCH':'POST',headers:{...edHeaders(await edCustomerToken()),Prefer:'return=representation'},body:JSON.stringify(body)});
-  await edLoadCustomerRecipients();
- }catch(e){alert('No se pudo guardar: '+e.message);btn.disabled=false;btn.textContent='Guardar destinatario'}
 }
 function edValidCustomerName(raw){
  const parts=String(raw||'').trim().split(/\s+/).filter(Boolean);
