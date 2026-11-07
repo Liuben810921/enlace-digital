@@ -18,7 +18,7 @@ const ctx={
  edCustomerRecipients:[recipient],validateCart:()=>stock,renderFloatingCart:()=>{},
  edOfficialCustomerLogin:()=>{rendered='LOGIN';},
  modal:x=>{rendered=x;},esc:x=>String(x),money:x=>String(x),
- edCubanPhone:x=>x,edCustomerToken:async()=> ctx.edCustomerSession?.token||null,
+ edCubanPhone:x=>x,edCustomerToken:async()=> {if(!ctx.edCustomerSession?.token)throw Error('Sesión no disponible');return ctx.edCustomerSession.token;},
  edCustomerRequest:async(action,payload)=>{requests.push({action,payload});if(action==='recipient-save')return {id:7};if(action==='profile')return {cliente:{nombre:'Comprador Uno'},destinatarios:[recipient]};throw Error(action);},
  edOfficialRecipientCheckout:id=>{ctx.selected=id;el('edDeliveryStatus').textContent='';},
  localStorage:{getItem:()=>JSON.stringify({token:'x',expires_at:Date.now()+100000}),setItem:()=>{}},
