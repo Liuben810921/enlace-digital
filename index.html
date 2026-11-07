@@ -1116,9 +1116,27 @@ function edRenderCustomerRecipients(){
  '<div class="panel" style="margin:12px 0 18px;padding:14px 16px"><strong style="display:block;font-size:1.1rem;line-height:1.4;color:#102d49">'+esc(c.nombre)+'</strong><p class="note" style="margin:7px 0 0">Cliente '+esc(c.codigo||String(c.numero))+'</p><p class="note" style="margin:3px 0 0">Teléfono: '+esc(c.telefono||'')+'</p></div>'+
  '<h3 style="margin:14px 0 10px">Mi dirección habitual</h3>'+
  (c.residencia==='cuba'?'<p class="note">'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(', '))+'</p>':'<p class="note">Sin dirección habitual en Cuba.</p>')+
+ '<button class="secondary" style="width:100%;margin:8px 0 14px" onclick="edEditHabitualAddress()">'+(c.residencia==='cuba'?'Actualizar mi dirección':'Añadir mi dirección en Cuba')+'</button>'+ 
  '<h3 style="margin:18px 0 10px">Mis destinatarios</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0;padding:12px 14px"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note" style="margin:8px 0 18px">Todavía no tienes destinatarios guardados. Podrás añadirlos durante una compra.</p>')+
  '<button class="secondary" style="width:100%;margin-top:12px" onclick="edCustomerLogout()">Cerrar sesión</button>');
+}
+function edEditHabitualAddress(){
+ const c=edCustomerProfile||{};
+ modal('<h2>Mi dirección habitual</h2><p class="note">Guarda aquí tu dirección personal en Cuba. No es un destinatario adicional.</p>'+
+ [['Provincia','Province',c.provincia],['Municipio','Municipality',c.municipio],['Barrio / reparto (opcional)','Neighborhood',c.barrio],['Dirección completa','Street',c.direccion_habitual]].map(([label,key,value])=>'<div class="field"><label>'+label+'</label><input id="edHome'+key+'" value="'+esc(value||'')+'"></div>').join('')+
+ '<button class="primary" style="width:100%" id="edHomeSave" onclick="edSaveHabitualAddress()">Guardar dirección</button><p class="note" id="edHomeStatus" role="status"></p>');
+}
+async function edSaveHabitualAddress(){
+ const v=k=>document.getElementById('edHome'+k).value.trim();
+ const address={province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),street:v('Street')};
+ const status=document.getElementById('edHomeStatus'),btn=document.getElementById('edHomeSave');
+ if(address.province.length<2||address.municipality.length<2||address.street.length<8){status.textContent='Completa provincia, municipio y dirección.';return}
+ btn.disabled=true;status.textContent='Guardando…';
+ try{
+  await edCustomerRequest('address-save',{token:await edCustomerToken(),address});
+  await edLoadCustomerRecipients();
+ }catch(e){status.textContent=e.message;btn.disabled=false}
 }
 async function edOfficialRecipientCheckout(selectedId=null){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
