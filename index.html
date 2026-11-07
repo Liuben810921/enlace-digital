@@ -1180,12 +1180,15 @@ async function edOfficialOrderPreview(selectedId=null){
   return;
  }
  const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
- modal('<h2>Vista previa de pedido oficial</h2><p class="alert">SOLO VISTA PREVIA. No se registra ni envía ningún pedido, no se cobra y no se descuenta inventario.</p>'+
+ modal('<h2>Finalizar compra</h2><p class="alert">MODO PRUEBA: no se registran ni envían pedidos reales, no se cobra y no se descuenta inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
  '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
  lines.map(x=>'<div class="row"><span>'+esc(x.product.name)+(x.line.color?' · '+esc(x.line.color):'')+' × '+x.line.qty+'</span><strong>'+money(Number(x.product.price)*x.line.qty)+' USD</strong></div>').join('')+
- '<p><strong>Total de productos: '+money(total)+' USD</strong></p><p class="note">La mensajería y las condiciones de pago se definirán en la compra oficial. Esta pantalla no confirma pedidos.</p>'+
- '<button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar destinatario</button>');
+ '<p><strong>Total de productos: '+money(total)+' USD</strong></p><p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
+ '<button class="primary" style="width:100%;margin:10px 0" onclick="edConfirmSimulatedCheckout()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar destinatario</button>');
+}
+function edConfirmSimulatedCheckout(){
+ modal('<h2>Prueba completada</h2><p class="alert">La confirmación de prueba se realizó correctamente. No se ha creado ni enviado ningún pedido, no se ha cobrado y no se ha descontado inventario.</p><button class="secondary" style="width:100%" onclick="closeModal()">Cerrar</button>');
 }
 function edOfficialRecipientSelect(){
  const choice=document.getElementById('edDeliveryChoice').value;
