@@ -1087,7 +1087,7 @@ async function edLoadCustomerRecipients(){
 function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
- (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No hay destinatarios asociados a esta cuenta. Para nuevas cuentas se exige un destinatario inicial; los adicionales se registrarán durante futuras compras oficiales.</p>')+
+ (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No tienes destinatarios guardados. Al preparar una compra podrás elegir entrega propia o a otra persona.</p>')+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Seleccionar o corregir destinatario para próxima compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
 }
 async function edOfficialRecipientCheckout(selectedId=null){
@@ -1099,10 +1099,10 @@ async function edOfficialRecipientCheckout(selectedId=null){
   }catch(e){if(/sesi[oó]n|caducad/i.test(e.message))return edOfficialCustomerLogin();alert('No se pudieron cargar los destinatarios: '+e.message);return}
  }
  const options=edCustomerRecipients.map(r=>'<option value="'+r.id+'">'+esc(r.nombre+' · '+r.municipio+' · '+r.direccion)+'</option>').join('');
- modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="new">Enviar a otro destinatario</option></select></div>'+
+ modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="self">Yo recibiré la compra</option><option value="new">Otra persona recibirá la compra</option></select></div>'+
  ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  '<button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOrderPreview()">Ver pedido preparado (sin enviar)</button><p id="edDeliveryStatus" class="note" role="status"></p>');
- const selected=selectedId!==null&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))?String(selectedId):(!edCustomerRecipients.length?'new':null);
+ const selected=selectedId!==null&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))?String(selectedId):(!edCustomerRecipients.length?'self':null);
  if(selected!==null)document.getElementById('edDeliveryChoice').value=selected;
  edOfficialRecipientSelect();
 }
@@ -1139,10 +1139,10 @@ async function edOfficialOrderPreview(){
 }
 function edOfficialRecipientSelect(){
  const choice=document.getElementById('edDeliveryChoice').value;
- const r=edCustomerRecipients.find(x=>String(x.id)===choice)||{};
+ const r=choice==='self'?{nombre:edCustomerProfile?.nombre||'',telefono:edCubanPhone(edCustomerProfile?.telefono||''),provincia:'La Habana'}:(edCustomerRecipients.find(x=>String(x.id)===choice)||{});
  const keys={Name:r.nombre,Phone:r.telefono,Province:r.provincia||'La Habana',Municipality:r.municipio,Neighborhood:r.barrio,Address:r.direccion,References:r.referencias};
  Object.entries(keys).forEach(([k,v])=>document.getElementById('edDelivery'+k).value=v||'');
- document.getElementById('edDeliverySave').textContent=choice==='new'?'Guardar nuevo destinatario':'Guardar cambios del destinatario';
+ document.getElementById('edDeliverySave').textContent=choice==='self'?'Guardar mis datos de entrega':choice==='new'?'Guardar nuevo destinatario':'Guardar cambios del destinatario';
 }
 async function edOfficialRecipientSave(){
  const v=k=>document.getElementById('edDelivery'+k).value.trim();
@@ -1152,7 +1152,7 @@ async function edOfficialRecipientSave(){
  if(recipient.name.length<2||!recipient.phone||recipient.province.length<2||recipient.municipality.length<2||recipient.address.length<8){status.textContent='Completa nombre, teléfono cubano, provincia, municipio y dirección.';return}
  btn.disabled=true;status.textContent='Guardando…';
  try{
-  const saved=await edCustomerRequest('recipient-save',{token:await edCustomerToken(),id:choice==='new'?null:Number(choice),recipient});
+  const saved=await edCustomerRequest('recipient-save',{token:await edCustomerToken(),id:choice==='new'||choice==='self'?null:Number(choice),recipient});
   const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
   edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];
   edOfficialRecipientCheckout(saved.id);document.getElementById('edDeliveryStatus').textContent='Destinatario guardado correctamente.';
@@ -1163,37 +1163,27 @@ function edValidCustomerName(raw){
  return parts.length>=2&&parts.every(p=>/^[\p{L}][\p{L}\p{M}'’.-]*$/u.test(p));
 }
 function officialCustomerSignup(){
- modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Para crear una cuenta es obligatorio registrar al menos un destinatario con dirección de entrega en Cuba. El comprador puede vivir en el extranjero.</p>'+
+ modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Crea tu cuenta con tus datos personales. El destinatario y la dirección se registran al preparar una compra.</p>'+
  '<div class="field"><label>Nombre y apellido del comprador *</label><input id="officialName" autocomplete="name"></div>'+
  '<div class="field"><label>Teléfono / WhatsApp del comprador *</label><input id="officialPhone" type="tel" autocomplete="tel"></div>'+
  '<div class="field"><label>Correo electrónico (opcional)</label><input id="officialEmail" type="email"></div>'+
  '<div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label>Repetir contraseña *</label><input id="officialPasswordConfirm" type="password" autocomplete="new-password"></div>'+
- '<h3>Destinatario y dirección en Cuba (obligatorios)</h3>'+
- '<div class="field"><label>Nombre completo del destinatario *</label><input id="officialRecipientName" autocomplete="off"></div>'+
- '<div class="field"><label>Teléfono del destinatario en Cuba *</label><input id="officialRecipientPhone" type="tel" placeholder="+53 5XXXXXXX"></div>'+
- '<div class="field"><label>Provincia *</label><input id="officialRecipientProvince" value="La Habana"></div>'+
- '<div class="field"><label>Municipio *</label><input id="officialRecipientMunicipality"></div>'+
- '<div class="field"><label>Barrio o reparto</label><input id="officialRecipientNeighborhood"></div>'+
- '<div class="field"><label>Dirección completa *</label><textarea id="officialRecipientAddress" rows="3" placeholder="Calle, número, entrecalles, apartamento..."></textarea></div>'+
- '<div class="field"><label>Referencias para la entrega</label><textarea id="officialRecipientReferences" rows="2"></textarea></div>'+
  '<button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
 }
 async function submitOfficialCustomerSignup(){
  const val=id=>document.getElementById(id).value.trim();
  const name=val('officialName'),phone=edNormalizePhone(val('officialPhone')),email=val('officialEmail'),password=document.getElementById('officialPassword').value,confirm=document.getElementById('officialPasswordConfirm').value;
- const recipient={name:val('officialRecipientName'),phone:edCubanPhone(val('officialRecipientPhone')),province:val('officialRecipientProvince'),municipality:val('officialRecipientMunicipality'),neighborhood:val('officialRecipientNeighborhood'),address:val('officialRecipientAddress'),references:val('officialRecipientReferences')};
  const btn=document.getElementById('officialSignupBtn'),status=document.getElementById('officialSignupStatus');
  if(!edValidCustomerName(name))return status.textContent='Introduce tu nombre y al menos un apellido.';
  if(!phone)return status.textContent='Introduce un teléfono válido con código de país.';
  if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return status.textContent='Corrige el correo o déjalo vacío.';
  if(password.length<8||password.length>128)return status.textContent='La contraseña debe tener entre 8 y 128 caracteres.';
  if(password!==confirm)return status.textContent='Las contraseñas no coinciden.';
- if(recipient.name.length<2||!recipient.phone||recipient.province.length<2||recipient.municipality.length<2||recipient.address.length<8)return status.textContent='Completa el destinatario, teléfono cubano, provincia, municipio y dirección de entrega.';
- btn.disabled=true;status.textContent='Creando cuenta y guardando dirección…';
+ btn.disabled=true;status.textContent='Creando cuenta…';
  try{
-  const r=await edCustomerRequest('register',{name,phone,email,password,recipient});
-  status.textContent='Cuenta '+r.cliente.codigo+' y destinatario registrados. Ya puedes entrar con tu teléfono y contraseña.';
+  const r=await edCustomerRequest('register',{name,phone,email,password});
+  status.textContent='Cuenta '+r.cliente.codigo+' registrada. Ya puedes entrar con tu teléfono y contraseña.';
   btn.textContent='Entrar a mi cuenta';btn.onclick=edOfficialCustomerLogin;btn.disabled=false;
  }catch(e){status.textContent=e.message;btn.disabled=false}
 }
