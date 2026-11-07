@@ -1106,7 +1106,7 @@ async function edOfficialRecipientCheckout(selectedId=null){
  if(selected!==null)document.getElementById('edDeliveryChoice').value=selected;
  edOfficialRecipientSelect();
 }
-async async function edOfficialOrderPreview(){
+async function edOfficialOrderPreview(){
  const availability=validateCart();
  if(availability.removed||availability.adjusted){
   const status=document.getElementById('edDeliveryStatus');
