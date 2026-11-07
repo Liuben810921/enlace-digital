@@ -1114,7 +1114,7 @@ function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta</h2>'+
  '<div class="panel" style="margin:12px 0 18px;padding:14px 16px"><strong style="display:block;font-size:1.1rem;line-height:1.4;color:#102d49">'+esc(c.nombre)+'</strong><p class="note" style="margin:7px 0 0">Cliente '+esc(c.codigo||String(c.numero))+'</p><p class="note" style="margin:3px 0 0">Teléfono: '+esc(c.telefono||'')+'</p></div>'+
- '<h3 style="margin:14px 0 10px">Mis destinatarios</h3>'+
+ '<h3 style="margin:14px 0 10px">Mi dirección habitual</h3>'+\n (c.residencia===\'cuba\'?\'<p class="note">\'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(\', \'))+\'</p>\':\'<p class="note">Sin dirección habitual en Cuba.</p>\')+\n '<h3 style="margin:18px 0 10px">Mis destinatarios</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0;padding:12px 14px"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note" style="margin:8px 0 18px">Todavía no tienes destinatarios guardados. Podrás añadirlos durante una compra.</p>')+
  '<button class="secondary" style="width:100%;margin-top:12px" onclick="edCustomerLogout()">Cerrar sesión</button>');
 }
@@ -1190,27 +1190,42 @@ function edValidCustomerName(raw){
  const parts=String(raw||'').trim().split(/\s+/).filter(Boolean);
  return parts.length>=2&&parts.every(p=>/^[\p{L}][\p{L}\p{M}'’.-]*$/u.test(p));
 }
+function edSignupResidenceChange(){
+ const isCuba=document.getElementById('officialResidence')?.value==='cuba';
+ const section=document.getElementById('officialAddressFields');if(section)section.hidden=!isCuba;
+}
 function officialCustomerSignup(){
- modal('<h2>Registro oficial ENLACE DIGITAL</h2><p class="note">Crea tu cuenta con tus datos personales. El destinatario y la dirección se registran al preparar una compra.</p>'+
- '<div class="field"><label>Nombre y apellido del comprador *</label><input id="officialName" autocomplete="name"></div>'+
- '<div class="field"><label>Teléfono / WhatsApp del comprador *</label><input id="officialPhone" type="tel" autocomplete="tel"></div>'+
+ modal('<h2>Crear cuenta</h2><p class="note">Un único registro para clientes de Cuba y del extranjero.</p>'+
+ '<div class="field"><label>Nombre y apellido *</label><input id="officialName" autocomplete="name"></div>'+
+ '<div class="field"><label>Teléfono / WhatsApp *</label><input id="officialPhone" type="tel" autocomplete="tel"></div>'+
+ '<div class="field"><label>¿Dónde resides? *</label><select id="officialResidence" onchange="edSignupResidenceChange()"><option value="cuba">Resido en Cuba</option><option value="extranjero">Resido en el extranjero</option></select></div>'+
+ '<div id="officialAddressFields">'+
+ '<p class="note">Tu dirección habitual se guardará en tu cuenta para futuras compras.</p>'+
+ '<div class="field"><label>Provincia *</label><input id="officialProvince" autocomplete="address-level1"></div>'+
+ '<div class="field"><label>Municipio *</label><input id="officialMunicipality" autocomplete="address-level2"></div>'+
+ '<div class="field"><label>Barrio / reparto (opcional)</label><input id="officialNeighborhood"></div>'+
+ '<div class="field"><label>Dirección completa *</label><input id="officialStreet" autocomplete="street-address"></div></div>'+
  '<div class="field"><label>Correo electrónico (opcional)</label><input id="officialEmail" type="email"></div>'+
  '<div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label>Repetir contraseña *</label><input id="officialPasswordConfirm" type="password" autocomplete="new-password"></div>'+
- '<button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta oficial</button><p class="note" id="officialSignupStatus" role="status"></p>');
+ '<button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta</button><p class="note" id="officialSignupStatus" role="status"></p>');
+ edSignupResidenceChange();
 }
 async function submitOfficialCustomerSignup(){
  const val=id=>document.getElementById(id).value.trim();
  const name=val('officialName'),phone=edNormalizePhone(val('officialPhone')),email=val('officialEmail'),password=document.getElementById('officialPassword').value,confirm=document.getElementById('officialPasswordConfirm').value;
+ const residence=val('officialResidence');
+ const address={province:val('officialProvince'),municipality:val('officialMunicipality'),neighborhood:val('officialNeighborhood'),street:val('officialStreet')};
  const btn=document.getElementById('officialSignupBtn'),status=document.getElementById('officialSignupStatus');
  if(!edValidCustomerName(name))return status.textContent='Introduce tu nombre y al menos un apellido.';
+ if(residence==='cuba'&&(!address.province||!address.municipality||address.street.length<8))return status.textContent='Completa tu provincia, municipio y dirección habitual.';
  if(!phone)return status.textContent='Introduce un teléfono válido con código de país.';
  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return status.textContent='Corrige el correo o déjalo vacío.';
  if(password.length<8||password.length>128)return status.textContent='La contraseña debe tener entre 8 y 128 caracteres.';
  if(password!==confirm)return status.textContent='Las contraseñas no coinciden.';
  btn.disabled=true;status.textContent='Creando cuenta…';
  try{
-  const r=await edCustomerRequest('register',{name,phone,email,password});
+  const r=await edCustomerRequest('register',{name,phone,email,password,residence,address});
   status.textContent='Cuenta '+r.cliente.codigo+' registrada. Ya puedes entrar con tu teléfono y contraseña.';
   btn.textContent='Entrar a mi cuenta';btn.onclick=edOfficialCustomerLogin;btn.disabled=false;
  }catch(e){status.textContent=e.message;btn.disabled=false}
