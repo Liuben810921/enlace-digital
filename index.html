@@ -1114,20 +1114,20 @@ function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
  modal('<h2>Mi cuenta</h2>'+
  '<div class="panel" style="margin:12px 0 18px;padding:14px 16px"><strong style="display:block;font-size:1.1rem;line-height:1.4;color:#102d49">'+esc(c.nombre)+'</strong><p class="note" style="margin:7px 0 0">Cliente '+esc(c.codigo||String(c.numero))+'</p><p class="note" style="margin:3px 0 0">Teléfono: '+esc(c.telefono||'')+'</p></div>'+
- '<h3 style="margin:14px 0 10px">Mi dirección habitual</h3>'+
- (c.direccion_habitual?'<p class="note">'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(', '))+'</p>':'<p class="note">Sin dirección habitual en Cuba.</p>')+
- '<button class="secondary" style="width:100%;margin:8px 0 14px" onclick="edEditHabitualAddress()">'+(c.direccion_habitual?'Actualizar mi dirección':'Añadir mi dirección en Cuba')+'</button>'+ 
+ (c.residencia==='cuba'?'<h3 style="margin:14px 0 10px">Mi dirección habitual</h3><p class="note">'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(', '))+'</p><button class="secondary" style="width:100%;margin:8px 0 14px" onclick="edEditHabitualAddress()">Actualizar mi dirección</button>':'')+ 
  '<h3 style="margin:18px 0 10px">Mis destinatarios</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0;padding:12px 14px"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note" style="margin:8px 0 18px">Todavía no tienes destinatarios guardados. Podrás añadirlos durante una compra.</p>')+
  '<button class="secondary" style="width:100%;margin-top:12px" onclick="edCustomerLogout()">Cerrar sesión</button>');
 }
 function edEditHabitualAddress(){
  const c=edCustomerProfile||{};
+ if(c.residencia!=='cuba')return edRenderCustomerRecipients();
  modal('<h2>Mi dirección habitual</h2><p class="note">Guarda aquí tu dirección personal en Cuba. No es un destinatario adicional.</p>'+
  [['Provincia','Province',c.provincia],['Municipio','Municipality',c.municipio],['Barrio / reparto (opcional)','Neighborhood',c.barrio],['Dirección completa','Street',c.direccion_habitual]].map(([label,key,value])=>'<div class="field"><label>'+label+'</label><input id="edHome'+key+'" value="'+esc(value||'')+'"></div>').join('')+
  '<button class="primary" style="width:100%" id="edHomeSave" onclick="edSaveHabitualAddress()">Guardar dirección</button><p class="note" id="edHomeStatus" role="status"></p>');
 }
 async function edSaveHabitualAddress(){
+ if(edCustomerProfile?.residencia!=='cuba')return edRenderCustomerRecipients();
  const v=k=>document.getElementById('edHome'+k).value.trim();
  const address={province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),street:v('Street')};
  const status=document.getElementById('edHomeStatus'),btn=document.getElementById('edHomeSave');
@@ -1147,10 +1147,10 @@ async function edOfficialRecipientCheckout(selectedId=null){
   }catch(e){if(/sesi[oó]n|caducad/i.test(e.message))return edOfficialCustomerLogin();alert('No se pudieron cargar los destinatarios: '+e.message);return}
  }
  const options=edCustomerRecipients.map(r=>'<option value="'+r.id+'">'+esc(r.nombre+' · '+r.municipio+' · '+r.direccion)+'</option>').join('');
- modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+'<option value="self">Yo recibiré la compra</option><option value="new">Otra persona recibirá la compra</option></select></div>'+
+ modal('<h2>Destinatario para próxima compra</h2><p class="note">Preparación de entrega. No se genera ningún pedido real.</p><div class="field"><label>Seleccionar destinatario</label><select id="edDeliveryChoice" onchange="edOfficialRecipientSelect()">'+options+''+(edCustomerProfile.residencia==='cuba'?'<option value="self">Yo recibiré la compra</option>':'')+'<option value="new">Otra persona recibirá la compra</option></select></div>'+
  ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  '<button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOrderPreview()">Ver pedido preparado (sin enviar)</button><p id="edDeliveryStatus" class="note" role="status"></p>');
- const selected=selectedId!==null&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))?String(selectedId):(!edCustomerRecipients.length?'self':null);
+ const selected=selectedId!==null&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))?String(selectedId):(!edCustomerRecipients.length?'new':null);
  if(selected!==null)document.getElementById('edDeliveryChoice').value=selected;
  edOfficialRecipientSelect();
 }
