@@ -1115,8 +1115,8 @@ function edRenderCustomerRecipients(){
  modal('<h2>Mi cuenta</h2>'+
  '<div class="panel" style="margin:12px 0 18px;padding:14px 16px"><strong style="display:block;font-size:1.1rem;line-height:1.4;color:#102d49">'+esc(c.nombre)+'</strong><p class="note" style="margin:7px 0 0">Cliente '+esc(c.codigo||String(c.numero))+'</p><p class="note" style="margin:3px 0 0">Teléfono: '+esc(c.telefono||'')+'</p></div>'+
  '<h3 style="margin:14px 0 10px">Mi dirección habitual</h3>'+
- (c.residencia==='cuba'?'<p class="note">'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(', '))+'</p>':'<p class="note">Sin dirección habitual en Cuba.</p>')+
- '<button class="secondary" style="width:100%;margin:8px 0 14px" onclick="edEditHabitualAddress()">'+(c.residencia==='cuba'?'Actualizar mi dirección':'Añadir mi dirección en Cuba')+'</button>'+ 
+ (c.direccion_habitual?'<p class="note">'+esc([c.provincia,c.municipio,c.barrio,c.direccion_habitual].filter(Boolean).join(', '))+'</p>':'<p class="note">Sin dirección habitual en Cuba.</p>')+
+ '<button class="secondary" style="width:100%;margin:8px 0 14px" onclick="edEditHabitualAddress()">'+(c.direccion_habitual?'Actualizar mi dirección':'Añadir mi dirección en Cuba')+'</button>'+ 
  '<h3 style="margin:18px 0 10px">Mis destinatarios</h3>'+
  (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0;padding:12px 14px"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note" style="margin:8px 0 18px">Todavía no tienes destinatarios guardados. Podrás añadirlos durante una compra.</p>')+
  '<button class="secondary" style="width:100%;margin-top:12px" onclick="edCustomerLogout()">Cerrar sesión</button>');
