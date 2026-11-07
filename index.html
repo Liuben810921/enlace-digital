@@ -1077,7 +1077,7 @@ async function edOpenCustomerAccount(){
  try{await edLoadCustomerRecipients()}catch(e){edClearCustomerSession();edOfficialCustomerLogin()}
 }
 function edOfficialCustomerLogin(){
- modal('<h2>Mi cuenta oficial</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="officialCustomerSignup()">Crear cuenta</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
+ modal('<h2>Mi cuenta</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="officialCustomerSignup()">Crear cuenta</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
 }
 async function edCustomerSignIn(){
  const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');
@@ -1099,9 +1099,11 @@ async function edLoadCustomerRecipients(){
 }
 function edRenderCustomerRecipients(){
  const c=edCustomerProfile;if(!c)return edOfficialCustomerLogin();
- modal('<h2>Mi cuenta · '+esc(c.nombre)+'</h2><p class="note">Cliente '+esc(c.codigo||String(c.numero))+' · '+esc(c.telefono||'')+'</p><h3>Destinatarios en Cuba</h3>'+
- (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note">No tienes destinatarios guardados. Al preparar una compra podrás elegir entrega propia o a otra persona.</p>')+
- '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Seleccionar o corregir destinatario para próxima compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edCustomerLogout()">Cerrar sesión oficial</button>');
+ modal('<h2>Mi cuenta</h2>'+
+ '<div class="panel" style="margin:12px 0 18px;padding:14px 16px"><strong style="display:block;font-size:1.1rem;line-height:1.4;color:#102d49">'+esc(c.nombre)+'</strong><p class="note" style="margin:7px 0 0">Cliente '+esc(c.codigo||String(c.numero))+'</p><p class="note" style="margin:3px 0 0">Teléfono: '+esc(c.telefono||'')+'</p></div>'+
+ '<h3 style="margin:14px 0 10px">Mis destinatarios</h3>'+
+ (edCustomerRecipients.length?edCustomerRecipients.map(x=>'<div class="panel" style="margin:8px 0;padding:12px 14px"><strong>'+esc(x.nombre)+'</strong><p class="note">'+esc(x.telefono||'')+' · '+esc([x.provincia,x.municipio,x.barrio].filter(Boolean).join(', '))+'</p><p class="note">'+esc(x.direccion||'')+'</p></div>').join(''):'<p class="note" style="margin:8px 0 18px">Todavía no tienes destinatarios guardados. Podrás añadirlos durante una compra.</p>')+
+ '<button class="secondary" style="width:100%;margin-top:12px" onclick="edCustomerLogout()">Cerrar sesión</button>');
 }
 async function edOfficialRecipientCheckout(selectedId=null){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
