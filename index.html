@@ -1196,16 +1196,16 @@ function edOfficialRecipientNew(){
 }
 function edOfficialTemporaryAddress(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
- const fields=[['Name','Nombre de quien recibe',edCustomerProfile.nombre||''],['Phone','Teléfono cubano de contacto',''],['Province','Provincia','La Habana'],['Municipality','Municipio',''],['Neighborhood','Barrio / reparto',''],['Address','Calle, número y entrecalles',''],['References','Referencias adicionales','']];
+ const fields=[['Province','Provincia','La Habana'],['Municipality','Municipio',''],['Neighborhood','Barrio / reparto',''],['Address','Calle, número y entrecalles',''],['References','Referencias adicionales','']];
  modal('<h2>Otra dirección de entrega</h2><p class="note">Esta dirección se guardará en tu historial de entregas para reutilizarla, sin modificar tu dirección habitual ni crear un destinatario permanente.</p>'+
  fields.map(([key,label,val])=>'<div class="field"><label>'+esc(label)+'</label><input id="edOccasional'+key+'" value="'+esc(val)+'"></div>').join('')+
  '<p class="note" id="edOccasionalStatus" role="status"></p><button class="primary" id="edOccasionalSave" onclick="edOfficialTemporarySave()">Guardar dirección y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');
 }
 async function edOfficialTemporarySave(){
  const v=k=>document.getElementById('edOccasional'+k)?.value.trim()||'';
- const location={name:v('Name'),phone:edCubanPhone(v('Phone')),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
+ const location={name:edCustomerProfile.nombre,phone:edCustomerProfile.telefono,province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
  const status=document.getElementById('edOccasionalStatus'),btn=document.getElementById('edOccasionalSave');
- if(location.name.length<2||!location.phone||location.province.length<2||location.municipality.length<2||location.address.length<8){status.textContent='Completa nombre, teléfono cubano, provincia, municipio y dirección.';return}
+ if(location.province.length<2||location.municipality.length<2||location.address.length<8){status.textContent='Completa provincia, municipio y dirección.';return}
  btn.disabled=true;status.textContent='Guardando dirección de entrega…';
  try{
   const saved=await edCustomerRequest('delivery-location-save',{token:await edCustomerToken(),location});
