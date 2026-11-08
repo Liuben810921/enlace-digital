@@ -1308,7 +1308,7 @@ function officialCustomerSignup(){
  '<div class="field"><label>Municipio *</label><input id="officialMunicipality" autocomplete="address-level2"></div>'+
  '<div class="field"><label>Barrio / reparto (opcional)</label><input id="officialNeighborhood"></div>'+
  '<div class="field"><label>Dirección completa *</label><input id="officialStreet" autocomplete="street-address"></div></div>'+
- '<div class="field"><label>Correo electrónico (opcional)</label><input id="officialEmail" type="email"></div>'+
+ '<div class="field"><label for="officialEmail">Correo electrónico (opcional, recomendado)</label><input id="officialEmail" type="email" autocomplete="email" aria-describedby="officialEmailAdvice"><div id="officialEmailAdvice" role="note" style="margin-top:7px;padding:10px 12px;border:1px solid #d69a28;border-radius:9px;background:#fff4d9;color:#65400b;font-size:13px;line-height:1.45">💡 <strong>Te recomendamos añadir tu correo.</strong> Una vez verificado, te ayudará a recuperar el acceso a tu cuenta si olvidas la contraseña. Puedes registrarte sin correo.</div></div>'+
  '<div class="field"><label>Contraseña (mínimo 8 caracteres) *</label><input id="officialPassword" type="password" autocomplete="new-password"></div>'+
  '<div class="field"><label>Repetir contraseña *</label><input id="officialPasswordConfirm" type="password" autocomplete="new-password"></div>'+
  '<button id="officialSignupBtn" class="primary" style="width:100%" onclick="submitOfficialCustomerSignup()">Crear cuenta</button><p class="note" id="officialSignupStatus" role="status"></p>');
