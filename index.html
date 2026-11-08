@@ -1101,8 +1101,48 @@ async function edOpenCustomerAccount(){
 function edOfficialCustomerLogin(){
  modal('<h2>Mi cuenta</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="officialCustomerSignup()">Crear cuenta</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edShowRecoveryPreparation()">¿Olvidaste tu contraseña?</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
 }
+const ED_EMAIL_FLOW_URL='https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-correo-flujos';
+async function edEmailFlowRequest(action,data={}){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(ED_EMAIL_FLOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data}),signal:controller.signal});
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'No se pudo completar la solicitud.');
+  return result;
+ }finally{clearTimeout(timeout)}
+}
 function edShowRecoveryPreparation(){
- modal('<h2>Recuperar contraseña</h2><p class="note">Estamos preparando la recuperación segura mediante un correo electrónico previamente verificado.</p><div class="panel" style="padding:14px;margin:12px 0"><strong>Servicio todavía no habilitado</strong><p class="note">Por seguridad, no se enviarán enlaces ni se cambiarán contraseñas hasta completar las pruebas.</p></div><button class="secondary" style="width:100%" onclick="edOfficialCustomerLogin()">Volver a iniciar sesión</button>');
+ modal('<h2>Recuperar contraseña</h2><p class="note">Para recuperar el acceso necesitarás el teléfono registrado y un correo de recuperación previamente verificado.</p>'+
+ '<div class="field"><label>Teléfono / WhatsApp</label><input id="edRecoveryPhone" type="tel" autocomplete="tel" placeholder="+53 5XXXXXXX" disabled></div>'+
+ '<div class="field"><label>Correo de recuperación</label><input id="edRecoveryEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com" disabled></div>'+
+ '<button class="primary" style="width:100%" id="edRecoveryRequestBtn" onclick="edRequestPasswordRecovery()" disabled>Enviar enlace de recuperación</button>'+
+ '<p class="note" id="edRecoveryStatus" role="status">Comprobando disponibilidad del servicio…</p>'+
+ '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialCustomerLogin()">Volver a iniciar sesión</button>');
+ edCheckRecoveryAvailability();
+}
+async function edCheckRecoveryAvailability(){
+ const status=document.getElementById('edRecoveryStatus');
+ try{
+  const response=await edEmailFlowRequest('status');
+  if(!status)return;
+  if(response.available===true){
+   document.getElementById('edRecoveryPhone').disabled=false;
+   document.getElementById('edRecoveryEmail').disabled=false;
+   document.getElementById('edRecoveryRequestBtn').disabled=false;
+   status.textContent='Servicio disponible. Completa los datos de tu cuenta.';
+  }else status.textContent='La recuperación por correo todavía no está habilitada. No se enviará ningún mensaje.';
+ }catch(e){if(status)status.textContent='No fue posible comprobar el servicio. Inténtalo más tarde.'}
+}
+async function edRequestPasswordRecovery(){
+ const phone=edNormalizePhone(document.getElementById('edRecoveryPhone')?.value||'');
+ const email=String(document.getElementById('edRecoveryEmail')?.value||'').trim();
+ const status=document.getElementById('edRecoveryStatus'),btn=document.getElementById('edRecoveryRequestBtn');
+ if(!phone||!/^[^ @]+@[^ @]+\\.[^ @]+$/.test(email)){status.textContent='Revisa el teléfono y el correo.';return}
+ btn.disabled=true;status.textContent='Comprobando solicitud…';
+ try{await edEmailFlowRequest('request',{purpose:'recuperar_clave',phone,email});status.textContent='Si los datos coinciden con una cuenta habilitada, recibirás instrucciones en tu correo.'}
+ catch(e){status.textContent=e.message}
+ finally{btn.disabled=false}
 }
 async function edCustomerSignIn(){
  const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');
