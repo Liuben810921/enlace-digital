@@ -10,6 +10,11 @@ Deno.serve(async(req:Request)=>{
  let body:any;try{body=await req.json()}catch{return respond(400,{error:"Solicitud invalida"})}
  const action=String(body?.action||"");
  if(action==="status")return respond(200,{available:false,message:"La verificacion y recuperacion por correo estan en preparacion."});
+ if(action==="request"){
+  // Fail closed until a verified email transport is configured.
+  // Do not issue tokens that cannot be delivered securely.
+  return respond(503,{error:"La recuperacion por correo aun no esta habilitada."});
+ }
  if(action!=="consume")return respond(400,{error:"Operacion no disponible"});
  const purpose=String(body?.purpose||""),token=String(body?.token||""),password=String(body?.password||"");
  if(!["verificar_correo","recuperar_clave"].includes(purpose)||!/^[0-9a-f]{64}$/i.test(token)||(purpose==="recuperar_clave"&&(password.length<8||password.length>128)))return respond(400,{error:"Enlace invalido o caducado"});
