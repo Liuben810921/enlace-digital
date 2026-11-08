@@ -1214,7 +1214,7 @@ function edOfficialTemporaryAddress(){
 }
 async function edOfficialTemporarySave(){
  const v=k=>document.getElementById('edOccasional'+k)?.value.trim()||'';
- const location={name:edCustomerProfile.nombre,phone:edCustomerProfile.telefono,province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
+ const location={name:edCustomerProfile.nombre,phone:String(edCustomerProfile.telefono||'').replace(/^\+53(?=\d{8}$)/,''),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
  const status=document.getElementById('edOccasionalStatus'),btn=document.getElementById('edOccasionalSave');
  if(location.province.length<2||location.municipality.length<2||location.address.length<8){status.textContent='Completa provincia, municipio y dirección.';return}
  btn.disabled=true;status.textContent='Guardando dirección de entrega…';
