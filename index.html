@@ -1144,6 +1144,40 @@ async function edRequestPasswordRecovery(){
  catch(e){status.textContent=e.message}
  finally{btn.disabled=false}
 }
+function edOpenEmailTokenLink(){
+ const fragment=String(location.hash||'').replace(/^#/,'');
+ if(!fragment.startsWith('ed-email='))return;
+ let payload;
+ try{payload=new URLSearchParams(fragment).get('ed-email')}catch{return}
+ if(!payload)return;
+ const parts=payload.split(':');
+ if(parts.length!==2||!['verificar_correo','recuperar_clave'].includes(parts[0])||!/^[a-f0-9]{64}$/i.test(parts[1]))return;
+ const purpose=parts[0],token=parts[1].toLowerCase();
+ history.replaceState(null,'',location.pathname+location.search);
+ if(purpose==='recuperar_clave'){
+  modal('<h2>Establecer nueva contraseña</h2><p class="note">El enlace debe estar vigente y ser de un solo uso.</p>'+
+  '<div class="field"><label>Nueva contraseña</label><input type="password" autocomplete="new-password" id="edEmailNewPassword" minlength="8" maxlength="128"></div>'+
+  '<div class="field"><label>Confirmar contraseña</label><input type="password" autocomplete="new-password" id="edEmailConfirmPassword" minlength="8" maxlength="128"></div>'+
+  '<button class="primary" id="edEmailResetButton" style="width:100%">Guardar nueva contraseña</button><p class="note" id="edEmailTokenStatus" role="status"></p>');
+  const btn=document.getElementById('edEmailResetButton');
+  btn.onclick=async()=>{
+   const p=document.getElementById('edEmailNewPassword').value;
+   const c=document.getElementById('edEmailConfirmPassword').value;
+   const st=document.getElementById('edEmailTokenStatus');
+   if(p.length<8||p.length>128||p!==c){st.textContent='Las contraseñas deben coincidir y tener entre 8 y 128 caracteres.';return}
+   btn.disabled=true;st.textContent='Comprobando enlace…';
+   try{await edEmailFlowRequest('consume',{purpose,token,password:p});st.textContent='Contraseña actualizada. Ya puedes iniciar sesión.';document.getElementById('edEmailNewPassword').value='';document.getElementById('edEmailConfirmPassword').value='';}
+   catch(e){st.textContent=e.message;btn.disabled=false}
+  };
+ }else{
+  modal('<h2>Verificar correo</h2><p class="note">Confirma tu dirección de correo electrónico mediante un enlace de un solo uso.</p><button class="primary" id="edEmailVerifyButton" style="width:100%">Confirmar correo</button><p class="note" id="edEmailTokenStatus" role="status"></p>');
+  const btn=document.getElementById('edEmailVerifyButton');
+  btn.onclick=async()=>{btn.disabled=true;const st=document.getElementById('edEmailTokenStatus');st.textContent='Verificando…';try{await edEmailFlowRequest('consume',{purpose,token});st.textContent='Correo verificado correctamente.'}catch(e){st.textContent=e.message;btn.disabled=false}};
+ }
+}
+window.addEventListener('hashchange',edOpenEmailTokenLink);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(edOpenEmailTokenLink,0));
+else setTimeout(edOpenEmailTokenLink,0);
 async function edCustomerSignIn(){
  const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');
  const phone=edNormalizePhone(document.getElementById('edCustomerPhone').value),password=document.getElementById('edCustomerPassword').value;
