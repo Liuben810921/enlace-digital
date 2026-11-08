@@ -1138,7 +1138,7 @@ async function edSaveHabitualAddress(){
   await edLoadCustomerRecipients();
  }catch(e){status.textContent=e.message;btn.disabled=false}
 }
-async async function edOfficialRecipientCheckout(selectedId=null){
+async function edOfficialRecipientCheckout(selectedId=null){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
  if(selectedId==='new')return edOfficialRecipientNew();
  if(selectedId==='self')return edOfficialSelfDelivery();
