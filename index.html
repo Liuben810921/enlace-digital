@@ -1027,7 +1027,7 @@ function currentClient(){let id=localStorage.getItem(SESSION_KEY);return clients
 document.addEventListener('DOMContentLoaded',()=>{edRestoreCustomerSession().catch(()=>{});});
 const ED_CUSTOMER_AUTH_URL='https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-cliente-auth';
 const ED_CUSTOMER_SESSION_KEY='ed_customer_secure_session_v1';
-let edCustomerSession=null,edCustomerProfile=null,edCustomerRecipients=[];
+let edCustomerSession=null,edCustomerProfile=null,edCustomerRecipients=[],edCustomerDeliveryLocations=[];
 async function edCustomerRequest(action,data={}){
  const res=await fetch(ED_CUSTOMER_AUTH_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data}),cache:'no-store'});
  let json={};try{json=await res.json()}catch{}
@@ -1048,7 +1048,7 @@ function edStoreCustomerSession(token,expiresIn){
  edUpdateAccountHead();
 }
 function edClearCustomerSession(){
- edCustomerSession=null;edCustomerProfile=null;edCustomerRecipients=[];
+ edCustomerSession=null;edCustomerProfile=null;edCustomerRecipients=[];edCustomerDeliveryLocations=[];
  localStorage.removeItem(ED_CUSTOMER_SESSION_KEY);
  edUpdateAccountHead();
 }
@@ -1064,7 +1064,7 @@ async function edRestoreCustomerSession(){
   edCustomerSession=saved;
   const r=await edCustomerRequest('profile',{token:saved.token});
   edCustomerProfile=r.cliente;
-  edCustomerRecipients=r.destinatarios||[];
+  edCustomerRecipients=r.destinatarios||[];edCustomerDeliveryLocations=r.direcciones_entrega||[];
   edUpdateAccountHead();
  }catch(e){edClearCustomerSession()}
 }
@@ -1106,7 +1106,7 @@ async function edLoadCustomerRecipients(){
  const token=await edCustomerToken();
  const result=await edCustomerRequest('profile',{token});
  edCustomerProfile=result.cliente;
- edCustomerRecipients=result.destinatarios||[];
+ edCustomerRecipients=result.destinatarios||[];edCustomerDeliveryLocations=result.direcciones_entrega||[];
  edUpdateAccountHead();
  edRenderCustomerRecipients();
 }
@@ -1143,13 +1143,14 @@ async function edOfficialRecipientCheckout(selectedId=null){
  if(!edCustomerRecipients.length){
   try{
    const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
-   edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];
+   edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];edCustomerDeliveryLocations=data.direcciones_entrega||[];
   }catch(e){if(/sesi[oó]n|caducad/i.test(e.message))return edOfficialCustomerLogin();alert('No se pudieron cargar los destinatarios: '+e.message);return}
  }
+ const past=edCustomerDeliveryLocations.map(r=>'<button class="secondary" style="display:block;width:100%;text-align:left;margin:10px 0;padding:13px;border-radius:14px" onclick="edOfficialOrderPreview(&quot;location:'+Number(r.id)+'&quot;)"><strong>Dirección utilizada anteriormente</strong><div class="note">'+esc([r.provincia,r.municipio,r.barrio,r.direccion].filter(Boolean).join(', '))+'</div></button>').join('');
  const cards=edCustomerRecipients.map(r=>'<button class="secondary" style="display:block;width:100%;text-align:left;margin:10px 0;padding:15px;border:1px solid #b7d1d8;border-radius:14px" onclick="edOfficialOrderPreview('+Number(r.id)+')"><strong>'+esc(r.nombre)+'</strong><div class="note">'+esc(r.telefono)+'</div><div class="note">'+esc([r.provincia,r.municipio,r.barrio,r.direccion].filter(Boolean).join(', '))+'</div></button>').join('');
  const self=edCustomerProfile.residencia==='cuba'&&edCustomerProfile.direccion_habitual?'<button class="secondary" style="display:block;width:100%;text-align:left;margin:10px 0;padding:15px;border-radius:14px" onclick="edOfficialOrderPreview(\'self\')"><strong>Recibir en mi dirección habitual</strong><div class="note">'+esc([edCustomerProfile.provincia,edCustomerProfile.municipio,edCustomerProfile.barrio,edCustomerProfile.direccion_habitual].filter(Boolean).join(', '))+'</div></button>':'';
  if(selectedId===null){
-  modal('<h2>¿Quién recibirá tu compra?</h2><p class="note">Cliente: '+esc(edCustomerProfile.nombre)+' · '+esc(edCustomerProfile.codigo||'')+'</p><p class="note">Selecciona una tarjeta para revisar el pedido. No se enviará ni registrará ninguna compra.</p>'+self+cards+'<button class="secondary" style="width:100%;margin-top:12px" onclick="edOfficialRecipientCheckout(\'new\')">+ Añadir nuevo destinatario</button>');
+  modal('<h2>¿Quién recibirá tu compra?</h2><p class="note">Cliente: '+esc(edCustomerProfile.nombre)+' · '+esc(edCustomerProfile.codigo||'')+'</p><p class="note">Selecciona una tarjeta para revisar el pedido. No se enviará ni registrará ninguna compra.</p>'+self+cards+past+'<button class="secondary" style="width:100%;margin-top:12px" onclick="edOfficialRecipientCheckout(\'new\')">+ Añadir nuevo destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialTemporaryAddress()">Usar otra dirección para esta compra</button>');
   return;
  }
  if(selectedId!=='new'&&selectedId!=='self'&&edCustomerRecipients.some(r=>String(r.id)===String(selectedId))){return edOfficialOrderPreview(selectedId);}
@@ -1158,6 +1159,26 @@ async function edOfficialRecipientCheckout(selectedId=null){
  ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  '<input type="hidden" id="edDeliveryChoice" value="new"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar nuevo destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
  const province=document.getElementById('edDeliveryProvince');if(province)province.value='La Habana';
+}
+function edOfficialTemporaryAddress(){
+ if(!edCustomerProfile)return edOfficialCustomerLogin();
+ const fields=[['Name','Nombre de quien recibe',edCustomerProfile.nombre||''],['Phone','Teléfono cubano de contacto',''],['Province','Provincia','La Habana'],['Municipality','Municipio',''],['Neighborhood','Barrio / reparto',''],['Address','Calle, número y entrecalles',''],['References','Referencias adicionales','']];
+ modal('<h2>Otra dirección de entrega</h2><p class="note">Esta dirección se guardará en tu historial de entregas para reutilizarla, sin modificar tu dirección habitual ni crear un destinatario permanente.</p>'+
+ fields.map(([key,label,val])=>'<div class="field"><label>'+esc(label)+'</label><input id="edOccasional'+key+'" value="'+esc(val)+'"></div>').join('')+
+ '<p class="note" id="edOccasionalStatus" role="status"></p><button class="primary" id="edOccasionalSave" onclick="edOfficialTemporarySave()">Guardar dirección y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');
+}
+async function edOfficialTemporarySave(){
+ const v=k=>document.getElementById('edOccasional'+k)?.value.trim()||'';
+ const location={name:v('Name'),phone:edCubanPhone(v('Phone')),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
+ const status=document.getElementById('edOccasionalStatus'),btn=document.getElementById('edOccasionalSave');
+ if(location.name.length<2||!location.phone||location.province.length<2||location.municipality.length<2||location.address.length<8){status.textContent='Completa nombre, teléfono cubano, provincia, municipio y dirección.';return}
+ btn.disabled=true;status.textContent='Guardando dirección de entrega…';
+ try{
+  const saved=await edCustomerRequest('delivery-location-save',{token:await edCustomerToken(),location});
+  const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
+  edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];edCustomerDeliveryLocations=data.direcciones_entrega||[];
+  await edOfficialOrderPreview('location:'+saved.id);
+ }catch(e){status.textContent=e.message;btn.disabled=false}
 }
 async function edOfficialOrderPreview(selectedId=null){
  const availability=validateCart();
@@ -1170,7 +1191,8 @@ async function edOfficialOrderPreview(selectedId=null){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
  const choice=selectedId===null?document.getElementById('edDeliveryChoice')?.value:String(selectedId);
  const isSelf=choice==='self'&&edCustomerProfile.residencia==='cuba'&&!!edCustomerProfile.direccion_habitual;
- const recipient=isSelf?{nombre:edCustomerProfile.nombre,telefono:edCustomerProfile.telefono,provincia:edCustomerProfile.provincia,municipio:edCustomerProfile.municipio,barrio:edCustomerProfile.barrio,direccion:edCustomerProfile.direccion_habitual}:edCustomerRecipients.find(r=>String(r.id)===choice);
+ const loc=choice?.startsWith('location:')?edCustomerDeliveryLocations.find(r=>String(r.id)===choice.slice(9)):null;
+ const recipient=isSelf?{nombre:edCustomerProfile.nombre,telefono:edCustomerProfile.telefono,provincia:edCustomerProfile.provincia,municipio:edCustomerProfile.municipio,barrio:edCustomerProfile.barrio,direccion:edCustomerProfile.direccion_habitual}:loc?{nombre:loc.nombre_receptor,telefono:loc.telefono_receptor,provincia:loc.provincia,municipio:loc.municipio,barrio:loc.barrio,direccion:loc.direccion,referencias:loc.referencias}:edCustomerRecipients.find(r=>String(r.id)===choice);
  if(!recipient){const status=document.getElementById('edDeliveryStatus');if(status)status.textContent='Selecciona un destinatario válido.';return;}
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)})).filter(x=>x.product&&Number.isInteger(x.line.qty)&&x.line.qty>0);
  if(!lines.length)return alert('Añade productos al carrito para preparar el pedido.');
@@ -1207,7 +1229,7 @@ async function edOfficialRecipientSave(){
  try{
   const saved=await edCustomerRequest('recipient-save',{token:await edCustomerToken(),id:choice==='new'||choice==='self'?null:Number(choice),recipient});
   const data=await edCustomerRequest('profile',{token:await edCustomerToken()});
-  edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];
+  edCustomerProfile=data.cliente;edCustomerRecipients=data.destinatarios||[];edCustomerDeliveryLocations=data.direcciones_entrega||[];
   edOfficialOrderPreview(saved.id);
  }catch(e){status.textContent=e.message;btn.disabled=false}
 }
