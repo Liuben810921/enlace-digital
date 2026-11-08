@@ -5,16 +5,26 @@ Deno.serve(async(req:Request)=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:h});
  if(req.method!=="POST")return new Response(JSON.stringify({error:"Metodo no permitido"}),{status:405,headers:h});
  let body:any;try{body=await req.json()}catch{return new Response(JSON.stringify({error:"Solicitud invalida"}),{status:400,headers:h})}
+ // Diagnostico restringido a la credencial interna de servicio; no basta un JWT de usuario.
+ const expected=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+ const provided=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
+ if(!expected||provided.length!==expected.length)return new Response(JSON.stringify({error:"No autorizado"}),{status:403,headers:h});
+ let mismatch=0;for(let i=0;i<expected.length;i++)mismatch|=expected.charCodeAt(i)^provided.charCodeAt(i);
+ if(mismatch!==0)return new Response(JSON.stringify({error:"No autorizado"}),{status:403,headers:h});
  if(body?.action==="smtp-probe"){
   // Only tests a TLS handshake to Gmail port 465. Never authenticates or sends mail.
   let connection:Deno.TlsConn|undefined;
   let reachable=false;
   let reason="unavailable";
   try{
-   connection=await Promise.race([
-    Deno.connectTls({hostname:"smtp.gmail.com",port:465}),
-    new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000))
-   ]);
+   let expired=false;
+   let timer:number|undefined;
+   try{
+    connection=await Promise.race([
+     Deno.connectTls({hostname:"smtp.gmail.com",port:465}).then(conn=>{if(expired){conn.close();throw new Error("timeout")}return conn}),
+     new Promise<never>((_,reject)=>{timer=setTimeout(()=>{expired=true;reject(new Error("timeout"))},5000)})
+    ]);
+   }finally{if(timer!==undefined)clearTimeout(timer)}
    reachable=true;reason="tls_connected";
   }catch(e){reason=e instanceof Error&&e.message==="timeout"?"timeout":"connection_failed"}
   finally{try{connection?.close()}catch{}}
