@@ -1099,7 +1099,10 @@ async function edOpenCustomerAccount(){
  try{await edLoadCustomerRecipients()}catch(e){edClearCustomerSession();edOfficialCustomerLogin()}
 }
 function edOfficialCustomerLogin(){
- modal('<h2>Mi cuenta</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="officialCustomerSignup()">Crear cuenta</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
+ modal('<h2>Mi cuenta</h2><p class="note">Accede con tu teléfono y contraseña. No necesitas correo ni SMS.</p><div class="field"><label>Teléfono / WhatsApp</label><input id="edCustomerPhone" type="tel" autocomplete="username" placeholder="+53 5XXXXXXX"></div><div class="field"><label>Contraseña</label><input id="edCustomerPassword" type="password" autocomplete="current-password"></div><button class="primary" id="edCustomerLoginBtn" style="width:100%" onclick="edCustomerSignIn()">Entrar</button><button class="secondary" style="width:100%;margin-top:8px" onclick="officialCustomerSignup()">Crear cuenta</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edShowRecoveryPreparation()">¿Olvidaste tu contraseña?</button><p class="note" id="edCustomerLoginStatus" role="status"></p>');
+}
+function edShowRecoveryPreparation(){
+ modal('<h2>Recuperar contraseña</h2><p class="note">Estamos preparando la recuperación segura mediante un correo electrónico previamente verificado.</p><div class="panel" style="padding:14px;margin:12px 0"><strong>Servicio todavía no habilitado</strong><p class="note">Por seguridad, no se enviarán enlaces ni se cambiarán contraseñas hasta completar las pruebas.</p></div><button class="secondary" style="width:100%" onclick="edOfficialCustomerLogin()">Volver a iniciar sesión</button>');
 }
 async function edCustomerSignIn(){
  const btn=document.getElementById('edCustomerLoginBtn'),status=document.getElementById('edCustomerLoginStatus');
