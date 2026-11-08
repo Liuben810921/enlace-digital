@@ -1138,7 +1138,7 @@ async function edRequestPasswordRecovery(){
  const phone=edNormalizePhone(document.getElementById('edRecoveryPhone')?.value||'');
  const email=String(document.getElementById('edRecoveryEmail')?.value||'').trim();
  const status=document.getElementById('edRecoveryStatus'),btn=document.getElementById('edRecoveryRequestBtn');
- if(!phone||!/^[^ @]+@[^ @]+\\.[^ @]+$/.test(email)){status.textContent='Revisa el teléfono y el correo.';return}
+ if(!phone||!/^[^ @]+@[^ @]+\.[^ @]+$/.test(email)){status.textContent='Revisa el teléfono y el correo.';return}
  btn.disabled=true;status.textContent='Comprobando solicitud…';
  try{await edEmailFlowRequest('request',{purpose:'recuperar_clave',phone,email});status.textContent='Si los datos coinciden con una cuenta habilitada, recibirás instrucciones en tu correo.'}
  catch(e){status.textContent=e.message}
