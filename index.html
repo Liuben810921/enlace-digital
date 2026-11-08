@@ -1187,19 +1187,30 @@ function edOfficialOtherDelivery(){
  '<button class="primary" style="width:100%;margin-top:10px" onclick="edOfficialRecipientNew()">Añadir nuevo destinatario</button>'+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');
 }
+const ED_CUBA_MUNICIPIOS=Object.fromEntries(Object.entries({"Pinar del Río":"Consolación del Sur|Guane|La Palma|Los Palacios|Mantua|Minas de Matahambre|Pinar del Río|San Juan y Martínez|San Luis|Sandino|Viñales","Artemisa":"Alquízar|Artemisa|Bahía Honda|Bauta|Caimito|Candelaria|Guanajay|Güira de Melena|Mariel|San Antonio de los Baños|San Cristóbal","La Habana":"Arroyo Naranjo|Boyeros|Centro Habana|Cerro|Cotorro|Diez de Octubre|Guanabacoa|La Habana del Este|La Habana Vieja|La Lisa|Marianao|Playa|Plaza de la Revolución|Regla|San Miguel del Padrón","Mayabeque":"Batabanó|Bejucal|Güines|Jaruco|Madruga|Melena del Sur|Nueva Paz|Quivicán|San José de las Lajas|San Nicolás|Santa Cruz del Norte","Matanzas":"Calimete|Cárdenas|Ciénaga de Zapata|Colón|Jagüey Grande|Jovellanos|Limonar|Los Arabos|Martí|Matanzas|Pedro Betancourt|Perico|Unión de Reyes","Cienfuegos":"Abreus|Aguada de Pasajeros|Cienfuegos|Cruces|Cumanayagua|Lajas|Palmira|Rodas","Villa Clara":"Caibarién|Camajuaní|Cifuentes|Corralillo|Encrucijada|Manicaragua|Placetas|Quemado de Güines|Ranchuelo|Remedios|Sagua la Grande|Santa Clara|Santo Domingo","Sancti Spíritus":"Cabaiguán|Fomento|Jatibonico|La Sierpe|Sancti Spíritus|Taguasco|Trinidad|Yaguajay","Ciego de Ávila":"Baraguá|Bolivia|Chambas|Ciego de Ávila|Ciro Redondo|Florencia|Majagua|Morón|Primero de Enero|Venezuela","Camagüey":"Camagüey|Carlos Manuel de Céspedes|Esmeralda|Florida|Guáimaro|Jimaguayú|Minas|Najasa|Nuevitas|Santa Cruz del Sur|Sibanicú|Sierra de Cubitas|Vertientes","Las Tunas":"Amancio|Colombia|Jesús Menéndez|Jobabo|Las Tunas|Majibacoa|Manatí|Puerto Padre","Holguín":"Antilla|Báguanos|Banes|Cacocum|Calixto García|Cueto|Frank País|Gibara|Holguín|Mayarí|Moa|Rafael Freyre|Sagua de Tánamo|Urbano Noris","Granma":"Bartolomé Masó|Bayamo|Buey Arriba|Campechuela|Cauto Cristo|Guisa|Jiguaní|Manzanillo|Media Luna|Niquero|Pilón|Río Cauto|Yara","Santiago de Cuba":"Contramaestre|Guamá|Mella|Palma Soriano|San Luis|Santiago de Cuba|Segundo Frente|Songo-La Maya|Tercer Frente","Guantánamo":"Baracoa|Caimanera|El Salvador|Guantánamo|Imías|Maisí|Manuel Tames|Niceto Pérez|San Antonio del Sur|Yateras","Isla de la Juventud":"Isla de la Juventud"}).map(([k,v])=>[k,v.split('|')]));
+function edProvinceMunicipalityFields(prefix){
+ const options=Object.keys(ED_CUBA_MUNICIPIOS).map(p=>'<option value="'+esc(p)+'"'+(p==='La Habana'?' selected':'')+'>'+esc(p)+'</option>').join('');
+ return '<div class="field"><label>Provincia</label><select id="'+prefix+'Province" onchange="edMunicipalitiesChange(this.dataset.prefix)" data-prefix="'+prefix+'">'+options+'</select></div>'+
+ '<div class="field"><label>Municipio</label><select id="'+prefix+'Municipality"></select></div>';
+}
+function edMunicipalitiesChange(prefix){
+ const province=document.getElementById(prefix+'Province')?.value,select=document.getElementById(prefix+'Municipality');
+ if(!select)return;
+ select.innerHTML='<option value="">Seleccionar municipio</option>'+(ED_CUBA_MUNICIPIOS[province]||[]).map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+}
 function edOfficialRecipientNew(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
  modal('<h2>Añadir destinatario</h2><p class="note">Registra a la persona que recibirá los productos en Cuba. No se genera ningún pedido.</p>'+
- ['Nombre completo|Name','Teléfono cubano|Phone','Provincia|Province','Municipio|Municipality','Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ ['Nombre completo|Name','Teléfono cubano|Phone'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+edProvinceMunicipalityFields('edDelivery')+['Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  '<input type="hidden" id="edDeliveryChoice" value="new"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar nuevo destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOtherDelivery()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
- const province=document.getElementById('edDeliveryProvince');if(province)province.value='La Habana';
+ edMunicipalitiesChange('edDelivery');
 }
 function edOfficialTemporaryAddress(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
- const fields=[['Province','Provincia','La Habana'],['Municipality','Municipio',''],['Neighborhood','Barrio / reparto',''],['Address','Calle, número y entrecalles',''],['References','Referencias adicionales','']];
+ const fields=[['Neighborhood','Barrio / reparto',''],['Address','Calle, número y entrecalles',''],['References','Referencias adicionales','']];
  modal('<h2>Otra dirección de entrega</h2><p class="note">Esta dirección se guardará en tu historial de entregas para reutilizarla, sin modificar tu dirección habitual ni crear un destinatario permanente.</p>'+
- fields.map(([key,label,val])=>'<div class="field"><label>'+esc(label)+'</label><input id="edOccasional'+key+'" value="'+esc(val)+'"></div>').join('')+
- '<p class="note" id="edOccasionalStatus" role="status"></p><button class="primary" id="edOccasionalSave" onclick="edOfficialTemporarySave()">Guardar dirección y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');
+ edProvinceMunicipalityFields('edOccasional')+fields.map(([key,label,val])=>'<div class="field"><label>'+esc(label)+'</label><input id="edOccasional'+key+'" value="'+esc(val)+'"></div>').join('')+
+ '<p class="note" id="edOccasionalStatus" role="status"></p><button class="primary" id="edOccasionalSave" onclick="edOfficialTemporarySave()">Guardar dirección y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');edMunicipalitiesChange('edOccasional');
 }
 async function edOfficialTemporarySave(){
  const v=k=>document.getElementById('edOccasional'+k)?.value.trim()||'';
