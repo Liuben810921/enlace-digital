@@ -731,6 +731,12 @@ header .brand-identity{background:transparent!important;box-shadow:none!importan
  margin:0!important;
  padding:0!important;
 }
+
+/* Ventana de destinatario: titulo visible y carrito fuera del formulario. */
+body:has(#overlay:not(.hidden)) .float-cart{display:none!important}
+#modal.modal:has(#edDeliverySave)>.modal-scroll{scroll-padding-top:16px!important;padding-top:20px!important;padding-bottom:28px!important}
+#modal.modal:has(#edDeliverySave)>.modal-scroll>h2{padding-right:64px!important;line-height:1.2!important;overflow-wrap:break-word}
+#modal.modal:has(#edDeliverySave) #edDeliverySave{max-width:100%;white-space:normal;min-height:48px}
 </style><dialog id="aboutDialog" class="about-dialog"><button class="about-close" type="button" aria-label="Cerrar ventana" onclick="document.getElementById(&quot;aboutDialog&quot;).close()">✕</button><section class="philosophy" id="nuestra-filosofia" aria-labelledby="filosofia-titulo"><div class="philosophy-intro"><span class="philosophy-eyebrow">QUIÉNES SOMOS · NUESTRA FILOSOFÍA</span><h2 id="filosofia-titulo">La confianza es nuestra primera conexión.</h2><p>En ENLACE DIGITAL creemos que una buena relación comercial comienza con algo fundamental: <strong>la confianza.</strong></p><p>Nuestra filosofía nace de años de experiencia atendiendo personalmente a nuestros clientes, construyendo relaciones basadas en la honestidad, el respeto y la profesionalidad.</p><p>Creemos en hablar con claridad, ofrecer información verdadera y ayudar a cada persona a encontrar lo que realmente necesita.</p><p>Para nosotros, vender un producto o prestar un servicio no es simplemente completar una operación. Es establecer una conexión que puede convertirse en una relación de confianza duradera.</p><p>Hoy acercamos tecnología, productos y soluciones a nuestros clientes. Mañana seguiremos ampliando nuestras posibilidades, pero manteniendo siempre los mismos principios.</p><strong class="philosophy-signature">Todo comienza con una conexión.</strong></div><div class="philosophy-values"><div><span>01</span><strong>Honestidad</strong><small>Información clara y verdadera, siempre.</small></div><div><span>02</span><strong>Confianza</strong><small>Relaciones que perduran más allá de una compra.</small></div><div><span>03</span><strong>Compromiso</strong><small>Atención profesional antes y después de cada venta.</small></div></div></section></dialog><div class="category-drawer" id="categoryDrawer" onclick="if(event.target===this)closeCategories()"><div class="category-panel"><div class="category-head"><div><h2>Todos los departamentos</h2><p style="color:#667b84;margin:7px 0 0">Encuentra rápidamente lo que necesitas</p></div><button class="category-close" onclick="closeCategories()" aria-label="Cerrar departamentos">✕</button></div><div class="category-grid-modal" id="categoryGridModal"></div></div></div><div id="overlay" class="modalback hidden" onclick="if(event.target===this)closeModal()"><div id="modal" class="modal"></div></div>
 <script>
 
@@ -1207,6 +1213,7 @@ function edOfficialRecipientNew(){
  ['Nombre completo|Name','Teléfono cubano|Phone'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+edProvinceMunicipalityFields('edDelivery')+['Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  '<input type="hidden" id="edDeliveryChoice" value="new"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar nuevo destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOtherDelivery()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
  edMunicipalitiesChange('edDelivery');
+ const dialogScroll=document.querySelector('#modal>.modal-scroll');if(dialogScroll)dialogScroll.scrollTop=0;
 }
 function edOfficialTemporaryAddress(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
