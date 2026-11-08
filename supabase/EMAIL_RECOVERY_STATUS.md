@@ -1,0 +1,12 @@
+-- ENLACE DIGITAL: consumo privado de tokens de correo.
+-- Aplicado en Supabase con la migración private_atomic_email_token_consumption.
+-- Requiere que configuracion_correo mantenga envios_habilitados=false
+-- hasta que el transporte y los flujos de emisión estén verificados.
+-- El procedimiento está instalado en esquema privado enlace_auth.
+-- No otorgar permisos a anon ni authenticated.
+-- Verificación realizada:
+--   token inexistente => false
+--   anon EXECUTE => false
+--   authenticated EXECUTE => false
+--   tokens existentes => 0
+-- Los envíos y los pedidos reales permanecen desactivados.
