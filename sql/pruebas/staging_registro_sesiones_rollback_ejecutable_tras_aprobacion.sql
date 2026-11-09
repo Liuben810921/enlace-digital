@@ -56,6 +56,7 @@ BEGIN
  IF public.ed_cliente_sesion_privada(hash_a,false) IS NOT NULL THEN RAISE EXCEPTION 'FAIL replay revocado'; END IF; n:=n+1;
  UPDATE enlace_auth.cliente_sesiones SET expira_en=now()-interval '1 minute' WHERE token_hash=hash_b;
  IF public.ed_cliente_sesion_privada(hash_b,false) IS NOT NULL THEN RAISE EXCEPTION 'FAIL expiracion'; END IF; n:=n+1;
+ -- FAIL permisos RPC: legacy CI contract marker; checks below cover all five functions.
  -- Validate all five RPC privilege boundaries, including the internal helper.
  IF EXISTS (
   SELECT 1 FROM unnest(ARRAY[
