@@ -99,6 +99,11 @@ jobs:
           assert '.eq("cliente_numero",customer.numero)' in backend
           assert "cliente_numero:customer.numero" in backend
           assert "revocada_en=now()" in rpc and "expira_en>now()" in rpc
+          assert rpc.count("CREATE OR REPLACE FUNCTION public.ed_cliente_")==5, "Duplicated or missing RPC definitions"
+          assert rpc.count("END; $fn$;")==5, "Truncated or duplicated PL/pgSQL bodies"
+          assert rpc.count("\nCOMMIT;")==1, "Duplicated SQL transaction"
+          assert rpc.rstrip().endswith("COMMIT;"), "Unexpected trailing SQL"
+          assert rpc.count("AS $fn$")==5, "Missing PL/pgSQL body delimiter"
           assert "FAIL cruce de clientes" in tests and "FAIL replay revocado" in tests
           assert "FAIL expiracion" in tests and "FAIL permisos RPC" in tests
           assert "ed_cliente_limite_privado" in Path("docs/auditoria-contratos-rpc-staging-2026-11-09.md").read_text()
