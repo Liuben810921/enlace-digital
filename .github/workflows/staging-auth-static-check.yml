@@ -101,6 +101,15 @@ jobs:
           assert "revocada_en=now()" in rpc and "expira_en>now()" in rpc
           assert "IF p_token_hash IS NULL OR p_token_hash !~" in rpc
           assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~")==2
+          assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}
+          assert "FAIL cruce de clientes" in tests and "FAIL replay revocado" in tests
+          assert "FAIL expiracion" in tests and "FAIL permisos RPC" in tests
+          assert "ed_cliente_limite_privado" in Path("docs/auditoria-contratos-rpc-staging-2026-11-09.md").read_text()
+          print("RPC contracts and staging safety PASS")
+          print("Static guards PASS")
+          PY
+ THEN RETURN NULL; END IF;")==2
+          assert rpc.count("END; $fn$;")==5
           assert "FAIL cruce de clientes" in tests and "FAIL replay revocado" in tests
           assert "FAIL expiracion" in tests and "FAIL permisos RPC" in tests
           assert "ed_cliente_limite_privado" in Path("docs/auditoria-contratos-rpc-staging-2026-11-09.md").read_text()
