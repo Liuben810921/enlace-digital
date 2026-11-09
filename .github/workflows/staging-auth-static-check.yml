@@ -35,6 +35,10 @@ jobs:
           assert 'SECURITY DEFINER SET search_path TO' in q
           assert 'FROM PUBLIC,anon,authenticated' in q
           assert 'TO service_role' in q
+          assert "'numero',c.cliente_numero" in q
+          assert "'cerrada',true" in q
+          assert "WHERE numero=(c->>'numero')::integer" in q
+          assert 'length(coalesce(p_direccion' in q
           assert 'DO NOT EXECUTE' in q
           print("Static guards PASS")
           PY
