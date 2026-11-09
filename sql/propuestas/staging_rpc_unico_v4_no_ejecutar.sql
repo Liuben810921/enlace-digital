@@ -24,7 +24,7 @@ BEGIN
  INSERT INTO enlace_auth.cliente_credenciales(cliente_numero,telefono_e164,password_hash,correo_recuperacion)
  VALUES(n,p_telefono,h,correo);
  RETURN jsonb_build_object('numero',n,'codigo','ED-'||lpad(n::text,6,'0'));
-END $fn$;
+END; $fn$;
 
 CREATE OR REPLACE FUNCTION public.ed_cliente_registrar_residencia_privado(
  p_nombre text,p_telefono text,p_password text,p_correo text,p_residencia text,
@@ -43,7 +43,7 @@ BEGIN
  direccion_habitual=CASE WHEN p_residencia='cuba' THEN btrim(p_direccion) END
  WHERE numero=n;
  RETURN result;
-END $fn$;
+END; $fn$;
 
 CREATE OR REPLACE FUNCTION public.ed_cliente_login_privado(
  p_telefono text,p_password text,p_token_hash text
@@ -65,7 +65,7 @@ BEGIN
  VALUES(c.cliente_numero,p_token_hash,now()+interval '30 days');
  SELECT * INTO client FROM public.clientes_oficiales WHERE numero=c.cliente_numero;
  RETURN jsonb_build_object('numero',client.numero,'codigo',client.codigo,'nombre',client.nombre,'residencia',client.residencia);
-END $fn$;
+END; $fn$;
 
 CREATE OR REPLACE FUNCTION public.ed_cliente_sesion_privada(
  p_token_hash text,p_revocar boolean DEFAULT false
@@ -79,7 +79,7 @@ BEGIN
  IF NOT FOUND THEN RETURN NULL; END IF;
  IF p_revocar THEN UPDATE enlace_auth.cliente_sesiones SET revocada_en=now() WHERE token_hash=p_token_hash; RETURN jsonb_build_object('cerrada',true); END IF;
  RETURN jsonb_build_object('numero',c.cliente_numero,'codigo',c.codigo,'nombre',c.nombre,'residencia',c.residencia,'telefono',c.telefono,'correo',c.correo,'provincia',c.provincia,'municipio',c.municipio,'barrio',c.barrio,'direccion_habitual',c.direccion_habitual);
-END $fn$;
+END; $fn$;
 
 CREATE OR REPLACE FUNCTION public.ed_cliente_direccion_privada(
  p_token_hash text,p_provincia text,p_municipio text,p_barrio text,p_direccion text
@@ -93,7 +93,7 @@ BEGIN
  barrio=btrim(coalesce(p_barrio,'')),direccion_habitual=btrim(p_direccion)
  WHERE numero=(c->>'numero')::integer;
  RETURN FOUND;
-END $fn$;
+END; $fn$;
 -- No public client role may invoke these privileged RPCs.
 REVOKE ALL ON FUNCTION
  public.ed_cliente_registrar_privado(text,text,text,text),
