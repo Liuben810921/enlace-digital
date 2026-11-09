@@ -283,3 +283,44 @@ Deno.test("session backend errors do not leak private records",async()=>{
   assertEquals((r.body as any).cliente,undefined);
  }
 });
+
+Deno.test("unexpected JSON types and malformed payloads never reach protected writes",async()=>{
+ const cases=[
+  {action:"register",name:["Prueba","Cuba"],phone:"+15550001001",password:"ClaveFicticia2026!",residence:"cuba"},
+  {action:"register",name:"Prueba Cuba",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"cuba",address:{province:"La Habana",municipality:"Plaza",street:"short"}},
+  {action:"recipient-save",token:"invalid",recipient:{name:"Receptor A"}},
+  {action:"delivery-location-save",token:"invalid",location:{name:"Receptor A"}},
+  {action:"profile",token:12345},
+  {action:"login",phone:{"unexpected":true},password:"ClaveFicticia2026!"}
+ ];
+ for(const payload of cases){
+  reset();
+  const r=await send(String(payload.action),payload);
+  assert(r.status>=400&&r.status<500);
+  assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+ }
+});
+Deno.test("global rate limit fails closed before private authentication and table operations",async()=>{
+ for(const action of ["register","login","profile","recipient-save","delivery-location-save"]){
+  reset();queueRpc("ed_cliente_limite_privado",{data:false,error:null});
+  const r=await send(action,{token});
+  assertEquals(r.status,429);
+  assertEquals(calls.filter(c=>c.kind==="rpc"&&c.name!=="ed_cliente_limite_privado").length,0);
+  assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
+ }
+});
+Deno.test("response security headers prevent caching and disallow wildcard CORS",async()=>{
+ reset();const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"origin":"https://attacker.invalid","content-type":"application/json"},body:JSON.stringify({action:"unrecognized"})}));
+ assertEquals(r.status,400);
+ assertEquals(r.headers.get("cache-control"),"no-store");
+ assertEquals(r.headers.get("access-control-allow-origin"),null);
+ assertEquals(r.headers.get("content-type"),"application/json");
+});
+Deno.test("invalid request bodies are rejected without private RPCs",async()=>{
+ for(const raw of ["null","[]","42","true","\"string\"","{"]){
+  reset();
+  const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:raw}));
+  assertEquals(r.status,400);
+  assertEquals(calls.filter(c=>c.kind==="rpc"&&c.name!=="ed_cliente_limite_privado").length,0);
+ }
+});
