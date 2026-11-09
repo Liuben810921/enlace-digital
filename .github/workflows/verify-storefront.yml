@@ -93,7 +93,7 @@ jobs:
             echo "Diagnostic not executed: protected credential unavailable in Actions."
             exit 0
           fi
-          for action in status smtp-probe; do
+          for action in status smtp-probe smtp-auth-probe; do
             export DIAG_ACTION="$action"
             curl --silent --show-error --max-time 12 --retry 1 \
               --output /tmp/ed-gmail-diagnostic.json \
@@ -114,8 +114,12 @@ jobs:
               raise SystemExit(1)
           if action=='status':
               print('Gmail app-password presence: '+('confirmed' if body.get('credential_present') is True else 'not confirmed'))
-          else:
+          elif action=='smtp-probe':
               print('TLS 465: '+('connected' if body.get('tls_reachable') is True else 'not connected'))
+              print('No email sent: '+('confirmed' if body.get('email_sent') is False else 'not confirmed'))
+          else:
+              result=body.get('auth_result','unknown')
+              print('SMTP AUTH: '+result if result in ('authenticated','rejected','app_password_or_policy_required','smtp_response_other','timeout','connection_failed','credential_missing') else 'SMTP AUTH: unknown')
               print('No email sent: '+('confirmed' if body.get('email_sent') is False else 'not confirmed'))
           PY
           done
