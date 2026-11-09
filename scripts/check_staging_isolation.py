@@ -18,28 +18,49 @@ assert '.select("id").eq("cliente_numero",customer.numero)' in edge
 assert '.eq("cliente_numero",data.numero).order(' in edge
 assert edge.count('.eq("cliente_numero",data.numero).order(') == 2
 assert edge.count('.eq("cliente_numero",customer.numero)') == 3
-# Negative mutation tests: deliberately remove an ownership predicate from each
-# sensitive update and prove the static check rejects the altered expression.
-def requires_owner_scope(source, fragment):
-    return fragment in source
+# Each contract is checked in the relevant route, not elsewhere in the file.
+def route(source, action, following):
+    begin = source.index('if(action==="' + action + '")')
+    finish = source.index(following, begin)
+    return source[begin:finish]
 
-sensitive_updates = (
-    '.update(record).eq("id",id).eq("cliente_numero",customer.numero)',
-    '.eq("id",found.id).eq("cliente_numero",customer.numero)',
+def assert_owner_contract(source):
+    recipient = route(source, "recipient-save", 'if(action==="session"')
+    location = route(source, "delivery-location-save", 'if(action==="recipient-save"')
+    profile = route(source, "session", 'return reply(400,{error:"Operacion no disponible"})')
+    assert '.update(record).eq("id",id).eq("cliente_numero",customer.numero)' in recipient
+    assert '.insert({...record,cliente_numero:customer.numero})' in recipient
+    assert '.eq("id",found.id).eq("cliente_numero",customer.numero)' in location
+    assert '.select("id").eq("cliente_numero",customer.numero)' in location
+    assert '.insert({cliente_numero:customer.numero,' in location
+    assert profile.count('.eq("cliente_numero",data.numero).order(') == 2
+
+assert_owner_contract(edge)
+# Mutation testing: the very same contract must fail on each unsafe variant.
+mutations = (
+    ('.update(record).eq("id",id).eq("cliente_numero",customer.numero)',
+     '.update(record).eq("id",id)'),
+    ('.insert({...record,cliente_numero:customer.numero})',
+     '.insert({...record,cliente_numero:Number(body.cliente_numero)})'),
+    ('.eq("id",found.id).eq("cliente_numero",customer.numero)',
+     '.eq("id",found.id)'),
+    ('.select("id").eq("cliente_numero",customer.numero)',
+     '.select("id")'),
+    ('.insert({cliente_numero:customer.numero,',
+     '.insert({cliente_numero:Number(body.cliente_numero),'),
+    ('.eq("cliente_numero",data.numero).order(',
+     '.order('),
 )
-for protected in sensitive_updates:
-    assert requires_owner_scope(edge, protected)
-    unsafe = protected.replace('.eq("cliente_numero",customer.numero)', '')
-    altered = edge.replace(protected, unsafe, 1)
-    assert altered != edge and not requires_owner_scope(altered, protected), (
-        "Negative mutation was not detected: " + protected
-    )
-
-# A profile must retain both separate owner filters.
-profile_guard = '.eq("cliente_numero",data.numero).order('
-assert edge.count(profile_guard) == 2
-altered_profile = edge.replace(profile_guard, '.order(', 1)
-assert altered_profile.count(profile_guard) == 1
+for safe, unsafe in mutations:
+    assert safe in edge, "Mutation target missing"
+    mutated = edge.replace(safe, unsafe, 1)
+    assert mutated != edge
+    try:
+        assert_owner_contract(mutated)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("Unsafe mutation escaped owner checks: " + safe)
 
 for table in ("clientes_destinatarios", "clientes_direcciones_entrega"):
     assert f'CREATE TABLE IF NOT EXISTS public.{table}' in schema
