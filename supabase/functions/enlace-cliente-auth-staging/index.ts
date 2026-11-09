@@ -14,8 +14,19 @@ Deno.serve(async req=>{
  if(!enabled||!validProject)return reply(503,{error:"Servicio staging desactivado o proyecto incorrecto"});
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers});
  if(req.method!=="POST")return reply(405,{error:"Metodo no permitido"});
- if((req.headers.get("content-length")||"0") && Number(req.headers.get("content-length"))>4096)return reply(413,{error:"Solicitud demasiado grande"});
- let body:any;try{body=await req.json()}catch{return reply(400,{error:"Solicitud invalida"})}
+ // Reject oversized bodies even when Content-Length is missing or untrusted.
+ const declaredLength=Number(req.headers.get("content-length")||"0");
+ if(!Number.isFinite(declaredLength)||declaredLength<0||declaredLength>4096)return reply(413,{error:"Solicitud demasiado grande"});
+ let body:any;
+ try{
+  const reader=req.body?.getReader();
+  if(!reader)return reply(400,{error:"Solicitud invalida"});
+  const chunks:Uint8Array[]=[];let total=0;
+  while(true){const {done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>4096){await reader.cancel();return reply(413,{error:"Solicitud demasiado grande"})}chunks.push(value)}
+  const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+  body=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+  if(!body||typeof body!=="object"||Array.isArray(body))return reply(400,{error:"Solicitud invalida"});
+ }catch{return reply(400,{error:"Solicitud invalida"})}
  const action=String(body?.action||"");
  const ip=(req.headers.get("cf-connecting-ip")||req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown").trim().slice(0,80);
  const identity=await sha(ip);
