@@ -1,0 +1,30 @@
+-- STAGING CONTRACT ADDENDUM / PROPOSAL ONLY / NEVER RUN AS-IS
+-- Complements staging_registro_destinatarios_no_ejecutar.sql.
+-- Review full production RPC definitions and schema before writing an executable migration.
+-- The production Edge Function v12 expects the following columns in
+-- public.clientes_direcciones_entrega:
+-- usado_en timestamptz NOT NULL DEFAULT now()
+-- distancia_km numeric NULL
+-- punto_salida_id bigint NULL (verify actual production type and FK)
+-- ruta_version text NULL (verify actual production type)
+-- calculado_en timestamptz NULL
+-- The existing draft omitted these fields. Do not deploy the draft without reconciliation.
+--
+-- Required private RPCs not present in staging:
+-- ed_cliente_registrar_residencia_privado
+-- ed_cliente_login_privado
+-- ed_cliente_sesion_privada
+-- ed_cliente_direccion_privada
+-- Present: ed_cliente_limite_privado(p_clave text,p_max integer,p_ventana_seg integer).
+--
+-- Design invariants for future implementation:
+-- 1. registration inserts customer + credential atomically; hash passwords using
+--    server-side slow KDF (bcrypt/argon2), never SHA-256 passwords.
+-- 2. login checks rate limits and lockouts, writes only token HASH with expiry.
+-- 3. session resolves customer by hash, expiry and revocation, and may revoke.
+-- 4. address update requires valid session and same customer; reject invalid Cuba address.
+-- 5. recipient and location writes must bind owner to server-validated customer ID,
+--    never accept caller-controlled cliente_numero.
+-- 6. limit function must fail closed.
+-- 7. no sending email or creating real orders.
+-- This file is a design contract, not an executable migration.
