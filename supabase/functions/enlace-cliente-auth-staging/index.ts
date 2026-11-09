@@ -30,7 +30,10 @@ Deno.serve(async req=>{
  const action=String(body?.action||"");
  const ip=(req.headers.get("cf-connecting-ip")||req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown").trim().slice(0,80);
  const identity=await sha(ip);
+ // The proxy-IP header must be trusted only when the deployment proxy strips
+ // client-supplied forwarding headers. Until then use an additional global gate.
  const limit=async(k:string,max:number,secs:number)=>{const {data,error}=await db.rpc("ed_cliente_limite_privado",{p_clave:k,p_max:max,p_ventana_seg:secs});return !error&&data===true};
+ if(!(await limit("staging-auth-global",300,60)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
  if(action==="register"){
   if(!(await limit("reg-ip:"+identity,3,3600)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
   const name=String(body?.name||"").trim(),phone=String(body?.phone||"").trim(),password=String(body?.password||""),email=String(body?.email||"").trim();
