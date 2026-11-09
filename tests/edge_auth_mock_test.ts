@@ -423,3 +423,22 @@ Deno.test("logout requires explicit revocation confirmation from SQL",async()=>{
   assertEquals((rpc.args as any).p_revocar,true);
  }
 });
+
+Deno.test("protected writes fail closed on session backend error or invalid owner",async()=>{
+ for(const action of ["address-save","recipient-save","delivery-location-save"]){
+  for(const result of [{data:null,error:{code:"XX000"}},{data:{numero:"11"},error:null},{data:{numero:0},error:null}]){
+   reset();queueRpc("ed_cliente_sesion_privada",result);
+   const r=await send(action,{token});
+   assertEquals(r.status,500);
+   assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
+   assertEquals(calls.filter(c=>c.name==="ed_cliente_direccion_privada").length,0);
+  }
+ }
+});
+Deno.test("protected writes return unauthorized on revoked session without writes",async()=>{
+ for(const action of ["address-save","recipient-save","delivery-location-save"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:null,error:null});
+  assertEquals((await send(action,{token})).status,401);
+  assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
+ }
+});
