@@ -8,7 +8,8 @@ const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".su
 const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 // Configure a reviewed HTTPS origin explicitly before any staging enablement.
 const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";
-const publishableKey=Deno.env.get("ED_STAGING_PUBLISHABLE_KEY")||"";
+// Supabase provisions this JSON dictionary automatically; do not duplicate its value as a custom secret.
+const publishableKey=(()=>{try{const keys=JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}");return typeof keys?.default==="string"?keys.default:""}catch{return ""}})();
 const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.origin==="https://liuben810921.github.io"?u.origin:""}catch{return ""}})();
 const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
 const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
