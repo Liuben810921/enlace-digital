@@ -6,6 +6,12 @@ on:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
       - 'sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql'
       - '.github/workflows/staging-auth-static-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql'
+      - '.github/workflows/staging-auth-static-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
