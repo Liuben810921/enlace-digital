@@ -442,3 +442,23 @@ Deno.test("protected writes return unauthorized on revoked session without write
   assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
  }
 });
+
+Deno.test("recipient IDs reject coercion and do not mutate records",async()=>{
+ const recipient={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ for(const id of ["55",true,false,[],[55],{},1.5]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  const r=await send("recipient-save",{token,id,recipient});
+  assertEquals(r.status,400);
+  assertEquals(calls.filter(c=>c.name==="clientes_destinatarios").length,0);
+ }
+});
+Deno.test("protected writes distinguish expired sessions, RPC errors and invalid owners",async()=>{
+ for(const action of ["recipient-save","delivery-location-save","address-save"]){
+  for(const scenario of [{data:null,error:null,status:401},{data:null,error:{code:"XX000"},status:500},{data:{numero:"11"},error:null,status:500}]){
+   reset();queueRpc("ed_cliente_sesion_privada",{data:scenario.data,error:scenario.error});
+   const r=await send(action,{token});
+   assertEquals(r.status,scenario.status);
+   assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
+  }
+ }
+});
