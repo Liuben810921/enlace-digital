@@ -28,11 +28,11 @@ function table(name:string){
 let handler:(req:Request)=>Promise<Response>;
 (globalThis as any).__captureServe=(fn:typeof handler)=>{handler=fn};
 const mocked=source
- .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = globalThis.__mockCreateClient;')
+ .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = (globalThis as any).__mockCreateClient;')
  .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
  .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
- .replace('Deno.serve(async req=>{','globalThis.__captureServe(async req=>{');
-assert(mocked.includes("globalThis.__captureServe(async req=>{"));
+ .replace('Deno.serve(async req=>{','(globalThis as any).__captureServe(async (req:Request)=>{');
+assert(mocked.includes("__captureServe(async (req:Request)=>{"));
 const temp=await Deno.makeTempFile({suffix:".ts"});
 try{await Deno.writeTextFile(temp,mocked);await import("file://"+temp+"?mock="+Date.now())}finally{await Deno.remove(temp)}
 handler=(globalThis as any).__handler??handler;
