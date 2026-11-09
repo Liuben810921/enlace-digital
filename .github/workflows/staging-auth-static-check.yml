@@ -6,6 +6,7 @@ on:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
+      - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   pull_request:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
+      - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   workflow_dispatch:
 permissions:
@@ -71,5 +73,35 @@ jobs:
           assert "punto_salida_id text" in schema
           assert tests.count("n:=n+1;")==17
           assert "BEGIN;" in tests and "ROLLBACK;" in tests
+          # Verify explicit RPC contracts, isolation and staging-only safety.
+          expected={
+            "ed_cliente_registrar_privado":4,
+            "ed_cliente_registrar_residencia_privado":9,
+            "ed_cliente_login_privado":3,
+            "ed_cliente_sesion_privada":2,
+            "ed_cliente_direccion_privada":5,
+          }
+          import re
+          definitions=re.findall(r"CREATE OR REPLACE FUNCTION public\\.(ed_cliente_\\w+)\\((.*?)\\) RETURNS",rpc,re.S)
+          assert len(definitions)==5, "Five function signatures required"
+          for name,arguments in definitions:
+              assert name in expected, f"Unexpected RPC {name}"
+              assert len(re.findall(r"\\bp_\\w+\\s+(?:text|boolean)\\b",arguments))==expected[name], f"Signature mismatch {name}"
+          assert len(re.findall(r"SECURITY DEFINER SET search_path TO ''",rpc))==5
+          assert "REVOKE ALL ON FUNCTION" in rpc and "FROM PUBLIC,anon,authenticated" in rpc
+          assert "GRANT EXECUTE ON FUNCTION" in rpc and "TO service_role" in rpc
+          for action in ('register','login','address-save','recipient-save','delivery-location-save','session','logout','profile'):
+              assert f'action==="{action}"' in backend, f"Missing route {action}"
+          for name in ("ed_cliente_registrar_residencia_privado","ed_cliente_login_privado","ed_cliente_sesion_privada","ed_cliente_direccion_privada","ed_cliente_limite_privado"):
+              assert f'db.rpc("{name}"' in backend, f"Missing Edge RPC {name}"
+          assert "p_residencia='cuba'" in rpc and "Direccion habitual requerida" in rpc
+          assert "p_residencia NOT IN ('cuba','extranjero')" in rpc
+          assert '.eq("cliente_numero",customer.numero)' in backend
+          assert "cliente_numero:customer.numero" in backend
+          assert "revocada_en=now()" in rpc and "expira_en>now()" in rpc
+          assert "FAIL cruce de clientes" in tests and "FAIL replay revocado" in tests
+          assert "FAIL expiracion" in tests and "FAIL permisos RPC" in tests
+          assert "ed_cliente_limite_privado" in Path("docs/auditoria-contratos-rpc-staging-2026-11-09.md").read_text()
+          print("RPC contracts and staging safety PASS")
           print("Static guards PASS")
           PY
