@@ -7,12 +7,17 @@ const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";
 const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();
 const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Origin":"https://staging-preview.invalid","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
-const reply=(status:number,body:unknown)=>new Response(JSON.stringify(body),{status,headers});
+// Configure a reviewed HTTPS origin explicitly before any staging enablement.
+const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";
+const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.hostname!=="staging-preview.invalid"?u.origin:""}catch{return ""}})();
+const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
+const corsHeaders=(req:Request)=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
+
+const reply=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
  if(!enabled||!validProject)return reply(503,{error:"Servicio staging desactivado o proyecto incorrecto"});
- if(req.method==="OPTIONS")return new Response(null,{status:204,headers});
+ if(req.method==="OPTIONS")return new Response(null,{status:req.headers.get("origin")===allowedOrigin&&allowedOrigin?204:403,headers:{...headers,...corsHeaders(req)}});
  if(req.method!=="POST")return reply(405,{error:"Metodo no permitido"});
  // Reject oversized bodies even when Content-Length is missing or untrusted.
  const declaredLength=Number(req.headers.get("content-length")||"0");
@@ -28,10 +33,11 @@ Deno.serve(async req=>{
   if(!body||typeof body!=="object"||Array.isArray(body))return reply(400,{error:"Solicitud invalida"});
  }catch{return reply(400,{error:"Solicitud invalida"})}
  const action=String(body?.action||"");
- const ip=(req.headers.get("cf-connecting-ip")||req.headers.get("x-forwarded-for")?.split(",")[0]||"unknown").trim().slice(0,80);
+ // Do not trust client-supplied forwarding headers before proxy provenance is verified.
+ const ip="unverified-proxy";
  const identity=await sha(ip);
- // The proxy-IP header must be trusted only when the deployment proxy strips
- // client-supplied forwarding headers. Until then use an additional global gate.
+ // All requests share the IP limiter until trusted proxy attribution is configured.
+ // Global limit remains an additional fail-closed safeguard.
  const limit=async(k:string,max:number,secs:number)=>{const {data,error}=await db.rpc("ed_cliente_limite_privado",{p_clave:k,p_max:max,p_ventana_seg:secs});return !error&&data===true};
  if(!(await limit("staging-auth-global",300,60)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
  if(action==="register"){
