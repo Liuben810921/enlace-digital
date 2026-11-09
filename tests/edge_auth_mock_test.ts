@@ -511,3 +511,16 @@ Deno.test("delivery insert and reuse reject missing, malformed or mismatched IDs
   assertEquals(queries[1].filters.id,4);
  }
 });
+
+Deno.test("static staging publishable-key contract: default key, fail-closed, no duplicate", async () => {
+ const config = await Deno.readTextFile("supabase/config.toml");
+ assert(!source.includes("ED_STAGING_PUBLISHABLE_KEY"), "obsolete custom key in handler");
+ assert(!config.includes("ED_STAGING_PUBLISHABLE_KEY"), "obsolete custom key in config");
+ assert(source.includes('Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")'), "missing managed key dictionary");
+ assert(source.includes('typeof keys?.default==="string"?keys.default:""'), "default key must be a string");
+ assert(source.includes('publishableKey.startsWith("sb_publishable_")'), "modern key validation missing");
+ assert(source.includes('sameKey(req.headers.get("apikey")||"",publishableKey)'), "apikey equality check missing");
+ assert(source.includes('Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true"'), "explicit opt-in gate missing");
+ assert(source.includes('if(!enabled||!validProject||!key||!allowedOrigin||!publishableKey.startsWith'), "fail-closed gate missing");
+ assert(source.includes('u.origin===configuredOrigin&&u.origin==="https://liuben810921.github.io"'), "exact HTTPS origin check missing");
+});
