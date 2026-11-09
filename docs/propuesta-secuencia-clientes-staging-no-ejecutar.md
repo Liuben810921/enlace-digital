@@ -35,3 +35,15 @@ No se ha ejecutado ningún SQL de efectos, migración ni despliegue.
 ## Preflight incorporado al borrador (commit 230b13a)
 
 El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inicia su transacción con un bloque `DO $preflight$` que aborta si (1) ya existen clientes, (2) ya existe la secuencia de clientes o (3) existe una restricción Cuba con el nombre reservado que requiere comprobar equivalencia. Esto evita aplicar a ciegas el `START WITH 1` sobre un estado distinto del observado y evita ignorar un CHECK no equivalente. El preflight **no sustituye** la exclusión operativa de escritores concurrentes: una transacción sola no impide que otro proceso registre clientes entre las verificaciones. La instalación sigue sin autorización.
+
+## Orden de instalación controlada — NO EJECUTAR
+
+1. Obtener autorización específica para **staging** y confirmar proyecto `xqahthghvozeigbojhyi`. Mantener la Edge Function deshabilitada, sin correo ni pedidos reales. Prohibir escritores concurrentes de clientes durante toda la operación.
+2. Antes de modificar datos, consultar catálogo y comprobar que `public.clientes_oficiales` está vacía, que la secuencia no existe y que no hay una restricción `ed_cliente_cuba_direccion_ck` previa. Verificar propietario de las tres tablas y que `pgcrypto` está en `extensions`. Si alguna condición falla, abortar y revisar, sin reiniciar contadores.
+3. Revisar el SQL completo de `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql`, incluyendo su preflight transaccional, columnas, CHECK, RLS, GRANT de tablas nuevas y secuencias. La ejecución real requiere autorización adicional. No aplicar automáticamente sobre un esquema existente con definiciones diferentes.
+4. Solo después de validar el esquema, revisar `sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql` y el propietario efectivo de las cinco funciones `SECURITY DEFINER`. La función auxiliar `ed_cliente_registrar_privado` **no debe tener EXECUTE para `service_role`**; únicamente el wrapper de residencia puede registrar clientes desde Edge. `anon` y `authenticated` no deben ejecutar ninguna de las cinco RPC.
+5. Verificar tras instalación autorizada los permisos efectivos mediante `has_function_privilege`, las columnas y CHECK con `pg_get_constraintdef`, el estado de secuencia y que el propietario puede acceder a las tablas RLS. No habilitar Edge todavía.
+6. Con autorización separada para pruebas, ejecutar la batería ficticia con ROLLBACK, confirmar sus aserciones y comprobar aislamiento entre dos clientes. **Advertencia:** operaciones `nextval` no se revierten con ROLLBACK; la secuencia puede avanzar aunque se reviertan filas. No prometer estado numérico idéntico.
+7. No desplegar ni habilitar la Edge Function hasta revisar los resultados de integración, origen CORS, controles de tasa y ausencia de accesos entre clientes. El despliegue requiere autorización propia.
+
+**Estado de esta guía:** preparación y análisis de GitHub solamente; no se ha ejecutado la instalación.
