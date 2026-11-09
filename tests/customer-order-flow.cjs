@@ -38,7 +38,7 @@ ctx.edCustomerSession=null;await ctx.edOfficialOrderPreview();assert.equal(rende
  el('edDeliveryAddress').value='Calle Dos 200';
  await ctx.edOfficialRecipientSave();
  assert.equal(requests[0].action,'recipient-save');assert.equal(requests[0].payload.id,7);
- assert.equal(requests[1].action,'profile');assert.match(rendered,/MODO PRUEBA/);
+ assert.equal(requests[1].action,'profile');await new Promise(setImmediate);assert.match(rendered,/MODO PRUEBA/);
  requests=[];await ctx.edRestoreCustomerSession();
  assert.equal(requests[0].action,'profile');
  assert.equal(ctx.edCustomerRecipients.length,1);
