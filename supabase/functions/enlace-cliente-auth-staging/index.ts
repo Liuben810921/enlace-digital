@@ -12,6 +12,7 @@ const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protoco
 const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
 const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
 
+const textFields=(obj:unknown,keys:string[])=>!!obj&&typeof obj==="object"&&!Array.isArray(obj)&&keys.every(k=>(obj as Record<string,unknown>)[k]===undefined||(obj as Record<string,unknown>)[k]===null||typeof (obj as Record<string,unknown>)[k]==="string");
 const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
@@ -48,6 +49,7 @@ Deno.serve(async req=>{
   if(!(await limit("reg-phone:"+await sha(phone),3,86400)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
   const residence=String(body?.residence||"");
   const address=body?.address||{};
+  if(!textFields(address,["province","municipality","neighborhood","street"]))return reply(400,{error:"Direccion invalida"});
   const province=String(address.province||"").trim(),municipality=String(address.municipality||"").trim(),neighborhood=String(address.neighborhood||"").trim(),street=String(address.street||"").trim();
   if(!["cuba","extranjero"].includes(residence)||(residence==="cuba"&&(province.length<2||municipality.length<2||street.length<8))||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Selecciona tu residencia y completa la direccion habitual si resides en Cuba."});
   const {data,error}=await db.rpc("ed_cliente_registrar_residencia_privado",{p_nombre:name,p_telefono:phone,p_password:password,p_correo:email||null,p_residencia:residence,p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
@@ -71,6 +73,7 @@ Deno.serve(async req=>{
   const {data:customer,error:authError}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:false});
   if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
   const a=body?.address||{};
+  if(!textFields(a,["province","municipality","neighborhood","street"]))return reply(400,{error:"Direccion invalida"});
   const province=String(a.province||"").trim(),municipality=String(a.municipality||"").trim(),neighborhood=String(a.neighborhood||"").trim(),street=String(a.street||"").trim();
   if(province.length<2||municipality.length<2||street.length<8||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Completa una direccion habitual valida."});
   const {data,error}=await db.rpc("ed_cliente_direccion_privada",{p_token_hash:await sha(token),p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
@@ -85,6 +88,7 @@ Deno.serve(async req=>{
   if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
   if(!(await limit("location:"+customer.numero,30,3600)))return reply(429,{error:"Demasiados intentos"});
   const a=body?.location||{};
+  if(!textFields(a,["name","phone","province","municipality","neighborhood","address","references"]))return reply(400,{error:"Direccion invalida"});
   const name=String(a.name||"").trim(),phone=String(a.phone||"").trim(),province=String(a.province||"").trim(),municipality=String(a.municipality||"").trim(),neighborhood=String(a.neighborhood||"").trim(),address=String(a.address||"").trim(),references=String(a.references||"").trim();
   if(name.length<2||name.length>150||!/^(?:\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||neighborhood.length>150||address.length<8||address.length>500||references.length>500)return reply(400,{error:"Revisa los datos de la direccion ocasional"});
   const base=db.from("clientes_direcciones_entrega");
@@ -105,6 +109,7 @@ Deno.serve(async req=>{
   const {data:customer,error:authError}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:false});
   if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
   const r=body?.recipient||{};
+  if(!textFields(r,["name","phone","province","municipality","neighborhood","address","references"]))return reply(400,{error:"Destinatario invalido"});
   const name=String(r.name||"").trim(),phone=String(r.phone||"").trim(),province=String(r.province||"").trim(),municipality=String(r.municipality||"").trim(),neighborhood=String(r.neighborhood||"").trim(),address=String(r.address||"").trim(),references=String(r.references||"").trim();
   if(name.length<2||name.length>150||!/^(?:\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||address.length<8||address.length>500||neighborhood.length>150||references.length>500)return reply(400,{error:"Revisa el destinatario y la direccion"});
   const id=body?.id==null?null:Number(body.id);
