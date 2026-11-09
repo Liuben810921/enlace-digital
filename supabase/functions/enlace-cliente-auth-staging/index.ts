@@ -6,7 +6,6 @@ const expectedProject="xqahthghvozeigbojhyi";
 const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";
 const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();
 const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 // Configure a reviewed HTTPS origin explicitly before any staging enablement.
 const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";
 const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.hostname!=="staging-preview.invalid"?u.origin:""}catch{return ""}})();
@@ -17,7 +16,8 @@ const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
  const reply=(status:number,body:unknown)=>sendResponse(status,body,req);
- if(!enabled||!validProject)return reply(503,{error:"Servicio staging desactivado o proyecto incorrecto"});
+ if(!enabled||!validProject||!key)return reply(503,{error:"Servicio staging desactivado o configuracion incompleta"});
+ const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  if(req.method==="OPTIONS")return new Response(null,{status:req.headers.get("origin")===allowedOrigin&&allowedOrigin?204:403,headers:{...headers,...corsHeaders(req)}});
  if(req.method!=="POST")return reply(405,{error:"Metodo no permitido"});
  // Reject oversized bodies even when Content-Length is missing or untrusted.
