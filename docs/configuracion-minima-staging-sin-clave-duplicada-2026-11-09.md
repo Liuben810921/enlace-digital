@@ -1,12 +1,12 @@
-# Configuración mínima de Edge staging, preparada sin aplicar — 2026-11-09
+# Configuración mínima de Edge staging — 2026-11-09
 
 ## Evidencia
-- Captura del Owner: proyecto `enlace-digital-staging`, **No custom secrets created**. Ningún secreto personalizado está configurado.
+- Captura inicial del Owner: proyecto `enlace-digital-staging`, sin custom secrets. Captura posterior: se ven exactamente los dos nombres autorizados guardados; los valores ocultos no se pueden comprobar visualmente.
 - Consulta de solo lectura: staging tiene una clave `default` moderna `sb_publishable_` activa; no se documenta su valor.
 - Documentación oficial https://supabase.com/docs/guides/functions/secrets y https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys : Supabase inyecta `SUPABASE_PUBLISHABLE_KEYS` como JSON de claves por nombre.
 - Código actualizado: obtiene `JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') || '{}').default`, comprueba prefijo y exige `apikey` idéntica antes de RPC. En caso de ausencia, JSON inválido o clave no moderna, falla cerrado con 503. No se duplica la clave en `ED_STAGING_PUBLISHABLE_KEY`.
 
-## Únicas variables personalizadas previstas (no escritas)
+## Únicas variables personalizadas registradas por el Owner (nombres verificados)
 1. `ED_STAGING_CUSTOMER_AUTH_ENABLED` = `false`. Interruptor de seguridad obligatorio; **no habilitar**.
 2. `ED_STAGING_ALLOWED_ORIGIN` = `https://liuben810921.github.io`. HTTPS exacto, sin ruta, sin barra final.
 
@@ -17,5 +17,5 @@
 - Riesgo: al guardar variables personalizadas se modificará el entorno del proyecto staging, potencialmente compartido por futuras funciones; usar nombres exclusivos y no alterar variables por defecto. Con el gate `false` el handler debe devolver 503 incluso si se desplegara, pero el deploy requiere autorización separada.
 - Reversión de configuración: retirar únicamente las dos variables personalizadas si fuese necesario, tras comprobar que no existen consumidores; confirmar por lista que ya no aparecen. No borrar secretos por defecto ni claves del proyecto.
 
-## Autorización pendiente
-Solicitar permiso **solo** para crear esas dos variables personalizadas en proyecto `xqahthghvozeigbojhyi`. No incluye despliegue, SQL, activación, correo, pedidos, producción, roles ni cambio de claves. Tras configurar, verificar únicamente nombres y estado sin revelar secretos. Si no existe una vía conectada para escribir secretos, guiar al Owner por Dashboard y solicitar captura de nombres.
+## Estado posterior a configuración
+El Owner guardó las dos variables mediante Dashboard y aportó captura de sus nombres. No se han verificado sus valores ocultos por lectura administrativa. La consulta de solo lectura de Edge Functions devolvió lista vacía. El despliegue y la activación requieren autorización nueva; no se autoriza SQL, correos, pedidos reales, producción, roles ni cambio de claves.
