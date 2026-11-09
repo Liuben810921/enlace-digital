@@ -21,3 +21,13 @@ La propuesta de esquema crea `public.clientes_oficiales_numero_seq AS integer ST
 El script `scripts/check_staging_isolation.py` y GitHub Actions inspeccionan las rutas de destinatarios y direcciones sin conectarse a una base de datos. Las pruebas de integración negativas futuras deben incluir: token de A con ID de destinatario de B (404 y ninguna modificación), perfil de A sin registros de B, token revocado o caducado (401 y ninguna escritura), dirección ocasional de B no reutilizada ni actualizada por A, y registro con teléfono duplicado. Las comprobaciones de código no sustituyen esas pruebas.
 
 No se ha ejecutado ningún SQL de efectos, migración ni despliegue.
+
+## Evidencia de staging vacío (2026-11-09; lectura solamente)
+
+- Consulta directa a `public.clientes_oficiales`: `COUNT(*) = 0`, `MAX(numero) = NULL`.
+- Consulta de catálogo `to_regclass('public.clientes_oficiales_numero_seq')`: `NULL` (no instalada).
+- El borrado de clientes ficticios ocurrió **solo en la base anterior**, no en staging; no se transfirieron datos.
+- En este estado observado, `CREATE SEQUENCE ... START WITH 1` es compatible con la tabla vacía. **No autoriza ejecutarlo aún**: la ausencia de datos y secuencia debe volver a comprobarse en la misma ventana de instalación, bajo exclusión de escritores. Si cambia cualquiera de esas condiciones, detener y aplicar el procedimiento conservador anterior.
+- El control estático de CI rechaza reinicios destructivos de la secuencia en la propuesta y exige sus privilegios explícitos; **no demuestra** ausencia de concurrencia ni compila los cuerpos PL/pgSQL.
+
+**Puerta de aprobación:** migración y despliegue continúan prohibidos hasta autorización explícita y verificación de prerrequisitos. No activar pedidos ni correo reales.
