@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.clientes_destinatarios (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
  cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE CASCADE,
  nombre text NOT NULL CHECK (length(btrim(nombre)) >= 2),
- telefono text NOT NULL CHECK (telefono ~ '^([+]53)?[0-9]{8}
+ telefono text NOT NULL CHECK (telefono ~ ('^([+]53)?[0-9]{8}' || chr(36))),
  provincia text NOT NULL, municipio text NOT NULL,
  barrio text NOT NULL DEFAULT '', direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
  referencias text NOT NULL DEFAULT '', creado_en timestamptz NOT NULL DEFAULT now(),
