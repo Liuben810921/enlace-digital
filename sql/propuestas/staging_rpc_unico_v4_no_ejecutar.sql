@@ -102,8 +102,10 @@ REVOKE ALL ON FUNCTION
  public.ed_cliente_sesion_privada(text,boolean),
  public.ed_cliente_direccion_privada(text,text,text,text,text)
  FROM PUBLIC,anon,authenticated;
+-- Base registration is an internal helper: direct EXECUTE would bypass
+-- residence collection and allow an account without its required address.
+-- The privileged residence wrapper can still call it as the function owner.
 GRANT EXECUTE ON FUNCTION
- public.ed_cliente_registrar_privado(text,text,text,text),
  public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text),
  public.ed_cliente_login_privado(text,text,text),
  public.ed_cliente_sesion_privada(text,boolean),
