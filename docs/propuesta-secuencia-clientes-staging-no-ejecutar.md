@@ -56,3 +56,11 @@ El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inici
 - CI del commit `d3f0ab3` falló por una aserción textual heredada sobre el mensaje de permisos; el borrador de prueba conserva ahora el marcador esperado sin retirar las verificaciones ampliadas (commit `cc4bd50`). Confirmar CI verde antes de proponer autorización.
 
 **Autorización pendiente (no concedida):** una vez que CI esté verde y se haya completado revisión manual de las cinco RPC, solicitar permiso explícito para ejecutar exclusivamente el esquema revisado en staging, sin Edge Function, correo ni pedidos reales. Antes de cualquier ejecución, volver a comprobar catálogo y exclusión de escritores. La instalación de RPC, pruebas con datos ficticios y despliegue se autorizarán por separado.
+
+## Protección de concurrencia y preparación final — 2026-11-09
+
+- El borrador de esquema ahora toma `LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE` **dentro de BEGIN, antes del preflight**. El bloqueo impide inserciones/actualizaciones concurrentes de esa tabla mientras dure la transacción; el preflight vuelve a comprobar que sigue vacía y que no existe la secuencia ni la restricción reservada. No sustituye revisar otros escritores, transacciones de larga duración ni el comportamiento del servicio antes de abrir mantenimiento.
+- Consultas read-only recientes: clientes 0, `MAX(numero)=NULL`, secuencia ausente, CHECK reservado ausente, cinco RPC propuestas ausentes, `pgcrypto` presente en `extensions`.
+- La función existente `public.ed_cliente_limite_privado` tiene propietario `postgres`, `SECURITY DEFINER`, `search_path` vacío; EXECUTE para `service_role`, no para `anon` ni `authenticated`.
+- CI del commit `ec6590e` aprobado (#42693371763); los commits posteriores con bloqueo deben obtener CI verde antes de solicitar la autorización.
+- **Alcance de la futura autorización**: instalar únicamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en proyecto staging `xqahthghvozeigbojhyi`, con preflight en la misma transacción, bloqueo de escritores, revisión del SQL exacto y validación posterior. Las cinco RPC, pruebas con datos ficticios, Edge Function, correo y pedidos reales quedan fuera de esa autorización y requerirán pasos separados.
