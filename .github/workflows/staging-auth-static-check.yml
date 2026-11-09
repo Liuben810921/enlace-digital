@@ -82,11 +82,11 @@ jobs:
             "ed_cliente_direccion_privada":5,
           }
           import re
-          definitions=re.findall(r"CREATE OR REPLACE FUNCTION public\\.(ed_cliente_\\w+)\\((.*?)\\) RETURNS",rpc,re.S)
+          definitions=re.findall(r"CREATE OR REPLACE FUNCTION public\.(ed_cliente_\w+)\((.*?)\) RETURNS",rpc,re.S)
           assert len(definitions)==5, "Five function signatures required"
           for name,arguments in definitions:
               assert name in expected, f"Unexpected RPC {name}"
-              assert len(re.findall(r"\\bp_\\w+\\s+(?:text|boolean)\\b",arguments))==expected[name], f"Signature mismatch {name}"
+              assert len(re.findall(r"\bp_\w+\s+(?:text|boolean)\b",arguments))==expected[name], f"Signature mismatch {name}"
           assert len(re.findall(r"SECURITY DEFINER SET search_path TO ''",rpc))==5
           assert "REVOKE ALL ON FUNCTION" in rpc and "FROM PUBLIC,anon,authenticated" in rpc
           assert "GRANT EXECUTE ON FUNCTION" in rpc and "TO service_role" in rpc
