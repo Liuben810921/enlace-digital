@@ -76,3 +76,13 @@ El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inici
 **Condiciones obligatorias inmediatamente antes de ejecutar**: reconfirmar el ID de proyecto, CI verde del commit exacto, contenido y checksum del archivo, ausencia de clientes/secuencia/CHECK/tablas auxiliares, no concurrencia de escritores y disponibilidad de ventana de mantenimiento. Si cambia cualquier precondición, detenerse. Después de instalar, verificar columnas, restricciones, RLS, permisos, índices y secuencias por consultas de lectura. No ejecutar las RPC ni las pruebas de integración sin autorizaciones separadas.
 
 **Solicitud propuesta (aún no autorizada):** «Autorizo ejecutar exclusivamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en Supabase staging `xqahthghvozeigbojhyi`, sujeto a la repetición del preflight, a su bloqueo transaccional y a la verificación posterior. No autorizo instalar RPC, desplegar Edge Functions, enviar correos, activar pedidos reales ni modificar producción, productos, departamentos o administradores».
+
+## Revisión independiente del esquema — 2026-11-09
+
+Se corrigió el encabezado que decía `INCOMPLETE: DO NOT APPLY`: se refería a la funcionalidad integral de autenticación (RPC y Edge), no a dependencias necesarias para crear el **esquema aislado**. El archivo mantiene la prohibición expresa de ejecución sin **nueva autorización para su revisión exacta**. No contiene definiciones ni llamadas a las cinco RPC y no activa pedidos ni correos.
+
+**Seguridad adicional:** preflight transaccional ahora aborta si detecta tablas auxiliares existentes o alguna de las siete columnas propuestas ya creada, además de clientes, secuencia y CHECK reservada. Se evita que `IF NOT EXISTS` oculte una instalación parcial. El bloqueo `SHARE ROW EXCLUSIVE` se toma antes del preflight. Las tablas nuevas mantienen RLS y permisos de acceso previstos para `service_role`; el rol público queda revocado. Se requiere verificación posterior de privilegios efectivos y RLS antes de considerar lista cualquier RPC.
+
+**Último preflight de solo lectura:** clientes 0; tablas auxiliares ausentes; siete columnas propuestas ausentes; secuencia ausente; CHECK ausente. El resultado debe reconfirmarse en el proyecto `xqahthghvozeigbojhyi` inmediatamente antes de cualquier futura ejecución. Los archivos cambiaron después de `f9b296e`: **la autorización anterior no cubre esta nueva versión**.
+
+**Limitación:** CI estático y comprobación de catálogo no equivalen a ensayo de ejecución SQL en una base de datos aislada. No se ha ejecutado DDL ni una migración de prueba. Solicitar nueva autorización únicamente cuando el CI del último commit esté verde y se haya revisado el archivo exacto.
