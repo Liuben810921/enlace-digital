@@ -1,22 +1,31 @@
--- PROPOSAL ONLY — DO NOT EXECUTE. STAGING xqahthghvozeigbojhyi.
--- NOT A MIGRATION. Needs separate explicit authorization and consumer inventory.
--- Reason: Edge handler uses SELECT/INSERT/UPDATE, never DELETE/TRUNCATE.
--- Actual ACL (read-only 2026-11-09) grants service_role DELETE and TRUNCATE.
--- IMPORTANT: service_role is a shared privileged role; other consumers may rely on grants.
--- Precondition: verify all external consumers, current ACL, project identity,
--- and that effective privileges do not persist through PUBLIC or role membership.
--- Apply only in an independently authorized change window, after tests/backups.
+-- PROPOSAL ONLY. DO NOT EXECUTE. ALL SQL COMMANDS ARE COMMENTS.
+-- STAGING ONLY: xqahthghvozeigbojhyi. Requires separate authorization.
+-- READ-ONLY AUDIT: service_role has direct grants SELECT, INSERT, UPDATE,
+-- DELETE, TRUNCATE, REFERENCES, TRIGGER and MAINTAIN on both tables.
+-- The Edge handler uses only SELECT, INSERT and UPDATE on these tables.
+-- No role memberships for service_role were returned by pg_auth_members.
+-- CAUTION: service_role has BYPASSRLS; REVOKE on these tables is not
+-- a substitute for protecting the service key or restricting other objects.
+-- Other clients using this shared role have NOT been exhaustively inventoried.
+-- Precondition: inventory external consumers, backups, regression tests,
+-- inspect all ACLs, and independently approve a staging-only change window.
+--
 -- BEGIN;
--- REVOKE DELETE, TRUNCATE ON TABLE
+-- REVOKE DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLE
 --   public.clientes_destinatarios,
 --   public.clientes_direcciones_entrega
 -- FROM service_role;
--- Confirm with has_table_privilege('service_role',...,'DELETE'/'TRUNCATE')
--- and rerun all relevant staging integration tests before COMMIT.
+-- Confirm via has_table_privilege for each privilege and confirm
+-- SELECT, INSERT, UPDATE and sequence USAGE/SELECT remain effective.
+-- Exercise approved staging workflows before COMMIT.
 -- COMMIT;
--- ROLLBACK PLAN (requires independent authorization):
--- GRANT DELETE, TRUNCATE ON TABLE
+--
+-- REVERSION (separate explicit authorization; only if these direct grants
+-- were actually removed and original ACL evidence was preserved):
+-- GRANT DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLE
 --   public.clientes_destinatarios,
 --   public.clientes_direcciones_entrega
 -- TO service_role;
--- Do not run either statement in production. Do not revoke from postgres.
+-- Verify ACLs after reversal. No changes to postgres or production.
+-- Foreign-key ON DELETE CASCADE from clientes_oficiales is a separate
+-- privileged deletion path and is not removed by this proposal.
