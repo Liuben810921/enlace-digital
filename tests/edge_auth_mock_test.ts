@@ -29,6 +29,8 @@ let handler:(req:Request)=>Promise<Response>;
 (globalThis as any).__captureServe=(fn:typeof handler)=>{handler=fn};
 const mocked=source
  .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = (globalThis as any).__mockCreateClient;')
+ .replace('const url=Deno.env.get("SUPABASE_URL")||"";','const url="https://xqahthghvozeigbojhyi.supabase.co";')
+ .replace('const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";','const key="mock-key";')
  .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
  .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
  .replace('Deno.serve(async req=>{','(globalThis as any).__captureServe(async (req:Request)=>{');
