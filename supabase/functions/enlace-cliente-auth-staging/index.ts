@@ -64,7 +64,7 @@ Deno.serve(async req=>{
   if(!(await limit("location:"+customer.numero,30,3600)))return reply(429,{error:"Demasiados intentos"});
   const a=body?.location||{};
   const name=String(a.name||"").trim(),phone=String(a.phone||"").trim(),province=String(a.province||"").trim(),municipality=String(a.municipality||"").trim(),neighborhood=String(a.neighborhood||"").trim(),address=String(a.address||"").trim(),references=String(a.references||"").trim();
-  if(name.length<2||name.length>150||!/^(?:\\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||neighborhood.length>150||address.length<8||address.length>500||references.length>500)return reply(400,{error:"Revisa los datos de la direccion ocasional"});
+  if(name.length<2||name.length>150||!/^(?:\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||neighborhood.length>150||address.length<8||address.length>500||references.length>500)return reply(400,{error:"Revisa los datos de la direccion ocasional"});
   const base=db.from("clientes_direcciones_entrega");
   const {data:found,error:lookupError}=await base.select("id").eq("cliente_numero",customer.numero).eq("provincia",province).eq("municipio",municipality).eq("barrio",neighborhood).eq("direccion",address).limit(1).maybeSingle();
   if(lookupError)return reply(500,{error:"No se pudo consultar la direccion"});
