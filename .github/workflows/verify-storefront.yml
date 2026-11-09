@@ -76,3 +76,46 @@ jobs:
           status=$(curl --retry 2 --max-time 20 --silent --show-error --output /tmp/unknown-response.json --write-out '%{http_code}' -H 'Content-Type: application/json' --data '{"action":"unsupported-action"}' "$url")
           test "$status" = "400" || { echo "Expected 400 for unknown action; got $status"; cat /tmp/unknown-response.json; exit 1; }
           echo "Unknown action correctly rejected"
+
+  gmail_diagnostic:
+    # Runs only on main push; does not send mail or print secrets or raw responses.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check protected Gmail diagnostics without sending messages
+        env:
+          INTERNAL_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$INTERNAL_KEY" ]; then
+            echo "Diagnostic not executed: protected credential unavailable in Actions."
+            exit 0
+          fi
+          for action in status smtp-probe; do
+            export DIAG_ACTION="$action"
+            curl --silent --show-error --max-time 12 --retry 1 \
+              --output /tmp/ed-gmail-diagnostic.json \
+              --write-out '%{http_code}' \
+              -H "Authorization: Bearer $INTERNAL_KEY" \
+              -H "Content-Type: application/json" \
+              --data "{\"action\":\"$action\"}" \
+              "https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-correo-staging" > /tmp/ed-gmail-http-status
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          action=os.environ['DIAG_ACTION']
+          code=Path('/tmp/ed-gmail-http-status').read_text().strip()
+          try: body=json.loads(Path('/tmp/ed-gmail-diagnostic.json').read_text())
+          except Exception: body={}
+          if code!='200':
+              print('Protected diagnostic could not run; HTTP '+code)
+              raise SystemExit(1)
+          if action=='status':
+              print('Gmail app-password presence: '+('confirmed' if body.get('credential_present') is True else 'not confirmed'))
+          else:
+              print('TLS 465: '+('connected' if body.get('tls_reachable') is True else 'not connected'))
+              print('No email sent: '+('confirmed' if body.get('email_sent') is False else 'not confirmed'))
+          PY
+          done
