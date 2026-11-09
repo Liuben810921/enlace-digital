@@ -123,3 +123,23 @@ jobs:
               print('No email sent: '+('confirmed' if body.get('email_sent') is False else 'not confirmed'))
           PY
           done
+          # Exercise email templates without creating tokens or sending messages.
+          for purpose in verificar_correo recuperar_clave; do
+            export DIAG_PURPOSE="$purpose"
+            curl --silent --show-error --max-time 12 \
+              --output /tmp/ed-mail-dry-run.json \
+              --write-out '%{http_code}' \
+              -H "Authorization: Bearer $INTERNAL_KEY" \
+              -H "Content-Type: application/json" \
+              --data "{\"action\":\"mail-dry-run\",\"purpose\":\"$purpose\",\"to\":\"fictional@example.invalid\",\"link\":\"https://liuben810921.github.io/enlace-digital/#ed-email=test\"}" \
+              "https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-correo-staging" > /tmp/ed-mail-dry-run-status
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          code=Path('/tmp/ed-mail-dry-run-status').read_text().strip()
+          body=json.loads(Path('/tmp/ed-mail-dry-run.json').read_text())
+          assert code=='200' and body.get('valid') is True and body.get('subject_ready') is True and body.get('body_ready') is True
+          assert body.get('mail_sent') is False and body.get('token_issued') is False and body.get('delivery_enabled') is False
+          print('Email template dry-run: passed; no mail sent or tokens issued')
+          PY
+          done
