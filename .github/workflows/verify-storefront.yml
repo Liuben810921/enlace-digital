@@ -47,16 +47,16 @@ jobs:
           assert(html.includes('async function edOfficialRecipientCheckout(selectedId=null)'),'Missing async recipient selection');
           assert(html.includes("edCustomerRequest('profile',{token:await edCustomerToken()})"),'Recipient profile refresh missing');
           assert(html.includes('SIMULACIÓN LOCAL: no se realizan cobros'),'Demo checkout isolation lost');
-          const preview=html.split('async function edOfficialOrderPreview(){')[1].split('function edOfficialRecipientSelect(){')[0];
-          assert(preview.includes('SOLO VISTA PREVIA'),'Official order preview must clearly prohibit submission');
+          const preview=html.split('async function edOfficialOrderPreview(selectedId=null){')[1].split('function edConfirmSimulatedCheckout(){')[0];
+          assert(preview.includes('MODO PRUEBA: no se registran ni envían pedidos reales'),'Official order preview must clearly prohibit real submission');
           assert(preview.includes('edCustomerProfile.nombre')&&preview.includes('recipient.direccion')&&preview.includes('x.product.price'),'Order preview must include buyer, address, and priced items');
           assert(preview.includes('validateCart()')&&preview.includes('availability.removed||availability.adjusted'),'Preview must reject stale stock');
           assert(preview.includes('lines.length!==cart.length')&&preview.includes('Number.isFinite(Number(x.product.price))'),'Preview must reject invalid line items and prices');
           assert(preview.includes('await edCustomerToken()')&&preview.includes('!edCustomerProfile'),'Preview must require a non-expired customer session');
-          assert(preview.includes('Tienes cambios sin guardar en el destinatario'),'Preview must reject unsaved recipient changes');
-          assert(preview.includes("Object.entries(pending).some"),'Preview must compare recipient form with saved record');
+          assert(preview.includes('Selecciona una dirección o un destinatario válido'),'Preview must reject invalid recipient selection');
+          assert(preview.includes('edCustomerDeliveryLocations.find')&&preview.includes('edCustomerRecipients.find'),'Preview must use saved delivery records');
           assert(!/edCustomerRequest\(|fetch\(|\.insert\(|\.update\(/.test(preview),'Order preview must not write to a backend');
-          assert(html.includes('Ver pedido preparado (sin enviar)'),'Order preview button missing');
+          assert(html.includes('Confirmar pedido de prueba'),'Simulated checkout button missing');
           assert(!html.includes('function edCustomerSaveRecipient('),'Obsolete recipient endpoint');
           console.log('Inline JavaScript syntax and customer safeguards verified');
           NODE
