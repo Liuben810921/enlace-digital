@@ -1,0 +1,40 @@
+name: staging-auth-static-check
+on:
+  push:
+    branches: [audit/registro-staging-aislado-20261109]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql'
+      - '.github/workflows/staging-auth-static-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: TypeScript typecheck (no execution of function)
+        run: deno check supabase/functions/enlace-cliente-auth-staging/index.ts
+      - name: Security invariants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path("supabase/functions/enlace-cliente-auth-staging/index.ts").read_text()
+          q=Path("sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql").read_text()
+          assert 'ubrvuplslconfxwpfzxj' not in s
+          assert 'ED_STAGING_CUSTOMER_AUTH_ENABLED' in s
+          assert 'expectedProject="xqahthghvozeigbojhyi"' in s
+          assert 'if(!enabled||!validProject)' in s
+          assert 'SECURITY DEFINER SET search_path TO' in q
+          assert 'FROM PUBLIC,anon,authenticated' in q
+          assert 'TO service_role' in q
+          assert 'DO NOT EXECUTE' in q
+          print("Static guards PASS")
+          PY
