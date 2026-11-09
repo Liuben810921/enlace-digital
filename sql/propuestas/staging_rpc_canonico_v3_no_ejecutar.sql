@@ -11,10 +11,10 @@ DECLARE n integer; h text; correo text;
 BEGIN
  IF array_length(regexp_split_to_array(btrim(coalesce(p_nombre,'')), '[[:space:]]+'),1)<2
     OR length(btrim(coalesce(p_nombre,'')))>150 THEN RAISE EXCEPTION 'Nombre y apellido requeridos'; END IF;
- IF p_telefono !~ '^[+][1-9][0-9]{7,14}
+ IF p_telefono IS NULL OR p_telefono !~ ('^[+][1-9][0-9]{7,14}' || chr(36)) THEN RAISE EXCEPTION 'Telefono invalido'; END IF;
  IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
  correo:=nullif(lower(btrim(p_correo)),'');
- IF correo IS NOT NULL AND (correo !~ '^[^ @]+@[^ @]+[.][^ @]+
+ IF correo IS NOT NULL AND (correo !~ ('^[^ @]+@[^ @]+[.][^ @]+' || chr(36)) OR length(correo)>254) THEN RAISE EXCEPTION 'Correo invalido'; END IF;
  IF EXISTS(SELECT 1 FROM enlace_auth.cliente_credenciales WHERE telefono_e164=p_telefono)
  OR EXISTS(SELECT 1 FROM public.clientes_oficiales WHERE telefono=p_telefono) THEN RAISE EXCEPTION 'Telefono ya registrado'; END IF;
  n:=nextval('public.clientes_oficiales_numero_seq');
@@ -113,7 +113,7 @@ COMMIT;
  THEN RAISE EXCEPTION 'Telefono invalido'; END IF;
  IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
  correo:=nullif(lower(btrim(p_correo)),'');
- IF correo IS NOT NULL AND (correo !~ '^[^ @]+@[^ @]+[.][^ @]+
+ IF correo IS NOT NULL AND (correo !~ ('^[^ @]+@[^ @]+[.][^ @]+' || chr(36)) OR length(correo)>254) THEN RAISE EXCEPTION 'Correo invalido'; END IF;
  IF EXISTS(SELECT 1 FROM enlace_auth.cliente_credenciales WHERE telefono_e164=p_telefono)
  OR EXISTS(SELECT 1 FROM public.clientes_oficiales WHERE telefono=p_telefono) THEN RAISE EXCEPTION 'Telefono ya registrado'; END IF;
  n:=nextval('public.clientes_oficiales_numero_seq');
@@ -308,7 +308,7 @@ COMMIT;
  THEN RAISE EXCEPTION 'Telefono invalido'; END IF;
  IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
  correo:=nullif(lower(btrim(p_correo)),'');
- IF correo IS NOT NULL AND (correo !~ '^[^ @]+@[^ @]+[.][^ @]+
+ IF correo IS NOT NULL AND (correo !~ ('^[^ @]+@[^ @]+[.][^ @]+' || chr(36)) OR length(correo)>254) THEN RAISE EXCEPTION 'Correo invalido'; END IF;
  IF EXISTS(SELECT 1 FROM enlace_auth.cliente_credenciales WHERE telefono_e164=p_telefono)
  OR EXISTS(SELECT 1 FROM public.clientes_oficiales WHERE telefono=p_telefono) THEN RAISE EXCEPTION 'Telefono ya registrado'; END IF;
  n:=nextval('public.clientes_oficiales_numero_seq');
