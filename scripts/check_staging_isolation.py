@@ -84,6 +84,14 @@ assert "FROM PUBLIC,anon,authenticated;" in rpc and "TO service_role;" in rpc
 assert "REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;" in schema
 assert "ALTER TABLE public.clientes_destinatarios ENABLE ROW LEVEL SECURITY;" in schema
 assert "ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;" in schema
+# Migration contracts: repeated application must not blindly add CHECK.
+assert "DO $guard$" in schema
+assert "FROM pg_catalog.pg_constraint" in schema
+assert "conname='ed_cliente_cuba_direccion_ck'" in schema
+assert schema.count("ADD CONSTRAINT ed_cliente_cuba_direccion_ck") == 1
+assert "GRANT SELECT,INSERT,UPDATE ON public.clientes_destinatarios,public.clientes_direcciones_entrega TO service_role;" in schema
+assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq TO service_role;" in schema
+assert "REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;" in schema
 assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
