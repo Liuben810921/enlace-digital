@@ -121,28 +121,8 @@ assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
 assert "nextval('public.clientes_oficiales_numero_seq')" in rpc
 # Migration must stop before CREATE SEQUENCE if live staging state drifted.
-assert schema.index('LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE;') < schema.index('DO $preflight
-assert "IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN" in schema
-assert "pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL" in schema
-assert "Existing Cuba address constraint requires manual definition review" in schema
-assert schema.count("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;") == 1
-assert "REVOKE ALL ON SEQUENCE public.clientes_oficiales_numero_seq FROM PUBLIC,anon,authenticated;" in schema
-assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_oficiales_numero_seq TO service_role;" in schema
-assert not re.search(r"\bsetval\s*\(", schema, re.I)
-print("Static recipient/delivery ownership and sequence readiness checks PASS")
-print("PREFLIGHT REQUIRED: recheck staging empty and sequence absent immediately before approved migration")
-)
-assert schema.index('DO $preflight
-assert "IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN" in schema
-assert "pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL" in schema
-assert "Existing Cuba address constraint requires manual definition review" in schema
-assert schema.count("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;") == 1
-assert "REVOKE ALL ON SEQUENCE public.clientes_oficiales_numero_seq FROM PUBLIC,anon,authenticated;" in schema
-assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_oficiales_numero_seq TO service_role;" in schema
-assert not re.search(r"\bsetval\s*\(", schema, re.I)
-print("Static recipient/delivery ownership and sequence readiness checks PASS")
-print("PREFLIGHT REQUIRED: recheck staging empty and sequence absent immediately before approved migration")
-) < schema.index('CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq')
+assert schema.index("LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE;") < schema.index("DO $preflight$")
+assert schema.index("DO $preflight$") < schema.index("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq")
 assert "IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN" in schema
 assert "pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL" in schema
 assert "Existing Cuba address constraint requires manual definition review" in schema
