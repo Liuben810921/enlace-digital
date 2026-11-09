@@ -16,6 +16,8 @@ const corsHeaders=(req:Request)=>req.headers.get("origin")===allowedOrigin&&allo
 const reply=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
+ const respond=reply;
+ const reply=(status:number,body:unknown)=>respond(status,body,req);
  if(!enabled||!validProject)return reply(503,{error:"Servicio staging desactivado o proyecto incorrecto"});
  if(req.method==="OPTIONS")return new Response(null,{status:req.headers.get("origin")===allowedOrigin&&allowedOrigin?204:403,headers:{...headers,...corsHeaders(req)}});
  if(req.method!=="POST")return reply(405,{error:"Metodo no permitido"});
