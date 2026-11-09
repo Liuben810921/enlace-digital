@@ -13,6 +13,7 @@ const headers={"Content-Type":"application/json","Cache-Control":"no-store","Acc
 const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
 
 const textFields=(obj:unknown,keys:string[])=>!!obj&&typeof obj==="object"&&!Array.isArray(obj)&&keys.every(k=>(obj as Record<string,unknown>)[k]===undefined||(obj as Record<string,unknown>)[k]===null||typeof (obj as Record<string,unknown>)[k]==="string");
+const validId=(value:unknown):value is number=>typeof value==="number"&&Number.isSafeInteger(value)&&value>0;
 const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
@@ -101,12 +102,15 @@ Deno.serve(async req=>{
   const {data:found,error:lookupError}=await base.select("id").eq("cliente_numero",customer.numero).eq("provincia",province).eq("municipio",municipality).eq("barrio",neighborhood).eq("direccion",address).limit(1).maybeSingle();
   if(lookupError)return reply(500,{error:"No se pudo consultar la direccion"});
   if(found){
-   const {error}=await db.from("clientes_direcciones_entrega").update({nombre_receptor:name,telefono_receptor:phone,referencias:references,usado_en:new Date().toISOString()}).eq("id",found.id).eq("cliente_numero",customer.numero);
+   if(!validId(found.id))return reply(500,{error:"La consulta devolvio una direccion invalida"});
+   const {data:updated,error}=await db.from("clientes_direcciones_entrega").update({nombre_receptor:name,telefono_receptor:phone,referencias:references,usado_en:new Date().toISOString()}).eq("id",found.id).eq("cliente_numero",customer.numero).select("id").maybeSingle();
    if(error)return reply(500,{error:"No se pudo actualizar la direccion"});
+   if(!updated||!validId(updated.id)||updated.id!==found.id)return reply(500,{error:"No se pudo confirmar la actualizacion de la direccion"});
    return reply(200,{id:found.id,reused:true});
   }
   const {data:saved,error}=await db.from("clientes_direcciones_entrega").insert({cliente_numero:customer.numero,nombre_receptor:name,telefono_receptor:phone,provincia:province,municipio:municipality,barrio:neighborhood,direccion:address,referencias:references}).select("id").single();
   if(error)return reply(500,{error:"No se pudo guardar la direccion"});
+  if(!saved||!validId(saved.id))return reply(500,{error:"No se pudo confirmar la direccion guardada"});
   return reply(201,{id:saved.id,reused:false});
  }
  if(action==="recipient-save"){
@@ -127,10 +131,12 @@ Deno.serve(async req=>{
    const {data,error}=await db.from("clientes_destinatarios").update(record).eq("id",id).eq("cliente_numero",customer.numero).select("id").maybeSingle();
    if(error)return reply(500,{error:"No se pudo actualizar el destinatario"});
    if(!data)return reply(404,{error:"Destinatario no encontrado"});
+   if(!validId(data.id)||data.id!==id)return reply(500,{error:"No se pudo confirmar el destinatario actualizado"});
    return reply(200,{id:data.id});
   }
   const {data,error}=await db.from("clientes_destinatarios").insert({...record,cliente_numero:customer.numero}).select("id").single();
   if(error)return reply(500,{error:"No se pudo guardar el destinatario"});
+  if(!data||!validId(data.id))return reply(500,{error:"No se pudo confirmar el destinatario guardado"});
   return reply(201,{id:data.id});
  }
  if(action==="session"||action==="logout"||action==="profile"){
