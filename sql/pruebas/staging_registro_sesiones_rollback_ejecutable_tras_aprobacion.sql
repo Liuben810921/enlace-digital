@@ -78,7 +78,7 @@ BEGIN
    'public.ed_cliente_direccion_privada(text,text,text,text,text)'
   ]) AS f(signature)
   WHERE NOT has_function_privilege('service_role',f.signature,'EXECUTE')
- ) THEN RAISE EXCEPTION 'FAIL service role RPC permissions'; END IF; n:=n+1;
+ ) THEN RAISE EXCEPTION 'FAIL service role RPC permissions'; END IF;
  RAISE NOTICE 'PASS % aserciones SQL (todos los datos ficticios se revertiran)',n;
 END $tests$;
 ROLLBACK;
