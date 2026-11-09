@@ -324,3 +324,36 @@ Deno.test("invalid request bodies are rejected without private RPCs",async()=>{
   assertEquals(calls.filter(c=>c.kind==="rpc"&&c.name!=="ed_cliente_limite_privado").length,0);
  }
 });
+
+Deno.test("SQL contract: RPC names and parameter keys match draft v4",async()=>{
+ const sql=await Deno.readTextFile("sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql");
+ const contracts:Record<string,string[]>={
+  ed_cliente_registrar_residencia_privado:["p_nombre","p_telefono","p_password","p_correo","p_residencia","p_provincia","p_municipio","p_barrio","p_direccion"],
+  ed_cliente_login_privado:["p_telefono","p_password","p_token_hash"],
+  ed_cliente_sesion_privada:["p_token_hash","p_revocar"],
+  ed_cliente_direccion_privada:["p_token_hash","p_provincia","p_municipio","p_barrio","p_direccion"],
+ };
+ for(const [name,params] of Object.entries(contracts)){
+  const match=sql.match(new RegExp("CREATE OR REPLACE FUNCTION public\\."+name+"\\(([\\s\\S]*?)\\) RETURNS","i"));
+  assert(match,"SQL RPC not found: "+name);
+  const declared=[...match[1].matchAll(/\b(p_[a-z_]+)\s+(?:text|boolean|integer)\b/g)].map(m=>m[1]);
+  assertEquals(declared,params);
+  assert(source.includes('db.rpc("'+name+'"'),"Handler does not call "+name);
+ }
+});
+Deno.test("address RPC false is a denied operation, backend error remains 500",async()=>{
+ const address={province:"La Habana",municipality:"Plaza",street:"Calle ficticia 123"};
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueRpc("ed_cliente_direccion_privada",{data:false,error:null});
+ assertEquals((await send("address-save",{token,address})).status,403);
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueRpc("ed_cliente_direccion_privada",{data:null,error:{code:"XX000"}});
+ assertEquals((await send("address-save",{token,address})).status,500);
+});
+Deno.test("logout returns explicit closure, not a fabricated customer profile",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:{cerrada:true},error:null});
+ const r=await send("logout",{token});
+ assertEquals(r.status,200);
+ assertEquals((r.body as any).closed,true);
+ assertEquals((r.body as any).cliente,undefined);
+});
