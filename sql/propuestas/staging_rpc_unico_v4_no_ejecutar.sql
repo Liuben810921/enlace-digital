@@ -1,6 +1,6 @@
 -- DRAFT ONLY: DO NOT EXECUTE. STAGING PROJECT xqahthghvozeigbojhyi.
--- Requires prior review of staging_registro_destinatarios_no_ejecutar.sql,
--- sequence/extension availability, RPC contracts and explicit deployment approval.
+-- Requires the already-installed schema-only staging migration, pgcrypto,
+-- RPC contract/security review, and separate explicit deployment approval.
 -- SECURITY DEFINER and service_role-only grants are intentional.
 -- No data migrations, deployment or production changes performed.
 BEGIN;
@@ -12,7 +12,7 @@ BEGIN
  IF array_length(regexp_split_to_array(btrim(coalesce(p_nombre,'')), '[[:space:]]+'),1)<2
     OR length(btrim(coalesce(p_nombre,'')))>150 THEN RAISE EXCEPTION 'Nombre y apellido requeridos'; END IF;
  IF p_telefono IS NULL OR p_telefono !~ ('^[+][1-9][0-9]{7,14}' || chr(36)) THEN RAISE EXCEPTION 'Telefono invalido'; END IF;
- IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
+ IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 OR octet_length(coalesce(p_password,''))>72 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
  correo:=nullif(lower(btrim(p_correo)),'');
  IF correo IS NOT NULL AND (correo !~ ('^[^ @]+@[^ @]+[.][^ @]+' || chr(36)) OR length(correo)>254) THEN RAISE EXCEPTION 'Correo invalido'; END IF;
  IF EXISTS(SELECT 1 FROM enlace_auth.cliente_credenciales WHERE telefono_e164=p_telefono)
@@ -33,6 +33,7 @@ CREATE OR REPLACE FUNCTION public.ed_cliente_registrar_residencia_privado(
 DECLARE result jsonb; n integer;
 BEGIN
  IF p_residencia NOT IN ('cuba','extranjero') OR p_residencia IS NULL THEN RAISE EXCEPTION 'Residencia invalida'; END IF;
+ IF length(coalesce(p_provincia,''))>100 OR length(coalesce(p_municipio,''))>100 OR length(coalesce(p_barrio,''))>150 OR length(coalesce(p_direccion,''))>500 THEN RAISE EXCEPTION 'Direccion demasiado larga'; END IF;
  IF p_residencia='cuba' AND (length(btrim(coalesce(p_provincia,'')))<2 OR length(btrim(coalesce(p_municipio,'')))<2 OR length(btrim(coalesce(p_direccion,'')))<8) THEN RAISE EXCEPTION 'Direccion habitual requerida'; END IF;
  result:=public.ed_cliente_registrar_privado(p_nombre,p_telefono,p_password,p_correo);
  n:=(result->>'numero')::integer;
@@ -105,6 +106,9 @@ REVOKE ALL ON FUNCTION
 -- Base registration is an internal helper: direct EXECUTE would bypass
 -- residence collection and allow an account without its required address.
 -- The privileged residence wrapper can still call it as the function owner.
+-- CREATE OR REPLACE preserves existing grants: explicitly remove any stale
+-- direct service_role EXECUTE privilege from the internal helper.
+REVOKE EXECUTE ON FUNCTION public.ed_cliente_registrar_privado(text,text,text,text) FROM service_role;
 GRANT EXECUTE ON FUNCTION
  public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text),
  public.ed_cliente_login_privado(text,text,text),
