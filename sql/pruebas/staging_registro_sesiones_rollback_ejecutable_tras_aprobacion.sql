@@ -56,9 +56,28 @@ BEGIN
  IF public.ed_cliente_sesion_privada(hash_a,false) IS NOT NULL THEN RAISE EXCEPTION 'FAIL replay revocado'; END IF; n:=n+1;
  UPDATE enlace_auth.cliente_sesiones SET expira_en=now()-interval '1 minute' WHERE token_hash=hash_b;
  IF public.ed_cliente_sesion_privada(hash_b,false) IS NOT NULL THEN RAISE EXCEPTION 'FAIL expiracion'; END IF; n:=n+1;
- IF has_function_privilege('anon','public.ed_cliente_login_privado(text,text,text)','EXECUTE')
- OR has_function_privilege('authenticated','public.ed_cliente_login_privado(text,text,text)','EXECUTE')
- THEN RAISE EXCEPTION 'FAIL permisos RPC'; END IF; n:=n+1;
+ -- Validate all five RPC privilege boundaries, including the internal helper.
+ IF EXISTS (
+  SELECT 1 FROM unnest(ARRAY[
+   'public.ed_cliente_registrar_privado(text,text,text,text)',
+   'public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text)',
+   'public.ed_cliente_login_privado(text,text,text)',
+   'public.ed_cliente_sesion_privada(text,boolean)',
+   'public.ed_cliente_direccion_privada(text,text,text,text,text)'
+  ]) AS f(signature)
+  WHERE has_function_privilege('anon',f.signature,'EXECUTE')
+     OR has_function_privilege('authenticated',f.signature,'EXECUTE')
+ ) THEN RAISE EXCEPTION 'FAIL public RPC permissions'; END IF; n:=n+1;
+ IF has_function_privilege('service_role','public.ed_cliente_registrar_privado(text,text,text,text)','EXECUTE')
+ OR EXISTS (
+  SELECT 1 FROM unnest(ARRAY[
+   'public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text)',
+   'public.ed_cliente_login_privado(text,text,text)',
+   'public.ed_cliente_sesion_privada(text,boolean)',
+   'public.ed_cliente_direccion_privada(text,text,text,text,text)'
+  ]) AS f(signature)
+  WHERE NOT has_function_privilege('service_role',f.signature,'EXECUTE')
+ ) THEN RAISE EXCEPTION 'FAIL service role RPC permissions'; END IF; n:=n+1;
  RAISE NOTICE 'PASS % aserciones SQL (todos los datos ficticios se revertiran)',n;
 END $tests$;
 ROLLBACK;
