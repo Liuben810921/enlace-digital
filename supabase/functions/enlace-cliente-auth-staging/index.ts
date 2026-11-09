@@ -8,9 +8,11 @@ const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".su
 const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 // Configure a reviewed HTTPS origin explicitly before any staging enablement.
 const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";
-const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.hostname!=="staging-preview.invalid"?u.origin:""}catch{return ""}})();
+const publishableKey=Deno.env.get("ED_STAGING_PUBLISHABLE_KEY")||"";
+const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.origin==="https://liuben810921.github.io"?u.origin:""}catch{return ""}})();
 const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
 const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
+const sameKey=(a:string,b:string)=>{if(!a||!b||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0};
 
 const textFields=(obj:unknown,keys:string[])=>!!obj&&typeof obj==="object"&&!Array.isArray(obj)&&keys.every(k=>(obj as Record<string,unknown>)[k]===undefined||(obj as Record<string,unknown>)[k]===null||typeof (obj as Record<string,unknown>)[k]==="string");
 const validId=(value:unknown):value is number=>typeof value==="number"&&Number.isSafeInteger(value)&&value>0;
@@ -18,10 +20,12 @@ const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
 Deno.serve(async req=>{
  const reply=(status:number,body:unknown)=>sendResponse(status,body,req);
- if(!enabled||!validProject||!key)return reply(503,{error:"Servicio staging desactivado o configuracion incompleta"});
+ if(!enabled||!validProject||!key||!allowedOrigin||!publishableKey.startsWith("sb_publishable_"))return reply(503,{error:"Servicio staging desactivado o configuracion incompleta"});
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  if(req.method==="OPTIONS")return new Response(null,{status:req.headers.get("origin")===allowedOrigin&&allowedOrigin?204:403,headers:{...headers,...corsHeaders(req)}});
  if(req.method!=="POST")return reply(405,{error:"Metodo no permitido"});
+ if(req.headers.has("origin")&&req.headers.get("origin")!==allowedOrigin)return reply(403,{error:"Origen no autorizado"});
+ if(!sameKey(req.headers.get("apikey")||"",publishableKey))return reply(401,{error:"Clave publica de staging invalida"});
  // Reject oversized bodies even when Content-Length is missing or untrusted.
  const declaredLength=Number(req.headers.get("content-length")||"0");
  if(!Number.isFinite(declaredLength)||declaredLength<0||declaredLength>4096)return reply(413,{error:"Solicitud demasiado grande"});
