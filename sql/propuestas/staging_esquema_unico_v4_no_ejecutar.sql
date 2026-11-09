@@ -5,6 +5,9 @@
 -- nombre text, auth_user_id uuid nullable, residencia text nullable, creado_en timestamptz.
 -- Existing enlace_auth.cliente_credenciales and cliente_sesiones are retained.
 BEGIN;
+-- Block concurrent inserts/updates to the existing customer table while
+-- checking emptiness and creating the initial sequence (transaction-scoped).
+LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE;
 -- Fail closed if the installation preflight no longer matches the observed empty staging.
 -- Deployment must additionally exclude concurrent registration writers throughout.
 DO $preflight$
