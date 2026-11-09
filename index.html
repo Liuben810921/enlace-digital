@@ -1151,9 +1151,11 @@ function edOpenEmailTokenLink(){
  try{payload=new URLSearchParams(fragment).get('ed-email')}catch{return}
  if(!payload)return;
  const parts=payload.split(':');
- if(parts.length!==2||!['verificar_correo','recuperar_clave'].includes(parts[0])||!/^[a-f0-9]{64}$/i.test(parts[1]))return;
+ // Eliminar cualquier token de la URL antes de mostrar una ventana, incluso si el enlace es invalido.
+ const valid=parts.length===2&&['verificar_correo','recuperar_clave'].includes(parts[0])&&/^[a-f0-9]{64}$/i.test(parts[1]);
+ history.replaceState(history.state,'',location.pathname+location.search);
+ if(!valid){modal('<h2>Enlace no válido</h2><p class="note">El enlace de correo no tiene el formato esperado. Solicita uno nuevo cuando el servicio esté disponible.</p>');return}
  const purpose=parts[0],token=parts[1].toLowerCase();
- history.replaceState(null,'',location.pathname+location.search);
  if(purpose==='recuperar_clave'){
   modal('<h2>Establecer nueva contraseña</h2><p class="note">El enlace debe estar vigente y ser de un solo uso.</p>'+
   '<div class="field"><label>Nueva contraseña</label><input type="password" autocomplete="new-password" id="edEmailNewPassword" minlength="8" maxlength="128"></div>'+
