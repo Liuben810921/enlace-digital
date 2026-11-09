@@ -73,7 +73,8 @@ jobs:
           assert "[functions.enlace-cliente-auth-staging]" in config and "verify_jwt = false" in config
           assert "https://liuben810921.github.io" in backend
           assert 'req.headers.get("apikey")' in backend
-          assert 'ED_STAGING_PUBLISHABLE_KEY' in backend
+          assert 'SUPABASE_PUBLISHABLE_KEYS' in backend
+          assert 'ED_STAGING_PUBLISHABLE_KEY' not in backend
           rpc=Path("sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql").read_text()
           schema=Path("sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql").read_text()
           tests=Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
