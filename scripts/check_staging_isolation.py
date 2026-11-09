@@ -99,6 +99,11 @@ assert "VALIDATE CONSTRAINT ed_cliente_cuba_direccion_ck" not in schema
 assert "GRANT SELECT,INSERT,UPDATE ON public.clientes_destinatarios,public.clientes_direcciones_entrega TO service_role;" in schema
 assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq TO service_role;" in schema
 assert "REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;" in schema
+# bcrypt's 72-byte input limit must be enforced at the database and Edge boundary.
+assert "octet_length(coalesce(p_password,''))>72" in rpc
+assert "new TextEncoder().encode(password).length>72" in edge
+assert "REVOKE EXECUTE ON FUNCTION public.ed_cliente_registrar_privado(text,text,text,text) FROM service_role;" in rpc
+assert "Direccion demasiado larga" in rpc
 # Internal registration helper must not be callable directly by service_role.
 privileges = rpc[rpc.index('-- No public client role may invoke'):]
 grant_block = privileges[privileges.index('GRANT EXECUTE ON FUNCTION'):privileges.index('TO service_role;')]
