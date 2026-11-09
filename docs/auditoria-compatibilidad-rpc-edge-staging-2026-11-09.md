@@ -23,3 +23,12 @@ La función Edge staging, desactivada por defecto, llama a registro, login, sesi
 - **Aislamiento real:** las pruebas de mutación son estáticas; faltan solicitudes de dos cuentas ficticias y pruebas negativas con tokens caducados/revocados.
 
 Se mantienen las restricciones: sin SQL con efectos, migraciones, despliegues, escrituras en Supabase, producción o fusión del PR.
+
+## Correcciones verificadas en borrador — CI #100
+
+- La creación de `ed_cliente_cuba_direccion_ck` está condicionada a su ausencia en `pg_catalog.pg_constraint`; evita el error por nombre duplicado al repetir el borrador. **Límite:** si ya existe una restricción con el mismo nombre pero expresión diferente, el guard no valida su equivalencia. Antes de instalar habrá que inspeccionar su definición y estado de validación.
+- Se declaran `GRANT SELECT,INSERT,UPDATE` a `service_role` para las dos tablas nuevas y `GRANT USAGE,SELECT` para sus secuencias IDENTITY. La compatibilidad de estos permisos se ha comprobado estáticamente, **no** contra el catálogo de una base migrada.
+- `scripts/check_staging_isolation.py` ahora exige el guard y los permisos. CI #100 (commit `8a5de05`) terminó `success`: TypeScript, análisis de 9/17/3 sentencias SQL y controles estáticos aprobados.
+- Sigue bloqueada la secuencia `clientes_oficiales_numero_seq`: `START WITH 1` no demuestra compatibilidad con IDs existentes. No ejecutar migración hasta su inicialización segura y aprobación.
+
+No se ejecutó SQL con efectos, migración ni despliegue.
