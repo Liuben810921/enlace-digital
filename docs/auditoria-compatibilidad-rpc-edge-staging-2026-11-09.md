@@ -42,3 +42,13 @@ No se ejecutó SQL con efectos, migración ni despliegue.
 - `public.clientes_oficiales` sigue vacía (`COUNT(*)=0`, `MAX(numero)=NULL`) en la lectura anterior. Este dato es temporal y debe reconfirmarse en la ventana de migración.
 
 **Conclusión:** el borrador sigue siendo una propuesta incompleta, no una migración aplicable automáticamente. No hay evidencia de compilación de los cuerpos PL/pgSQL ni de pruebas de integración. Para avanzar se requiere una revisión de columnas/privilegios y una migración de staging autorizada, con preflight de secuencia y CHECK, antes de habilitar Edge.
+
+## Auditoría de columnas y permisos de autenticación — staging (lectura 2026-11-09)
+
+- `public.clientes_oficiales`: columnas actuales `numero`, `codigo`, `nombre`, `auth_user_id`, `residencia`, `creado_en`. **No** existen todavía `telefono`, `correo`, `estado`, `provincia`, `municipio`, `barrio`, `direccion_habitual`; se proponen en el borrador de esquema. Por ello, las RPC de registro/perfil no se pueden instalar aisladamente antes de dicho esquema.
+- `enlace_auth.cliente_credenciales`: verificadas `cliente_numero`, `telefono_e164`, `password_hash`, `correo_recuperacion`, `intentos_fallidos` (default 0), `bloqueado_hasta` y `actualizado_en`; concuerdan con el borrador RPC.
+- `enlace_auth.cliente_sesiones`: verificadas `cliente_numero`, `token_hash`, `expira_en`, `revocada_en`; `id` tiene default `gen_random_uuid()`. Concuerdan con el borrador RPC.
+- Las tres tablas existentes tienen RLS activo y propietario `postgres`; `relforcerowsecurity=false`. En la lectura, `service_role` no tenía privilegios directos SELECT/INSERT/UPDATE sobre ellas y `anon`/`authenticated` no tenían SELECT. Esto es coherente con acceso por RPC `SECURITY DEFINER` **si las RPC se instalan con propietario privilegiado apropiado**. El rol propietario y los privilegios EXECUTE deben comprobarse después de la instalación autorizada.
+- La Edge Function propuesta usa RPC para clientes/credenciales/sesiones, y acceso directo por `service_role` solamente a las dos tablas nuevas de destinatarios/direcciones, cuyos GRANT se incluyen en la propuesta.
+
+**Bloqueos restantes:** instalación del esquema antes de las RPC, verificación de propietario efectivo y permisos tras instalación, compilación PL/pgSQL real y pruebas de integración con dos clientes ficticios. Los resultados de CI no equivalen a pruebas de ejecución SQL.
