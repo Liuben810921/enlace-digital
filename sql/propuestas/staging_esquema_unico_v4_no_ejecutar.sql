@@ -18,12 +18,21 @@ ALTER TABLE public.clientes_oficiales
   ADD COLUMN IF NOT EXISTS barrio text,
   ADD COLUMN IF NOT EXISTS direccion_habitual text;
 -- Residence-dependent invariant: use NOT VALID until historical rows are audited.
-ALTER TABLE public.clientes_oficiales
-  ADD CONSTRAINT ed_cliente_cuba_direccion_ck
-  CHECK (residencia IS DISTINCT FROM 'cuba' OR
-    (nullif(btrim(coalesce(provincia,'')),'') IS NOT NULL AND
-     nullif(btrim(coalesce(municipio,'')),'') IS NOT NULL AND
-     length(btrim(coalesce(direccion_habitual,''))) >= 8)) NOT VALID;
+DO $guard$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_catalog.pg_constraint
+   WHERE conrelid='public.clientes_oficiales'::pg_catalog.regclass
+     AND conname='ed_cliente_cuba_direccion_ck'
+ ) THEN
+   ALTER TABLE public.clientes_oficiales
+     ADD CONSTRAINT ed_cliente_cuba_direccion_ck
+     CHECK (residencia IS DISTINCT FROM 'cuba' OR
+       (nullif(btrim(coalesce(provincia,'')),'') IS NOT NULL AND
+        nullif(btrim(coalesce(municipio,'')),'') IS NOT NULL AND
+        length(btrim(coalesce(direccion_habitual,''))) >= 8)) NOT VALID;
+ END IF;
+END $guard$;
 
 CREATE TABLE IF NOT EXISTS public.clientes_destinatarios (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
