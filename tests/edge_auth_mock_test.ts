@@ -234,3 +234,52 @@ Deno.test("invalid recipient id rejected without table mutations",async()=>{
   assertEquals(calls.filter(c=>c.kind==="insert"||c.name==="clientes_destinatarios").length,0);
  }
 });
+
+Deno.test("profile read failures fail closed and never return partial customer data",async()=>{
+ for(const failedTable of ["clientes_destinatarios","clientes_direcciones_entrega"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  queueTable("clientes_destinatarios",failedTable==="clientes_destinatarios"?{data:null,error:{code:"XX000"}}:{data:[],error:null});
+  queueTable("clientes_direcciones_entrega",{data:null,error:{code:"XX000"}});
+  const r=await send("profile",{token});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).cliente,undefined);
+  const reads=calls.filter(c=>c.kind==="query");
+  assert(reads.every(c=>c.filters.cliente_numero===11));
+  if(failedTable==="clientes_destinatarios")assertEquals(reads.some(c=>c.name==="clientes_direcciones_entrega"),false);
+ }
+});
+Deno.test("delivery location lookup error prevents any insert or update",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueTable("clientes_direcciones_entrega",{data:null,error:{code:"XX000"}});
+ const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ assertEquals((await send("delivery-location-save",{token,location})).status,500);
+ assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+ const q=calls.find(c=>c.name==="clientes_direcciones_entrega")!;
+ assertEquals(q.filters.cliente_numero,11);
+});
+Deno.test("delivery location reuse update failure returns 500 scoped to owner",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueTable("clientes_direcciones_entrega",{data:{id:41},error:null},{data:null,error:{code:"XX000"}});
+ const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ assertEquals((await send("delivery-location-save",{token,location})).status,500);
+ const q=calls.filter(c=>c.kind==="query"&&c.name==="clientes_direcciones_entrega");
+ assertEquals(q.length,2);
+ assertEquals(q[1].filters.cliente_numero,11);
+ assertEquals(q[1].filters.id,41);
+ assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+});
+Deno.test("revoked session denies logout replay and protected profile",async()=>{
+ for(const action of ["logout","profile","recipient-save","delivery-location-save","address-save"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:null,error:null});
+  assertEquals((await send(action,{token})).status,401);
+  assertEquals(calls.filter(c=>c.kind==="insert"||c.kind==="query").length,0);
+ }
+});
+Deno.test("session backend errors do not leak private records",async()=>{
+ for(const action of ["session","logout","profile"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:null,error:{code:"XX000"}});
+  const r=await send(action,{token});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).cliente,undefined);
+ }
+});
