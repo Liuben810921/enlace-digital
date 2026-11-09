@@ -30,6 +30,7 @@ let handler:(req:Request)=>Promise<Response>;
 const mocked=source
  .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = (globalThis as any).__mockCreateClient;')
  .replace('const url=Deno.env.get("SUPABASE_URL")||"";','const url="https://xqahthghvozeigbojhyi.supabase.co";')
+ .replace('const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";','const configuredOrigin="https://staging.example.invalid";')
  .replace('const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";','const key="mock-key";')
  .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
  .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
@@ -161,4 +162,16 @@ Deno.test("method and invalid JSON rejected before database operations",async()=
  const get=await handler(new Request("https://staging-preview.invalid",{method:"GET"}));assertEquals(get.status,405);
  const bad=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:"{broken"}));assertEquals(bad.status,400);
  assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
+});
+
+Deno.test("CORS rejects unapproved origin and ignores spoofed proxy IP",async()=>{
+ reset();
+ const preflight=await handler(new Request("https://staging-preview.invalid",{method:"OPTIONS",headers:{origin:"https://attacker.invalid"}}));
+ assertEquals(preflight.status,403);
+ assertEquals(preflight.headers.get("access-control-allow-origin"),null);
+ const ok=await handler(new Request("https://staging-preview.invalid",{method:"OPTIONS",headers:{origin:"https://staging.example.invalid"}}));
+ assertEquals(ok.status,204);
+ assertEquals(ok.headers.get("access-control-allow-origin"),"https://staging.example.invalid");
+ await send("unrecognized",{},{"x-forwarded-for":"203.0.113.42","cf-connecting-ip":"198.51.100.10"});
+ assert(calls.some(c=>c.name==="ed_cliente_limite_privado"&&(c.args as any).p_clave==="reg-ip:"+"" )===false);
 });
