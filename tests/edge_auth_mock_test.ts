@@ -89,7 +89,7 @@ Deno.test("profile lists only session owner's recipients and delivery locations"
 });
 Deno.test("delivery dedup is owner scoped; logout revokes; invalid token blocked",async()=>{
  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null},{data:{cerrada:true},error:null});
- queueTable("clientes_direcciones_entrega",{data:{id:4},error:null},{data:null,error:null});
+ queueTable("clientes_direcciones_entrega",{data:{id:4},error:null},{data:{id:4},error:null});
  const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
  assertEquals((await send("delivery-location-save",{token,location})).status,200);
  const queries=calls.filter(c=>c.kind==="query"&&c.name==="clientes_direcciones_entrega");
