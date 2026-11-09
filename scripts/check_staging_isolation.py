@@ -102,6 +102,8 @@ assert "REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clien
 # bcrypt's 72-byte input limit must be enforced at the database and Edge boundary.
 assert "octet_length(coalesce(p_password,''))>72" in rpc
 assert "new TextEncoder().encode(password).length>72" in edge
+assert "total>4096" in edge and "reader.cancel()" in edge
+assert 'limit("staging-auth-global",300,60)' in edge
 assert "REVOKE EXECUTE ON FUNCTION public.ed_cliente_registrar_privado(text,text,text,text) FROM service_role;" in rpc
 assert "Direccion demasiado larga" in rpc
 # Internal registration helper must not be callable directly by service_role.
