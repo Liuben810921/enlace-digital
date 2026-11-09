@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.clientes_destinatarios (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
  cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE CASCADE,
  nombre text NOT NULL CHECK (length(btrim(nombre)) >= 2),
- telefono text NOT NULL CHECK (telefono ~ '^(?:[+]53)?[0-9]{8},
+ telefono text NOT NULL CHECK (telefono ~ '^([+]53)?[0-9]{8}
  provincia text NOT NULL, municipio text NOT NULL,
  barrio text NOT NULL DEFAULT '', direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
  referencias text NOT NULL DEFAULT '', creado_en timestamptz NOT NULL DEFAULT now(),
@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS ed_destinatarios_cliente_idx ON public.clientes_desti
 
 CREATE TABLE IF NOT EXISTS public.clientes_direcciones_entrega (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
- cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE RESTRICT,
+ cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE CASCADE,
  nombre_receptor text NOT NULL, telefono_receptor text NOT NULL,
  provincia text NOT NULL, municipio text NOT NULL, barrio text NOT NULL DEFAULT '',
  direccion text NOT NULL CHECK (length(direccion) BETWEEN 8 AND 500),
@@ -58,7 +58,7 @@ ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;
 COMMIT;
--- The COMMIT above is part of a NON-EXECUTED migration proposal, not a test script.
+-- END OF NON-EXECUTED PROPOSAL.
 ),
  provincia text NOT NULL, municipio text NOT NULL,
  barrio text NOT NULL DEFAULT '', direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
@@ -88,4 +88,4 @@ ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;
 COMMIT;
--- The COMMIT above is part of a NON-EXECUTED migration proposal, not a test script.
+-- END OF NON-EXECUTED PROPOSAL.
