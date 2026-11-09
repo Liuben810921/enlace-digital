@@ -103,3 +103,62 @@ Deno.test("oversized streaming body rejected without Content-Length",async()=>{
  assertEquals(r.status,413);
  assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
 });
+
+Deno.test("RPC errors fail closed for login, registration and session",async()=>{
+ reset();queueRpc("ed_cliente_login_privado",{data:null,error:{code:"XX000"}});
+ const login=await send("login",{phone:"+15550001001",password:"ClaveFicticia2026!"});assertEquals(login.status,500);
+ reset();queueRpc("ed_cliente_registrar_residencia_privado",{data:null,error:{code:"XX000"}});
+ const reg=await send("register",{name:"Prueba Exterior",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"extranjero"});assertEquals(reg.status,400);
+ reset();queueRpc("ed_cliente_sesion_privada",{data:null,error:{code:"XX000"}});
+ assertEquals((await send("profile",{token})).status,500);
+});
+Deno.test("expired and revoked sessions deny protected operations",async()=>{
+ for(const action of ["profile","recipient-save","address-save","delivery-location-save","session"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:null,error:null});
+  assertEquals((await send(action,{token})).status,401);
+  assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+ }
+});
+Deno.test("rate limiter failure and rejection block login before credentials RPC",async()=>{
+ for(const result of [{data:false,error:null},{data:null,error:{code:"XX000"}}]){
+  reset();queueRpc("ed_cliente_limite_privado",result);
+  assertEquals((await send("login",{phone:"+15550001001",password:"ClaveFicticia2026!"})).status,429);
+  assertEquals(calls.filter(c=>c.name==="ed_cliente_login_privado").length,0);
+ }
+});
+Deno.test("recipient ownership: successful update remains scoped and missing record is 404",async()=>{
+ const recipient={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueTable("clientes_destinatarios",{data:{id:55},error:null});
+ assertEquals((await send("recipient-save",{token,id:55,recipient})).status,200);
+ const q=calls.find(c=>c.kind==="query"&&c.name==="clientes_destinatarios")!;
+ assertEquals(q.filters.cliente_numero,11);assertEquals(q.filters.id,55);
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerB,error:null});
+ queueTable("clientes_destinatarios",{data:null,error:null});
+ assertEquals((await send("recipient-save",{token,id:55,recipient})).status,404);
+ assertEquals(calls.find(c=>c.kind==="query"&&c.name==="clientes_destinatarios")?.filters.cliente_numero,22);
+});
+Deno.test("delivery dedup: same address under another owner inserts separate record",async()=>{
+ const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerB,error:null});
+ queueTable("clientes_direcciones_entrega",{data:null,error:null},{data:{id:77},error:null});
+ const r=await send("delivery-location-save",{token,location});
+ assertEquals(r.status,201);
+ const q=calls.find(c=>c.kind==="query"&&c.name==="clientes_direcciones_entrega")!;
+ assertEquals(q.filters.cliente_numero,22);
+ const ins=calls.find(c=>c.kind==="insert"&&c.name==="clientes_direcciones_entrega")!;
+ assertEquals((ins.args as any).cliente_numero,22);
+});
+Deno.test("invalid input and unknown actions reject without protected writes",async()=>{
+ reset();assertEquals((await send("recipient-save",{token:"invalid"})).status,401);
+ assertEquals((await send("address-save",{token:"invalid"})).status,401);
+ assertEquals((await send("register",{name:"Only",phone:"bad",password:"short",residence:"cuba"})).status,400);
+ assertEquals((await send("unrecognized")).status,400);
+ assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+});
+Deno.test("method and invalid JSON rejected before database operations",async()=>{
+ reset();
+ const get=await handler(new Request("https://staging-preview.invalid",{method:"GET"}));assertEquals(get.status,405);
+ const bad=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:"{broken"}));assertEquals(bad.status,400);
+ assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
+});
