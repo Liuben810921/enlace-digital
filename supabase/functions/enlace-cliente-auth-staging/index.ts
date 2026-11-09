@@ -73,7 +73,9 @@ Deno.serve(async req=>{
   const token=String(body?.token||"");
   if(!/^[0-9a-f]{64}$/.test(token))return reply(401,{error:"Sesion invalida"});
   const {data:customer,error:authError}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:false});
-  if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
+  if(authError)return reply(500,{error:"No se pudo verificar la sesion"});
+  if(!customer)return reply(401,{error:"Sesion caducada"});
+  if(!Number.isSafeInteger(customer.numero)||customer.numero<=0)return reply(500,{error:"La sesion no devolvio una cuenta valida"});
   const a=body?.address||{};
   if(!textFields(a,["province","municipality","neighborhood","street"]))return reply(400,{error:"Direccion invalida"});
   const province=String(a.province||"").trim(),municipality=String(a.municipality||"").trim(),neighborhood=String(a.neighborhood||"").trim(),street=String(a.street||"").trim();
@@ -87,7 +89,9 @@ Deno.serve(async req=>{
   const token=String(body?.token||"");
   if(!/^[0-9a-f]{64}$/.test(token))return reply(401,{error:"Sesion invalida"});
   const {data:customer,error:authError}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:false});
-  if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
+  if(authError)return reply(500,{error:"No se pudo verificar la sesion"});
+  if(!customer)return reply(401,{error:"Sesion caducada"});
+  if(!Number.isSafeInteger(customer.numero)||customer.numero<=0)return reply(500,{error:"La sesion no devolvio una cuenta valida"});
   if(!(await limit("location:"+customer.numero,30,3600)))return reply(429,{error:"Demasiados intentos"});
   const a=body?.location||{};
   if(!textFields(a,["name","phone","province","municipality","neighborhood","address","references"]))return reply(400,{error:"Direccion invalida"});
@@ -109,7 +113,9 @@ Deno.serve(async req=>{
   const token=String(body?.token||"");
   if(!/^[0-9a-f]{64}$/.test(token))return reply(401,{error:"Sesion invalida"});
   const {data:customer,error:authError}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:false});
-  if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
+  if(authError)return reply(500,{error:"No se pudo verificar la sesion"});
+  if(!customer)return reply(401,{error:"Sesion caducada"});
+  if(!Number.isSafeInteger(customer.numero)||customer.numero<=0)return reply(500,{error:"La sesion no devolvio una cuenta valida"});
   const r=body?.recipient||{};
   if(!textFields(r,["name","phone","province","municipality","neighborhood","address","references"]))return reply(400,{error:"Destinatario invalido"});
   const name=String(r.name||"").trim(),phone=String(r.phone||"").trim(),province=String(r.province||"").trim(),municipality=String(r.municipality||"").trim(),neighborhood=String(r.neighborhood||"").trim(),address=String(r.address||"").trim(),references=String(r.references||"").trim();
