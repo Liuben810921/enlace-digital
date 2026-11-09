@@ -39,3 +39,9 @@ No se han ejecutado migraciones, funciones SQL con efectos, despliegues ni escri
 **Riesgos pendientes:** secuencia nueva debe inicializarse con seguridad respecto de numeros existentes antes de cualquier migración; los privilegios reales de funciones y tablas nuevas no pueden validarse hasta su instalación autorizada; las consultas Edge con service_role requieren pruebas negativas de aislamiento (cliente A intentando actualizar ID de cliente B). RLS habilitado no basta para demostrar autorización si se utiliza service_role.
 
 Estas consultas fueron de solo lectura. No se ejecutaron migraciones, RPC con efectos, ni escrituras.
+
+## Secuencia e aislamiento — auditoría adicional
+
+La propuesta actual crea public.clientes_oficiales_numero_seq con START WITH 1 y la RPC de registro consume nextval. **No existe en el borrador un paso seguro de sincronización con MAX(public.clientes_oficiales.numero)**. Incluso si el máximo observado en una lectura anterior era NULL, puede cambiar antes de una migración. Bloqueo de despliegue: durante una futura ventana autorizada, bloquear concurrentemente las altas, verificar MAX(numero) y estado de secuencia y preparar un ajuste atómico apropiado, con revisión de propiedad/permisos y sin perder números; nunca ejecutar esta operación durante la auditoría. Las secuencias no se revierten por ROLLBACK.
+
+Se añadió scripts/check_staging_isolation.py, ejecutado por el workflow en GitHub Actions: comprueba estáticamente que el cliente se obtiene de la sesión, que las actualizaciones por ID incluyen cliente_numero, que las consultas de perfil filtran por cliente y que las tablas propuestas tienen FK y RLS. **Limitación**: las coincidencias de código no demuestran aislamiento en tiempo de ejecución; las pruebas negativas entre clientes siguen bloqueadas hasta autorización de un entorno de pruebas. El checker deja explícito el bloqueo de inicialización de secuencia, sin ejecutar ninguna SQL.
