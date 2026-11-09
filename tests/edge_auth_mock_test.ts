@@ -462,3 +462,41 @@ Deno.test("protected writes distinguish expired sessions, RPC errors and invalid
   }
  }
 });
+
+Deno.test("recipient insert and update reject invalid or mismatched persisted IDs",async()=>{
+ const recipient={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ for(const data of [null,{}, {id:"55"}, {id:0}]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  queueTable("clientes_destinatarios",{data,error:null});
+  const r=await send("recipient-save",{token,recipient});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).id,undefined);
+ }
+ for(const data of [{id:56},{id:"55"},{id:0}]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  queueTable("clientes_destinatarios",{data,error:null});
+  const r=await send("recipient-save",{token,id:55,recipient});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).id,undefined);
+ }
+});
+Deno.test("delivery insert and reuse reject missing, malformed or mismatched IDs",async()=>{
+ const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ for(const saved of [null,{}, {id:"4"},{id:0}]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  queueTable("clientes_direcciones_entrega",{data:null,error:null},{data:saved,error:null});
+  const r=await send("delivery-location-save",{token,location});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).id,undefined);
+ }
+ for(const updated of [null,{id:5},{id:"4"}]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  queueTable("clientes_direcciones_entrega",{data:{id:4},error:null},{data:updated,error:null});
+  const r=await send("delivery-location-save",{token,location});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).id,undefined);
+  const queries=calls.filter(c=>c.kind==="query"&&c.name==="clientes_direcciones_entrega");
+  assertEquals(queries[1].filters.cliente_numero,11);
+  assertEquals(queries[1].filters.id,4);
+ }
+});
