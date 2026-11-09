@@ -40,6 +40,14 @@ BEGIN
  EXCEPTION WHEN OTHERS THEN
   IF SQLERRM='FAIL duplicado admitido' THEN RAISE; END IF;
  END; n:=n+1;
+ -- Multibyte password over bcrypt's 72-byte boundary must be rejected.
+ BEGIN
+  PERFORM public.ed_cliente_registrar_residencia_privado(
+   'Prueba Clave Larga','+15550001004',repeat('x',73),NULL,'extranjero','','','','');
+  RAISE EXCEPTION 'FAIL password over 72 bytes admitted';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM='FAIL password over 72 bytes admitted' THEN RAISE; END IF;
+ END; n:=n+1;
  IF (SELECT password_hash FROM enlace_auth.cliente_credenciales WHERE cliente_numero=id_a)='ClaveFicticia2026!' THEN RAISE EXCEPTION 'FAIL password plano'; END IF; n:=n+1;
  IF public.ed_cliente_login_privado('+15550001001','incorrecta',repeat('c',64)) IS NOT NULL THEN RAISE EXCEPTION 'FAIL password incorrecto'; END IF; n:=n+1;
  login_a:=public.ed_cliente_login_privado('+15550001001','ClaveFicticia2026!',hash_a);
