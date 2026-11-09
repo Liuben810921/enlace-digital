@@ -104,6 +104,18 @@ privileges = rpc[rpc.index('-- No public client role may invoke'):]
 grant_block = privileges[privileges.index('GRANT EXECUTE ON FUNCTION'):privileges.index('TO service_role;')]
 assert 'public.ed_cliente_registrar_privado(text,text,text,text)' not in grant_block
 assert 'public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text)' in grant_block
+# Post-install SQL test must assert effective grants for all five RPCs.
+tests = Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
+for signature in (
+    "ed_cliente_registrar_privado(text,text,text,text)",
+    "ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text)",
+    "ed_cliente_login_privado(text,text,text)",
+    "ed_cliente_sesion_privada(text,boolean)",
+    "ed_cliente_direccion_privada(text,text,text,text,text)",
+):
+    assert signature in tests
+assert "FAIL public RPC permissions" in tests
+assert "FAIL service role RPC permissions" in tests
 assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
