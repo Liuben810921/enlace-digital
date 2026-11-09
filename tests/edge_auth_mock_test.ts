@@ -32,7 +32,7 @@ const mocked=source
  .replace('const url=Deno.env.get("SUPABASE_URL")||"";','const url="https://xqahthghvozeigbojhyi.supabase.co";')
  .replace('const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";','const configuredOrigin="https://liuben810921.github.io";')
  .replace('const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";','const key="mock-key";')
- .replace('const publishableKey=Deno.env.get("ED_STAGING_PUBLISHABLE_KEY")||"";','const publishableKey="sb_publishable_mock_staging";')
+ .replace('Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}"','\'{"default":"sb_publishable_mock_staging"}\'')
  .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
  .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
  .replace('Deno.serve(async req=>{','(globalThis as any).__captureServe(async (req:Request)=>{');
