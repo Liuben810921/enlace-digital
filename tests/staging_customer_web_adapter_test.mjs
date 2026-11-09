@@ -15,5 +15,5 @@ test('request carries public key in apikey, never as Bearer; session token remai
 });
 test('non-JSON or HTTP error fails closed',async()=>{
  const api=createStagingCustomerTransport({endpoint:staging,publishableKey:'sb_publishable_example',fetchImpl:async()=>({ok:false,status:503,json:async()=>{throw Error('invalid')}})});
- await assert.rejects(api('login',{}),/HTTP 503/);
+ await assert.rejects(api('login',{}),/Respuesta no JSON/);
 });
