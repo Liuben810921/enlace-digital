@@ -47,3 +47,12 @@ El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inici
 7. No desplegar ni habilitar la Edge Function hasta revisar los resultados de integración, origen CORS, controles de tasa y ausencia de accesos entre clientes. El despliegue requiere autorización propia.
 
 **Estado de esta guía:** preparación y análisis de GitHub solamente; no se ha ejecutado la instalación.
+
+## Preflight actualizado — comprobación de solo lectura, 2026-11-09
+
+- Staging `xqahthghvozeigbojhyi`: clientes `COUNT(*)=0`, `MAX(numero)=NULL`; secuencia `to_regclass(...)=NULL`; restricción `ed_cliente_cuba_direccion_ck`: 0; cinco RPC privadas propuestas instaladas: 0.
+- Las tablas `public.clientes_oficiales`, `enlace_auth.cliente_credenciales` y `enlace_auth.cliente_sesiones` tienen RLS activo y propietario `postgres`.
+- Los requisitos de catálogo observados son compatibles con una instalación inicial **solo en staging**. No demuestran que el SQL sea seguro para ejecutar ni garantizan que el estado permanezca igual.
+- CI del commit `d3f0ab3` falló por una aserción textual heredada sobre el mensaje de permisos; el borrador de prueba conserva ahora el marcador esperado sin retirar las verificaciones ampliadas (commit `cc4bd50`). Confirmar CI verde antes de proponer autorización.
+
+**Autorización pendiente (no concedida):** una vez que CI esté verde y se haya completado revisión manual de las cinco RPC, solicitar permiso explícito para ejecutar exclusivamente el esquema revisado en staging, sin Edge Function, correo ni pedidos reales. Antes de cualquier ejecución, volver a comprobar catálogo y exclusión de escritores. La instalación de RPC, pruebas con datos ficticios y despliegue se autorizarán por separado.
