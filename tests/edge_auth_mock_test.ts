@@ -30,8 +30,9 @@ let handler:(req:Request)=>Promise<Response>;
 const mocked=source
  .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = (globalThis as any).__mockCreateClient;')
  .replace('const url=Deno.env.get("SUPABASE_URL")||"";','const url="https://xqahthghvozeigbojhyi.supabase.co";')
- .replace('const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";','const configuredOrigin="https://staging.example.invalid";')
+ .replace('const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";','const configuredOrigin="https://liuben810921.github.io";')
  .replace('const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";','const key="mock-key";')
+ .replace('const publishableKey=Deno.env.get("ED_STAGING_PUBLISHABLE_KEY")||"";','const publishableKey="sb_publishable_mock_staging";')
  .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
  .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
  .replace('Deno.serve(async req=>{','(globalThis as any).__captureServe(async (req:Request)=>{');
@@ -43,10 +44,20 @@ function reset(){calls.length=0;for(const k of Object.keys(rpcResults))delete rp
 function queueRpc(name:string,...values:unknown[]){rpcResults[name]=values}
 function queueTable(name:string,...values:unknown[]){tableResults[name]=values}
 async function send(action:string,extra:Record<string,unknown>={},headers:Record<string,string>={}){
- const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"content-type":"application/json",...headers},body:JSON.stringify({action,...extra})}));
+ const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"content-type":"application/json","apikey":"sb_publishable_mock_staging",...headers},body:JSON.stringify({action,...extra})}));
  return {status:r.status,body:await r.json()};
 }
 const token="a".repeat(64),customerA={numero:11},customerB={numero:22};
+Deno.test("missing or wrong publishable key rejected before RPC",async()=>{
+ reset();
+ const req=new Request("https://staging-preview.invalid",{method:"POST",headers:{"content-type":"application/json","apikey":"sb_publishable_wrong"},body:JSON.stringify({action:"login"})});
+ assertEquals((await handler(req)).status,401);
+ assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
+});
+Deno.test("wrong browser origin denied before RPC",async()=>{
+ reset();const r=await send("login",{},{"origin":"https://untrusted.example"});
+ assertEquals(r.status,403);assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
+});
 Deno.test("register: Cuba address and foreign no address; duplicate and validation",async()=>{
  reset();
  queueRpc("ed_cliente_registrar_residencia_privado",{data:{numero:11},error:null},{data:null,error:{code:"23505"}});
@@ -100,7 +111,7 @@ Deno.test("delivery dedup is owner scoped; logout revokes; invalid token blocked
 });
 Deno.test("oversized streaming body rejected without Content-Length",async()=>{
  reset();const body=JSON.stringify({action:"login",padding:"x".repeat(5000)});
- const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(body));c.close()}})}));
+ const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"apikey":"sb_publishable_mock_staging"},body:new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(body));c.close()}})}));
  assertEquals(r.status,413);
  assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
 });
