@@ -31,3 +31,7 @@ No se ha ejecutado ningún SQL de efectos, migración ni despliegue.
 - El control estático de CI rechaza reinicios destructivos de la secuencia en la propuesta y exige sus privilegios explícitos; **no demuestra** ausencia de concurrencia ni compila los cuerpos PL/pgSQL.
 
 **Puerta de aprobación:** migración y despliegue continúan prohibidos hasta autorización explícita y verificación de prerrequisitos. No activar pedidos ni correo reales.
+
+## Preflight incorporado al borrador (commit 230b13a)
+
+El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inicia su transacción con un bloque `DO $preflight$` que aborta si (1) ya existen clientes, (2) ya existe la secuencia de clientes o (3) existe una restricción Cuba con el nombre reservado que requiere comprobar equivalencia. Esto evita aplicar a ciegas el `START WITH 1` sobre un estado distinto del observado y evita ignorar un CHECK no equivalente. El preflight **no sustituye** la exclusión operativa de escritores concurrentes: una transacción sola no impide que otro proceso registre clientes entre las verificaciones. La instalación sigue sin autorización.
