@@ -27,7 +27,7 @@ def route(source, action, following):
 def assert_owner_contract(source):
     recipient = route(source, "recipient-save", 'if(action==="session"')
     location = route(source, "delivery-location-save", 'if(action==="recipient-save"')
-    profile = route(source, "session", 'return reply(400,{error:"Operacion no disponible"})')
+    profile = source[source.index('if(action==="session"||action==="logout"||action==="profile")'):source.index('return reply(400,{error:"Operacion no disponible"})')]
     assert '.update(record).eq("id",id).eq("cliente_numero",customer.numero)' in recipient
     assert '.insert({...record,cliente_numero:customer.numero})' in recipient
     assert '.eq("id",found.id).eq("cliente_numero",customer.numero)' in location
