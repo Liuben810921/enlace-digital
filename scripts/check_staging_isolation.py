@@ -99,6 +99,11 @@ assert "VALIDATE CONSTRAINT ed_cliente_cuba_direccion_ck" not in schema
 assert "GRANT SELECT,INSERT,UPDATE ON public.clientes_destinatarios,public.clientes_direcciones_entrega TO service_role;" in schema
 assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq TO service_role;" in schema
 assert "REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;" in schema
+# Internal registration helper must not be callable directly by service_role.
+privileges = rpc[rpc.index('-- No public client role may invoke'):]
+grant_block = privileges[privileges.index('GRANT EXECUTE ON FUNCTION'):privileges.index('TO service_role;')]
+assert 'public.ed_cliente_registrar_privado(text,text,text,text)' not in grant_block
+assert 'public.ed_cliente_registrar_residencia_privado(text,text,text,text,text,text,text,text,text)' in grant_block
 assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
