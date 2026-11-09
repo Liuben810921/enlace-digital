@@ -86,3 +86,13 @@ Se corrigió el encabezado que decía `INCOMPLETE: DO NOT APPLY`: se refería a 
 **Último preflight de solo lectura:** clientes 0; tablas auxiliares ausentes; siete columnas propuestas ausentes; secuencia ausente; CHECK ausente. El resultado debe reconfirmarse en el proyecto `xqahthghvozeigbojhyi` inmediatamente antes de cualquier futura ejecución. Los archivos cambiaron después de `f9b296e`: **la autorización anterior no cubre esta nueva versión**.
 
 **Limitación:** CI estático y comprobación de catálogo no equivalen a ensayo de ejecución SQL en una base de datos aislada. No se ha ejecutado DDL ni una migración de prueba. Solicitar nueva autorización únicamente cuando el CI del último commit esté verde y se haya revisado el archivo exacto.
+
+## Instalación autorizada y verificada del esquema en staging — 2026-11-09
+
+**Autorización explícita:** instalar solo el archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` del commit `302190629bff06e983d5563cabf8b2f4b1903a4a`, blob `8f9c00a2a60edcc1ef926e37ec41144d81c511b6`, en proyecto `xqahthghvozeigbojhyi` (`enlace-digital-staging`).
+
+**Ejecución:** `apply_migration` con nombre `enlace_digital_staging_schema_only_v4_20261109` devolvió `success: true`. Antes de ejecutar se verificaron el ID/nombre del proyecto, el blob exacto, el bloqueo transaccional anterior al preflight, ausencia de clientes, secuencia, CHECK, tablas auxiliares, columnas y RPC propuestas.
+
+**Comprobaciones posteriores (consultas de solo lectura):** clientes 0; secuencia de numeración creada; ambas tablas auxiliares creadas; siete columnas nuevas en `clientes_oficiales`; CHECK `ed_cliente_cuba_direccion_ck` presente con `convalidated=false` (`NOT VALID` por diseño); ambas claves foráneas hacia clientes válidas; índices PK y por cliente en ambas tablas; RLS habilitado en las dos tablas nuevas; `anon` y `authenticated` sin SELECT directo; `service_role` con SELECT/INSERT/UPDATE en las tablas auxiliares y USAGE/SELECT en las tres secuencias; roles públicos sin USAGE de esas secuencias. Cinco RPC propuestas instaladas: 0.
+
+**Fuera de alcance y no ejecutado:** instalación de RPC, Edge Function, correos, pedidos reales, cambios de producción, productos, departamentos o administradores. El esquema está instalado, pero el registro y el checkout no están habilitados. La siguiente etapa es revisión y autorización separada de las RPC y de las pruebas controladas.
