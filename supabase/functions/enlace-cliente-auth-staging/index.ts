@@ -120,8 +120,8 @@ Deno.serve(async req=>{
   if(!textFields(r,["name","phone","province","municipality","neighborhood","address","references"]))return reply(400,{error:"Destinatario invalido"});
   const name=String(r.name||"").trim(),phone=String(r.phone||"").trim(),province=String(r.province||"").trim(),municipality=String(r.municipality||"").trim(),neighborhood=String(r.neighborhood||"").trim(),address=String(r.address||"").trim(),references=String(r.references||"").trim();
   if(name.length<2||name.length>150||!/^(?:\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||address.length<8||address.length>500||neighborhood.length>150||references.length>500)return reply(400,{error:"Revisa el destinatario y la direccion"});
-  const id=body?.id==null?null:Number(body.id);
-  if(id!==null&&(!Number.isSafeInteger(id)||id<=0))return reply(400,{error:"Destinatario invalido"});
+  const id=body?.id==null?null:body.id;
+  if(id!==null&&(typeof id!=="number"||!Number.isSafeInteger(id)||id<=0))return reply(400,{error:"Destinatario invalido"});
   const record={nombre:name,telefono:phone,provincia:province,municipio:municipality,barrio:neighborhood,direccion:address,referencias:references};
   if(id!==null){
    const {data,error}=await db.from("clientes_destinatarios").update(record).eq("id",id).eq("cliente_numero",customer.numero).select("id").maybeSingle();
