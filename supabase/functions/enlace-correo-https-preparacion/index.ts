@@ -12,7 +12,7 @@ Deno.serve(async(req:Request)=>{
  if(Number(req.headers.get("content-length")||0)>4096)return json(413,{error:"Solicitud demasiado grande"});
  let body:any;try{body=await req.json()}catch{return json(400,{error:"Solicitud invalida"})}
  if(body?.action==="status"){
-  return json(200,{transport:"https_resend",credentials_configured:Boolean(Deno.env.get("RESEND_API_KEY"))&&Boolean(Deno.env.get("EMAIL_FROM_VERIFIED")),enabled:false,mail_sent:false});
+  return json(200,{transport:"https_resend",enabled:false,mail_sent:false});
  }
  if(body?.action!=="deliver")return json(400,{error:"Operacion no disponible"});
  // Defensa por capas: nunca llega al proveedor con el despliegue actual.
