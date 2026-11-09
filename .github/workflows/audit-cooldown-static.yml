@@ -1,0 +1,38 @@
+name: Audit email cooldown proposal (static only)
+on:
+  pull_request:
+    paths:
+      - 'sql/propuestas/staging_cooldown_consumido.sql'
+      - 'docs/**cooldown**'
+      - '.github/workflows/audit-cooldown-static.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify isolated SQL proposal invariants
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('sql/propuestas/staging_cooldown_consumido.sql')
+          assert p.is_file(), 'Proposal missing'
+          s=p.read_text()
+          assert s.count('CREATE OR REPLACE FUNCTION') == 1
+          assert 'enlace_auth.ed_emitir_token_correo_privado(' in s
+          assert "SECURITY DEFINER SET search_path TO ''" in s
+          assert "cliente_numero=v_cliente.cliente_numero and proposito=p_proposito and creado_en>now()-interval '10 minutes')" in s
+          assert not re.search(r"creado_en>now\(\)-interval '10 minutes' and consumido_en is null",s)
+          assert "set consumido_en=now() where cliente_numero=v_cliente.cliente_numero and proposito=p_proposito and consumido_en is null" in s
+          assert "interval '20 minutes' else interval '24 hours'" in s
+          assert not re.search(r'\b(?:COMMIT|DROP|TRUNCATE)\s',s,re.I)
+          assert not re.search(r'smtp|http_post|send_email',s,re.I)
+          print('PASS: static SQL proposal invariants; no SQL executed')
+          PY
