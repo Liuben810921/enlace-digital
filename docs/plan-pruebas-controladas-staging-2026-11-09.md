@@ -24,3 +24,15 @@ Tras el rollback, consultar recuentos de clientes, credenciales, sesiones, desti
 ## Autorización pendiente
 
 Solicitar permiso nuevo y específico antes de ejecutar el fixture transaccional, incluyendo aceptación expresa del avance irreversible de la secuencia en staging. Excluir Edge, correos, pedidos reales y producción.
+
+## Resultado del ensayo autorizado — 2026-11-09
+
+**Autorización específica recibida:** ejecución únicamente del fixture `sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql` del commit `f91600532ae0d409f084aa9f1724c3f094bb91f6`, blob `eb26ad8521fec675a7e09639f2289f8cff588e94`, en `xqahthghvozeigbojhyi`; se aceptó expresamente el avance no transaccional de la secuencia.
+
+**Preflight:** proyecto staging correcto; cinco RPC presentes; cuatro externas con EXECUTE efectivo para `service_role`, auxiliar sin ese permiso; `anon` y `authenticated` sin EXECUTE en las cinco; cero filas en clientes, credenciales, sesiones, destinatarios y direcciones.
+
+**Ejecución:** una única llamada `execute_sql` con el contenido íntegro del fixture `BEGIN; DO ...; ROLLBACK;`. Respuesta del proveedor: `[]`, sin errores SQL. No se devolvieron los `NOTICE` de las aserciones; la ausencia de excepción y el postflight respaldan la finalización sin error, pero no se dispone de traza individual de cada aserción.
+
+**Postflight de solo lectura:** clientes 0; credenciales 0; sesiones 0; destinatarios 0; direcciones 0. Secuencia `public.clientes_oficiales_numero_seq`: `last_value=2`, `is_called=true`. La secuencia avanzó como se advirtió y **no se reinició ni modificó manualmente**. No quedaron filas ficticias.
+
+**Límites:** no se ejecutaron pruebas de integración de Edge ni se verificó el aislamiento API real. Sin correos, despliegues, pedidos reales ni cambios en producción, productos, departamentos o administradores.
