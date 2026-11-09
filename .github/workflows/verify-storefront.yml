@@ -143,3 +143,24 @@ jobs:
           print('Email template dry-run: passed; no mail sent or tokens issued')
           PY
           done
+
+          # Isolated token lifecycle: no DB writes, token persistence, or messages.
+          for purpose in verificar_correo recuperar_clave; do
+            curl --silent --show-error --max-time 12 \
+              --output /tmp/ed-token-lifecycle.json \
+              --write-out '%{http_code}' \
+              -H "Authorization: Bearer $INTERNAL_KEY" \
+              -H "Content-Type: application/json" \
+              --data "{\"action\":\"token-lifecycle-dry-run\",\"purpose\":\"$purpose\"}" \
+              "https://ubrvuplslconfxwpfzxj.supabase.co/functions/v1/enlace-correo-staging" > /tmp/ed-token-lifecycle-status
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          code=Path('/tmp/ed-token-lifecycle-status').read_text().strip()
+          body=json.loads(Path('/tmp/ed-token-lifecycle.json').read_text())
+          assert code=='200' and body.get('passed') is True
+          checks=body['checks']
+          assert checks['mail_sent'] is False and checks['db_written'] is False and checks['token_persisted'] is False
+          print('Isolated token lifecycle: passed; no database changes or messages')
+          PY
+          done
