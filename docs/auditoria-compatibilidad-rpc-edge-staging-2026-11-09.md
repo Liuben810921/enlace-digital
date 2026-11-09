@@ -52,3 +52,13 @@ No se ejecutó SQL con efectos, migración ni despliegue.
 - La Edge Function propuesta usa RPC para clientes/credenciales/sesiones, y acceso directo por `service_role` solamente a las dos tablas nuevas de destinatarios/direcciones, cuyos GRANT se incluyen en la propuesta.
 
 **Bloqueos restantes:** instalación del esquema antes de las RPC, verificación de propietario efectivo y permisos tras instalación, compilación PL/pgSQL real y pruebas de integración con dos clientes ficticios. Los resultados de CI no equivalen a pruebas de ejecución SQL.
+
+## Revisión posterior a instalación de esquema — 2026-11-09
+
+El esquema de staging está instalado y se verificaron por lectura siete columnas de clientes, `pgcrypto` en `extensions`, cero clientes y cero de las cinco RPC propuestas. La migración de RPC permanece **sin ejecutar**.
+
+**Hallazgos corregidos solo en GitHub:** la RPC interna de registro ahora rechaza contraseñas cuyo tamaño UTF-8 supere 72 bytes (límite de bcrypt), con validación equivalente en el borrador Edge. La RPC de registro con residencia limita la longitud de los campos de dirección. Se añadió `REVOKE EXECUTE ... FROM service_role` explícito para la función auxiliar de registro; `CREATE OR REPLACE` puede preservar privilegios existentes y la mera ausencia de un GRANT no es suficiente.
+
+**Contrato de seguridad:** cinco `SECURITY DEFINER` con `search_path` vacío; cuatro RPC externas para `service_role`, auxiliar interna sin EXECUTE directo para `service_role`, `anon` ni `authenticated`. Registro y actualización de residencia son operaciones transaccionales dentro de una función; login usa `FOR UPDATE` para intentos fallidos y bloqueo; sesiones usan hash de token, caducidad y revocación; direcciones se limitan al número de cliente resuelto por token. El control de tasa de Edge depende de `ed_cliente_limite_privado` existente. Se requiere comprobar privilegios efectivos, integración y concurrencia tras cualquier futura instalación autorizada.
+
+**Límites de verificación:** revisión estática y CI no equivalen a ejecución real de PL/pgSQL, pruebas de login, seguridad dinámica o despliegue. No se han ejecutado pruebas que creen usuarios ni se han habilitado pedidos/correos. La futura instalación de RPC necesita autorización separada y preflight actualizado.
