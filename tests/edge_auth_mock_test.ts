@@ -1,6 +1,7 @@
 // Offline Deno integration tests of the actual Edge handler with a mocked Supabase client.
 // No network, credentials, database or server socket is used.
-import { assert, assertEquals } from "jsr:@std/assert@1";
+function assert(value:unknown,message="assertion failed"): asserts value {if(!value)throw Error(message)}
+function assertEquals(actual:unknown,expected:unknown){if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)}
 const source = await Deno.readTextFile("supabase/functions/enlace-cliente-auth-staging/index.ts");
 type Call = {kind:string; name:string; args?:unknown; filters:Record<string,unknown>};
 const calls:Call[]=[];
