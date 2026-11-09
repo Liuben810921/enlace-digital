@@ -1,0 +1,59 @@
+name: staging-auth-static-check
+on:
+  push:
+    branches: [audit/registro-staging-aislado-20261109]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/**'
+      - '.github/workflows/staging-auth-static-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/**'
+      - '.github/workflows/staging-auth-static-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: TypeScript typecheck (no execution of function)
+        run: deno check supabase/functions/enlace-cliente-auth-staging/index.ts
+      - name: Static SQL contract checks (no database connection)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          backend=Path("supabase/functions/enlace-cliente-auth-staging/index.ts").read_text()
+          rpc=Path("sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql").read_text()
+          schema=Path("sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql").read_text()
+          tests=Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
+          assert "ubrvuplslconfxwpfzxj" not in backend
+          assert "ED_STAGING_CUSTOMER_AUTH_ENABLED" in backend
+          assert 'expectedProject="xqahthghvozeigbojhyi"' in backend
+          assert "if(!enabled||!validProject)" in backend
+          assert rpc.count("CREATE OR REPLACE FUNCTION")==5
+          assert rpc.count("COMMIT;")==1 and schema.count("COMMIT;")==1
+          assert rpc.count("BEGIN;")==1 and schema.count("BEGIN;")==1
+          assert rpc.count("END $fn$;")==5
+          assert "p_telefono !~ (" in rpc and "correo !~ (" in rpc
+          assert "telefono ~ (" in schema
+          assert "SECURITY DEFINER SET search_path TO" in rpc
+          assert "FROM PUBLIC,anon,authenticated" in rpc
+          assert "TO service_role" in rpc
+          assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq" in schema
+          assert "punto_salida_id text" in schema
+          assert tests.count("n:=n+1;")==17
+          assert "BEGIN;" in tests and "ROLLBACK;" in tests
+          print("Static guards PASS")
+          PY
