@@ -66,4 +66,7 @@ ALTER TABLE public.clientes_destinatarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;
+-- Explicit grants for the staging Edge service role (RLS remains enabled).
+GRANT SELECT,INSERT,UPDATE ON public.clientes_destinatarios,public.clientes_direcciones_entrega TO service_role;
+GRANT USAGE,SELECT ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq TO service_role;
 COMMIT;
