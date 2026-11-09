@@ -50,7 +50,7 @@ CREATE OR REPLACE FUNCTION public.ed_cliente_login_privado(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $fn$
 DECLARE c record; client record;
 BEGIN
- IF p_token_hash IS NULL OR IF p_token_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Token invalido'; END IF;
+ IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Token invalido'; END IF;
  SELECT * INTO c FROM enlace_auth.cliente_credenciales WHERE telefono_e164=p_telefono FOR UPDATE;
  IF NOT FOUND THEN PERFORM extensions.crypt(coalesce(p_password,''),extensions.gen_salt('bf',10)); RETURN NULL; END IF;
  IF c.bloqueado_hasta IS NOT NULL AND c.bloqueado_hasta>now() THEN RETURN NULL; END IF;
@@ -72,7 +72,7 @@ CREATE OR REPLACE FUNCTION public.ed_cliente_sesion_privada(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $fn$
 DECLARE c record;
 BEGIN
- IF p_token_hash IS NULL OR IF p_token_hash !~ '^[a-f0-9]{64}$' THEN RETURN NULL; END IF;
+ IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$' THEN RETURN NULL; END IF;
  SELECT s.cliente_numero,c0.codigo,c0.nombre,c0.residencia,c0.telefono,c0.correo,c0.provincia,c0.municipio,c0.barrio,c0.direccion_habitual
  INTO c FROM enlace_auth.cliente_sesiones s JOIN public.clientes_oficiales c0 ON c0.numero=s.cliente_numero
  WHERE s.token_hash=p_token_hash AND s.expira_en>now() AND s.revocada_en IS NULL FOR UPDATE OF s;
