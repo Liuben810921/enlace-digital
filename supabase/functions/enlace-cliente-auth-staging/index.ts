@@ -133,6 +133,11 @@ Deno.serve(async req=>{
   const {data,error}=await db.rpc("ed_cliente_sesion_privada",{p_token_hash:await sha(token),p_revocar:action==="logout"});
   if(error)return reply(500,{error:"No se pudo verificar la sesion"});
   if(!data)return reply(401,{error:"Sesion caducada"});
+  if(action==="logout"){
+   if(data.cerrada!==true)return reply(500,{error:"No se pudo confirmar el cierre de sesion"});
+   return reply(200,{closed:true});
+  }
+  if(!Number.isSafeInteger(data.numero)||data.numero<=0)return reply(500,{error:"La sesion no devolvio una cuenta valida"});
   if(action==="profile"){
    const {data:recipients,error:recError}=await db.from("clientes_destinatarios").select("id,nombre,telefono,provincia,municipio,barrio,direccion,referencias").eq("cliente_numero",data.numero).order("creado_en",{ascending:false}).limit(100);
    if(recError)return reply(500,{error:"No se pudo consultar los destinatarios"});
@@ -140,7 +145,6 @@ Deno.serve(async req=>{
    if(locError)return reply(500,{error:"No se pudieron consultar las direcciones"});
    return reply(200,{cliente:data,destinatarios:recipients||[],direcciones_entrega:locations||[]});
   }
-  if(action==="logout")return reply(200,{closed:true});
   return reply(200,{cliente:data});
  }
  return reply(400,{error:"Operacion no disponible"});
