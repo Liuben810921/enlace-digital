@@ -6,6 +6,7 @@ on:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
+      - 'scripts/check_staging_isolation.py'
       - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   pull_request:
@@ -14,6 +15,7 @@ on:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
+      - 'scripts/check_staging_isolation.py'
       - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   workflow_dispatch:
@@ -32,6 +34,8 @@ jobs:
           deno-version: v2.x
       - name: TypeScript typecheck (no execution of function)
         run: deno check supabase/functions/enlace-cliente-auth-staging/index.ts
+      - name: Static recipient and delivery isolation checks (no database connection)
+        run: python3 scripts/check_staging_isolation.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
