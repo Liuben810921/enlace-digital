@@ -197,3 +197,40 @@ Deno.test("disabled Edge does not initialize privileged Supabase client",async()
   await Deno.remove(file);
  }
 });
+
+Deno.test("protected write failures return 500 without false success",async()=>{
+ const recipient={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ for(const action of ["recipient-save","delivery-location-save"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  const tableName=action==="recipient-save"?"clientes_destinatarios":"clientes_direcciones_entrega";
+  if(action==="delivery-location-save")queueTable(tableName,{data:null,error:null},{data:null,error:{code:"XX000"}});
+  else queueTable(tableName,{data:null,error:{code:"XX000"}});
+  const r=await send(action,{token,...(action==="recipient-save"?{recipient}:{location:recipient})});
+  assertEquals(r.status,500);
+ }
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueRpc("ed_cliente_direccion_privada",{data:null,error:{code:"XX000"}});
+ assertEquals((await send("address-save",{token,address:{province:"La Habana",municipality:"Plaza",street:"Calle ficticia 123"}})).status,500);
+});
+Deno.test("registration rate limit blocks before private registration RPC",async()=>{
+ reset();queueRpc("ed_cliente_limite_privado",{data:true,error:null},{data:false,error:null});
+ const r=await send("register",{name:"Prueba Exterior",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"extranjero"});
+ assertEquals(r.status,429);
+ assertEquals(calls.filter(c=>c.name==="ed_cliente_registrar_residencia_privado").length,0);
+});
+Deno.test("successful foreign registration requires no Cuban address",async()=>{
+ reset();queueRpc("ed_cliente_registrar_residencia_privado",{data:{numero:23},error:null});
+ const r=await send("register",{name:"Prueba Exterior",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"extranjero"});
+ assertEquals(r.status,201);
+ const args=calls.find(c=>c.name==="ed_cliente_registrar_residencia_privado")!.args as any;
+ assertEquals(args.p_residencia,"extranjero");
+ assertEquals(args.p_direccion,"");
+});
+Deno.test("invalid recipient id rejected without table mutations",async()=>{
+ for(const id of [-1,0,1.5,"abc"]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  const r=await send("recipient-save",{token,id,recipient:{name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"}});
+  assertEquals(r.status,400);
+  assertEquals(calls.filter(c=>c.kind==="insert"||c.name==="clientes_destinatarios").length,0);
+ }
+});
