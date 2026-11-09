@@ -357,3 +357,30 @@ Deno.test("logout returns explicit closure, not a fabricated customer profile",a
  assertEquals((r.body as any).closed,true);
  assertEquals((r.body as any).cliente,undefined);
 });
+
+Deno.test("structured values cannot be coerced into persisted address or recipient strings",async()=>{
+ const valid={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ const malformed=[
+  {action:"register",name:"Prueba Cuba",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"cuba",address:{province:"La Habana",municipality:"Plaza",street:{toString:"Calle ficticia 123"}}},
+  {action:"address-save",token,address:{province:"La Habana",municipality:"Plaza",street:{unexpected:"Calle ficticia 123"}}},
+  {action:"recipient-save",token,recipient:{...valid,address:{unexpected:"Calle ficticia 123"}}},
+  {action:"delivery-location-save",token,location:{...valid,province:["La Habana"]}}
+ ];
+ for(const payload of malformed){
+  reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+  const r=await send(payload.action,payload);
+  assertEquals(r.status,400);
+  assertEquals(calls.filter(c=>c.kind==="insert").length,0);
+  assertEquals(calls.filter(c=>c.name==="ed_cliente_registrar_residencia_privado"||c.name==="ed_cliente_direccion_privada").length,0);
+ }
+});
+Deno.test("session response returns authenticated customer and never echoes bearer token",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerB,error:null});
+ const r=await send("session",{token});
+ assertEquals(r.status,200);
+ assertEquals((r.body as any).cliente.numero,22);
+ assertEquals(JSON.stringify(r.body).includes(token),false);
+ const auth=calls.find(c=>c.name==="ed_cliente_sesion_privada")!;
+ assertEquals((auth.args as any).p_revocar,false);
+ assertEquals((auth.args as any).p_token_hash===token,false);
+});
