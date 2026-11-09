@@ -32,3 +32,13 @@ Se mantienen las restricciones: sin SQL con efectos, migraciones, despliegues, e
 - Sigue bloqueada la secuencia `clientes_oficiales_numero_seq`: `START WITH 1` no demuestra compatibilidad con IDs existentes. No ejecutar migración hasta su inicialización segura y aprobación.
 
 No se ejecutó SQL con efectos, migración ni despliegue.
+
+## Inspección directa de staging — 2026-11-09 (solo lectura)
+
+- Existen `public.clientes_oficiales`, `enlace_auth.cliente_credenciales` y `enlace_auth.cliente_sesiones`.
+- `pgcrypto` está instalada en `extensions`; la referencia explícita `extensions.crypt` / `extensions.gen_salt` concuerda con el esquema observado.
+- De las RPC `public.ed_cliente_*`, únicamente existe `ed_cliente_limite_privado(text, integer, integer)`. Las cinco RPC propuestas en el PR **no están instaladas**.
+- No existen todavía `public.clientes_destinatarios`, `public.clientes_direcciones_entrega` ni `public.clientes_oficiales_numero_seq`.
+- `public.clientes_oficiales` sigue vacía (`COUNT(*)=0`, `MAX(numero)=NULL`) en la lectura anterior. Este dato es temporal y debe reconfirmarse en la ventana de migración.
+
+**Conclusión:** el borrador sigue siendo una propuesta incompleta, no una migración aplicable automáticamente. No hay evidencia de compilación de los cuerpos PL/pgSQL ni de pruebas de integración. Para avanzar se requiere una revisión de columnas/privilegios y una migración de staging autorizada, con preflight de secuencia y CHECK, antes de habilitar Edge.
