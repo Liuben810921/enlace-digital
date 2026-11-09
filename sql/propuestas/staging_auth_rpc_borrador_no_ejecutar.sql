@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION public.ed_cliente_registrar_privado(
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $fn$
 DECLARE n integer; h text; correo text;
 BEGIN
- IF array_length(regexp_split_to_array(btrim(coalesce(p_nombre,'')), E'\\s+'),1)<2
+ IF array_length(regexp_split_to_array(btrim(coalesce(p_nombre,'')), '[[:space:]]+'),1)<2
     OR length(btrim(coalesce(p_nombre,'')))>150 THEN RAISE EXCEPTION 'Nombre y apellido requeridos'; END IF;
  IF p_telefono !~ '^\\+[1-9][0-9]{7,14}$' THEN RAISE EXCEPTION 'Telefono invalido'; END IF;
  IF length(coalesce(p_password,'')) NOT BETWEEN 8 AND 128 THEN RAISE EXCEPTION 'Contrasena invalida'; END IF;
@@ -77,8 +77,8 @@ BEGIN
  INTO c FROM enlace_auth.cliente_sesiones s JOIN public.clientes_oficiales c0 ON c0.numero=s.cliente_numero
  WHERE s.token_hash=p_token_hash AND s.expira_en>now() AND s.revocada_en IS NULL FOR UPDATE OF s;
  IF NOT FOUND THEN RETURN NULL; END IF;
- IF p_revocar THEN UPDATE enlace_auth.cliente_sesiones SET revocada_en=now() WHERE token_hash=p_token_hash; END IF;
- RETURN to_jsonb(c);
+ IF p_revocar THEN UPDATE enlace_auth.cliente_sesiones SET revocada_en=now() WHERE token_hash=p_token_hash; RETURN jsonb_build_object('cerrada',true); END IF;
+ RETURN jsonb_build_object('numero',c.cliente_numero,'codigo',c.codigo,'nombre',c.nombre,'residencia',c.residencia,'telefono',c.telefono,'correo',c.correo,'provincia',c.provincia,'municipio',c.municipio,'barrio',c.barrio,'direccion_habitual',c.direccion_habitual);
 END $fn$;
 
 CREATE OR REPLACE FUNCTION public.ed_cliente_direccion_privada(
@@ -88,10 +88,10 @@ DECLARE c jsonb;
 BEGIN
  c:=public.ed_cliente_sesion_privada(p_token_hash,false);
  IF c IS NULL OR c->>'residencia'<>'cuba' THEN RETURN false; END IF;
- IF length(btrim(coalesce(p_provincia,'')))<2 OR length(btrim(coalesce(p_municipio,'')))<2 OR length(btrim(coalesce(p_direccion,'')))<8 THEN RETURN false; END IF;
+ IF length(btrim(coalesce(p_provincia,'')))<2 OR length(btrim(coalesce(p_municipio,'')))<2 OR length(btrim(coalesce(p_direccion,'')))<8 OR length(coalesce(p_provincia,''))>100 OR length(coalesce(p_municipio,''))>100 OR length(coalesce(p_barrio,''))>150 OR length(coalesce(p_direccion,''))>500 THEN RETURN false; END IF;
  UPDATE public.clientes_oficiales SET provincia=btrim(p_provincia),municipio=btrim(p_municipio),
  barrio=btrim(coalesce(p_barrio,'')),direccion_habitual=btrim(p_direccion)
- WHERE numero=(c->>'cliente_numero')::integer;
+ WHERE numero=(c->>'numero')::integer;
  RETURN FOUND;
 END $fn$;
 -- No public client role may invoke these privileged RPCs.
