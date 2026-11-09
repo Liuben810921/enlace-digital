@@ -23,7 +23,7 @@ Deno.serve(async req=>{
  if(action==="register"){
   if(!(await limit("reg-ip:"+identity,3,3600)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
   const name=String(body?.name||"").trim(),phone=String(body?.phone||"").trim(),password=String(body?.password||""),email=String(body?.email||"").trim();
-  if(name.length>150||name.split(/\s+/).length<2||!/^\+[1-9][0-9]{7,14}$/.test(phone)||password.length<8||password.length>128||email.length>254||(email&&!/^[^ @]+@[^ @]+\.[^ @]+$/.test(email)))return reply(400,{error:"Revisa los datos del registro"});
+  if(name.length>150||name.split(/\s+/).length<2||!/^\+[1-9][0-9]{7,14}$/.test(phone)||password.length<8||password.length>128||new TextEncoder().encode(password).length>72||email.length>254||(email&&!/^[^ @]+@[^ @]+\.[^ @]+$/.test(email)))return reply(400,{error:"Revisa los datos del registro"});
   if(!(await limit("reg-phone:"+await sha(phone),3,86400)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
   const residence=String(body?.residence||"");
   const address=body?.address||{};
