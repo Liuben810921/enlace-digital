@@ -67,7 +67,7 @@ jobs:
           assert "ubrvuplslconfxwpfzxj" not in backend
           assert "ED_STAGING_CUSTOMER_AUTH_ENABLED" in backend
           assert 'expectedProject="xqahthghvozeigbojhyi"' in backend
-          assert "if(!enabled||!validProject)" in backend
+          assert "if(!enabled||!validProject||!key)" in backend
           assert rpc.count("CREATE OR REPLACE FUNCTION")==5
           assert rpc.count("COMMIT;")==1 and schema.count("COMMIT;")==1
           assert rpc.count("BEGIN;")==1 and schema.count("BEGIN;")==1
