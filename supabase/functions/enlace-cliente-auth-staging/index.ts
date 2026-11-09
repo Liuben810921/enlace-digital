@@ -11,7 +11,7 @@ const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false
 const configuredOrigin=Deno.env.get("ED_STAGING_ALLOWED_ORIGIN")||"";
 const allowedOrigin=(()=>{try{const u=new URL(configuredOrigin);return u.protocol==="https:"&&u.origin===configuredOrigin&&u.hostname!=="staging-preview.invalid"?u.origin:""}catch{return ""}})();
 const headers={"Content-Type":"application/json","Cache-Control":"no-store","Access-Control-Allow-Headers":"content-type,apikey,authorization","Access-Control-Allow-Methods":"POST,OPTIONS"};
-const corsHeaders=(req:Request)=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
+const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
 
 const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
 async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
