@@ -4,6 +4,7 @@ on:
     branches: [audit/registro-staging-aislado-20261109]
     paths:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'supabase/config.toml'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
@@ -16,6 +17,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'supabase/config.toml'
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
@@ -67,6 +69,11 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           backend=Path("supabase/functions/enlace-cliente-auth-staging/index.ts").read_text()
+          config=Path("supabase/config.toml").read_text()
+          assert "[functions.enlace-cliente-auth-staging]" in config and "verify_jwt = false" in config
+          assert "https://liuben810921.github.io" in backend
+          assert 'req.headers.get("apikey")' in backend
+          assert 'ED_STAGING_PUBLISHABLE_KEY' in backend
           rpc=Path("sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql").read_text()
           schema=Path("sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql").read_text()
           tests=Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
