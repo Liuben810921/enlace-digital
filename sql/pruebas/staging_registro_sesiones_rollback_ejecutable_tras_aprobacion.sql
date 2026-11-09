@@ -1,5 +1,8 @@
 -- STAGING ONLY, POST-MIGRATION, EXPLICIT APPROVAL REQUIRED.
 -- Never run in production. One SQL Editor execution, BEGIN..ROLLBACK.
+-- IMPORTANT: PostgreSQL nextval() is NONTRANSACTIONAL: ROLLBACK removes
+-- fixture rows but does NOT restore clientes_oficiales_numero_seq.
+-- Approval must explicitly allow sequence advancement; never reset it automatically.
 -- Requires BOTH reviewed proposal migrations already installed in staging.
 -- NO real email, checkout or external service calls.
 BEGIN;
@@ -79,8 +82,12 @@ BEGIN
   ]) AS f(signature)
   WHERE NOT has_function_privilege('service_role',f.signature,'EXECUTE')
  ) THEN RAISE EXCEPTION 'FAIL service role RPC permissions'; END IF;
- RAISE NOTICE 'PASS % aserciones SQL (todos los datos ficticios se revertiran)',n;
+ RAISE NOTICE 'PASS % aserciones SQL (filas ficticias revertidas; secuencia NO revertida)',n;
 END $tests$;
 ROLLBACK;
 -- Test limitations: owner isolation for recipient-save requires Edge Function
 -- integration tests; SQL fixture FK checks alone do not establish API security.
+
+-- Postflight read-only: confirm zero fixture rows in customer/credentials/sessions,
+-- check recipient/delivery rows and inspect sequence last_value/is_called.
+-- Never use setval() or reseed without separate authorization.
