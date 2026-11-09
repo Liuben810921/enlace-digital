@@ -54,6 +54,7 @@ Deno.serve(async req=>{
   if(!["cuba","extranjero"].includes(residence)||(residence==="cuba"&&(province.length<2||municipality.length<2||street.length<8))||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Selecciona tu residencia y completa la direccion habitual si resides en Cuba."});
   const {data,error}=await db.rpc("ed_cliente_registrar_residencia_privado",{p_nombre:name,p_telefono:phone,p_password:password,p_correo:email||null,p_residencia:residence,p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
   if(error){if(error.message?.includes("Telefono ya registrado")||error.code==="23505")return reply(409,{error:"Este telefono ya esta registrado. Si es tu cuenta, inicia sesion."});console.error("Registration error",error.code);return reply(400,{error:"No se pudo completar el registro. Comprueba tus datos."})}
+  if(!data||!Number.isSafeInteger(data.numero)||data.numero<=0)return reply(500,{error:"El registro no devolvio una cuenta valida"});
   return reply(201,{cliente:data,notice:"Cuenta creada. El correo de recuperacion requiere verificacion antes de habilitarse."});
  }
 
@@ -65,6 +66,7 @@ Deno.serve(async req=>{
   const {data,error}=await db.rpc("ed_cliente_login_privado",{p_telefono:phone,p_password:password,p_token_hash:await sha(token)});
   if(error){console.error("Login backend error",error.code);return reply(500,{error:"No se pudo iniciar sesion"})}
   if(!data)return reply(401,{error:"Telefono o contrasena incorrectos, o acceso temporalmente bloqueado"});
+  if(!Number.isSafeInteger(data.numero)||data.numero<=0)return reply(500,{error:"El inicio de sesion no devolvio una cuenta valida"});
   return reply(200,{cliente:data,token,expires_in:2592000});
  }
  if(action==="address-save"){
