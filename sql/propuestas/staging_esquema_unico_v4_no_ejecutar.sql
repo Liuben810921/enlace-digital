@@ -5,6 +5,24 @@
 -- nombre text, auth_user_id uuid nullable, residencia text nullable, creado_en timestamptz.
 -- Existing enlace_auth.cliente_credenciales and cliente_sesiones are retained.
 BEGIN;
+-- Fail closed if the installation preflight no longer matches the observed empty staging.
+-- Deployment must additionally exclude concurrent registration writers throughout.
+DO $preflight$
+BEGIN
+ IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN
+  RAISE EXCEPTION 'Staging customers no longer empty; stop and reconcile sequence';
+ END IF;
+ IF pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL THEN
+  RAISE EXCEPTION 'Customer sequence already exists; inspect state before migration';
+ END IF;
+ IF EXISTS (
+  SELECT 1 FROM pg_catalog.pg_constraint
+  WHERE conrelid='public.clientes_oficiales'::pg_catalog.regclass
+    AND conname='ed_cliente_cuba_direccion_ck'
+ ) THEN
+  RAISE EXCEPTION 'Existing Cuba address constraint requires manual definition review';
+ END IF;
+END $preflight$;
 -- Sequence absent in staging (read-only catalog verification on 2026-11-09).
 CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;
 REVOKE ALL ON SEQUENCE public.clientes_oficiales_numero_seq FROM PUBLIC,anon,authenticated;
