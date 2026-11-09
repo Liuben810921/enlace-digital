@@ -173,5 +173,5 @@ Deno.test("CORS rejects unapproved origin and ignores spoofed proxy IP",async()=
  assertEquals(ok.status,204);
  assertEquals(ok.headers.get("access-control-allow-origin"),"https://staging.example.invalid");
  await send("unrecognized",{},{"x-forwarded-for":"203.0.113.42","cf-connecting-ip":"198.51.100.10"});
- assert(calls.some(c=>c.name==="ed_cliente_limite_privado"&&(c.args as any).p_clave==="reg-ip:"+"" )===false);
+ assert(calls.some(c=>c.name==="ed_cliente_limite_privado"&&(c.args as any).p_clave==="staging-auth-global"));
 });
