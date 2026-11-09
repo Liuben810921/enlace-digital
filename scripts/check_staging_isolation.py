@@ -120,6 +120,15 @@ assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
 assert "nextval('public.clientes_oficiales_numero_seq')" in rpc
+# Schema-only migration must not require installation of any authentication RPC.
+assert "independently installable" in schema
+assert "NOT AUTHORIZED FOR EXECUTION" in schema
+assert "INCOMPLETE: DO NOT APPLY" not in schema
+assert "CREATE OR REPLACE FUNCTION" not in schema
+assert "Staging auxiliary customer tables already exist; stop and inspect" in schema
+assert "Staging customer columns already partially migrated; stop and inspect" in schema
+assert schema.index("Staging auxiliary customer tables already exist") < schema.index("CREATE TABLE IF NOT EXISTS public.clientes_destinatarios")
+assert schema.index("Staging customer columns already partially migrated") < schema.index("ALTER TABLE public.clientes_oficiales")
 # Migration must stop before CREATE SEQUENCE if live staging state drifted.
 assert schema.index("LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE;") < schema.index("DO $preflight$")
 assert schema.index("DO $preflight$") < schema.index("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq")
