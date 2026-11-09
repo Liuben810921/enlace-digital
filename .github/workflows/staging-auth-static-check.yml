@@ -45,7 +45,7 @@ jobs:
           assert rpc.count("CREATE OR REPLACE FUNCTION")==5
           assert rpc.count("COMMIT;")==1 and schema.count("COMMIT;")==1
           assert rpc.count("BEGIN;")==1 and schema.count("BEGIN;")==1
-          assert rpc.count("END $fn$;")==5
+          assert rpc.count("END; $fn$;")==5
           assert "p_telefono !~ (" in rpc and "correo !~ (" in rpc
           assert "telefono ~ (" in schema
           assert "SECURITY DEFINER SET search_path TO" in rpc
