@@ -74,7 +74,8 @@ Deno.serve(async req=>{
   const province=String(a.province||"").trim(),municipality=String(a.municipality||"").trim(),neighborhood=String(a.neighborhood||"").trim(),street=String(a.street||"").trim();
   if(province.length<2||municipality.length<2||street.length<8||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Completa una direccion habitual valida."});
   const {data,error}=await db.rpc("ed_cliente_direccion_privada",{p_token_hash:await sha(token),p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
-  if(error||!data)return reply(500,{error:"No se pudo guardar la direccion habitual."});
+  if(error)return reply(500,{error:"No se pudo guardar la direccion habitual."});
+  if(!data)return reply(403,{error:"La direccion habitual solo puede actualizarse para residentes en Cuba con sesion valida."});
   return reply(200,{saved:true});
  }
  if(action==="delivery-location-save"){
@@ -132,6 +133,7 @@ Deno.serve(async req=>{
    if(locError)return reply(500,{error:"No se pudieron consultar las direcciones"});
    return reply(200,{cliente:data,destinatarios:recipients||[],direcciones_entrega:locations||[]});
   }
+  if(action==="logout")return reply(200,{closed:true});
   return reply(200,{cliente:data});
  }
  return reply(400,{error:"Operacion no disponible"});
