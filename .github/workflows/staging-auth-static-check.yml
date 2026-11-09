@@ -4,13 +4,15 @@ on:
     branches: [audit/registro-staging-aislado-20261109]
     paths:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
-      - 'sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql'
       - '.github/workflows/staging-auth-static-check.yml'
   pull_request:
     branches: [main]
     paths:
       - 'supabase/functions/enlace-cliente-auth-staging/**'
-      - 'sql/propuestas/staging_auth_rpc_borrador_no_ejecutar.sql'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql'
       - '.github/workflows/staging-auth-static-check.yml'
   workflow_dispatch:
 permissions:
@@ -46,5 +48,13 @@ jobs:
           assert "WHERE numero=(c->>'numero')::integer" in q
           assert 'length(coalesce(p_direccion' in q
           assert 'DO NOT EXECUTE' in q
+          schema=Path("sql/propuestas/staging_registro_destinatarios_no_ejecutar.sql").read_text()
+          tests=Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
+          assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq" in schema
+          assert "punto_salida_id text" in schema
+          assert tests.count("n:=n+1;")==17
+          assert "BEGIN;" in tests and "ROLLBACK;" in tests
+          assert "ed_cliente_sesion_privada" in tests
+          assert "ed_cliente_registrar_residencia_privado" in tests
           print("Static guards PASS")
           PY
