@@ -1,0 +1,102 @@
+// Offline Deno integration tests of the actual Edge handler with a mocked Supabase client.
+// No network, credentials, database or server socket is used.
+import { assert, assertEquals } from "jsr:@std/assert@1";
+const source = await Deno.readTextFile("supabase/functions/enlace-cliente-auth-staging/index.ts");
+type Call = {kind:string; name:string; args?:unknown; filters:Record<string,unknown>};
+const calls:Call[]=[];
+const rpcResults:Record<string,unknown[]>={};
+const tableResults:Record<string,unknown[]>={};
+function next(map:Record<string,unknown[]>,name:string){return (map[name]||[]).shift()??{data:null,error:null}}
+function table(name:string){
+ const filters:Record<string,unknown>={};
+ const chain:any={
+  select(){return chain},update(data:unknown){chain._update=data;return chain},
+  insert(data:unknown){calls.push({kind:"insert",name,args:data,filters:{}});return chain},
+  eq(k:string,v:unknown){filters[k]=v;return chain},
+  order(){return chain},limit(){return chain},
+  maybeSingle(){calls.push({kind:"query",name,filters:{...filters}});return Promise.resolve(next(tableResults,name))},
+  single(){calls.push({kind:"query",name,filters:{...filters}});return Promise.resolve(next(tableResults,name))},
+  then(resolve:(v:unknown)=>unknown){calls.push({kind:"query",name,filters:{...filters}});return Promise.resolve(next(tableResults,name)).then(resolve)}
+ };
+ return chain;
+}
+(globalThis as any).__mockCreateClient=()=>({
+ rpc(name:string,args:unknown){calls.push({kind:"rpc",name,args,filters:{}});return Promise.resolve(next(rpcResults,name))},
+ from:table
+});
+let handler:(req:Request)=>Promise<Response>;
+(globalThis as any).__captureServe=(fn:typeof handler)=>{handler=fn};
+const mocked=source
+ .replace('import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.10";','const createClient = globalThis.__mockCreateClient;')
+ .replace('const enabled=Deno.env.get("ED_STAGING_CUSTOMER_AUTH_ENABLED")==="true";','const enabled=true;')
+ .replace('const validProject=(()=>{try{return new URL(url).hostname===expectedProject+".supabase.co"}catch{return false}})();','const validProject=true;')
+ .replace('Deno.serve(async req=>{','globalThis.__captureServe(async req=>{');
+assert(mocked.includes("globalThis.__captureServe(async req=>{"));
+const temp=await Deno.makeTempFile({suffix:".ts"});
+try{await Deno.writeTextFile(temp,mocked);await import("file://"+temp+"?mock="+Date.now())}finally{await Deno.remove(temp)}
+handler=(globalThis as any).__handler??handler;
+function reset(){calls.length=0;for(const k of Object.keys(rpcResults))delete rpcResults[k];for(const k of Object.keys(tableResults))delete tableResults[k];rpcResults.ed_cliente_limite_privado=Array.from({length:20},()=>({data:true,error:null}))}
+function queueRpc(name:string,...values:unknown[]){rpcResults[name]=values}
+function queueTable(name:string,...values:unknown[]){tableResults[name]=values}
+async function send(action:string,extra:Record<string,unknown>={},headers:Record<string,string>={}){
+ const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"content-type":"application/json",...headers},body:JSON.stringify({action,...extra})}));
+ return {status:r.status,body:await r.json()};
+}
+const token="a".repeat(64),customerA={numero:11},customerB={numero:22};
+Deno.test("register: Cuba address and foreign no address; duplicate and validation",async()=>{
+ reset();
+ queueRpc("ed_cliente_registrar_residencia_privado",{data:{numero:11},error:null},{data:null,error:{code:"23505"}});
+ const base={name:"Prueba Cuba",phone:"+15550001001",password:"ClaveFicticia2026!"};
+ assertEquals((await send("register",{...base,residence:"cuba",address:{province:"La Habana",municipality:"Plaza",street:"Calle ficticia 123"}})).status,201);
+ const reg=calls.find(c=>c.name==="ed_cliente_registrar_residencia_privado")!;
+ assertEquals((reg.args as any).p_residencia,"cuba");
+ assertEquals((await send("register",{...base,phone:"+15550001002",residence:"extranjero"})).status,409);
+ assertEquals((await send("register",{...base,residence:"cuba"})).status,400);
+ assertEquals((await send("register",{...base,password:"x".repeat(73),residence:"extranjero"})).status,400);
+});
+Deno.test("login: rate limit, failure, success and token hash never plaintext",async()=>{
+ reset();queueRpc("ed_cliente_login_privado",{data:null,error:null},{data:customerA,error:null});
+ const base={phone:"+15550001001",password:"ClaveFicticia2026!"};
+ assertEquals((await send("login",base)).status,401);
+ const ok=await send("login",base);assertEquals(ok.status,200);
+ assertEquals((ok.body as any).token.length,64);
+ const login=calls.filter(c=>c.name==="ed_cliente_login_privado").at(-1)!;
+ assert((login.args as any).p_token_hash!==(ok.body as any).token);
+ reset();queueRpc("ed_cliente_limite_privado",{data:false,error:null});
+ assertEquals((await send("login",base)).status,429);
+});
+Deno.test("recipient update always filters by authenticated customer",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerB,error:null});
+ queueTable("clientes_destinatarios",{data:null,error:null});
+ const recipient={name:"Receptor B",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ const r=await send("recipient-save",{token,id:999,recipient});
+ assertEquals(r.status,404);
+ const update=calls.find(c=>c.kind==="query"&&c.name==="clientes_destinatarios")!;
+ assertEquals(update.filters.cliente_numero,22);assertEquals(update.filters.id,999);
+});
+Deno.test("profile lists only session owner's recipients and delivery locations",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null});
+ queueTable("clientes_destinatarios",{data:[],error:null});
+ queueTable("clientes_direcciones_entrega",{data:[],error:null});
+ const r=await send("profile",{token});assertEquals(r.status,200);
+ for(const name of ["clientes_destinatarios","clientes_direcciones_entrega"]){
+  assertEquals(calls.find(c=>c.kind==="query"&&c.name===name)?.filters.cliente_numero,11)
+ }
+});
+Deno.test("delivery dedup is owner scoped; logout revokes; invalid token blocked",async()=>{
+ reset();queueRpc("ed_cliente_sesion_privada",{data:customerA,error:null},{data:customerA,error:null});
+ queueTable("clientes_direcciones_entrega",{data:{id:4},error:null},{data:null,error:null});
+ const location={name:"Receptor A",phone:"+5355512345",province:"La Habana",municipality:"Plaza",address:"Calle ficticia 123"};
+ assertEquals((await send("delivery-location-save",{token,location})).status,200);
+ const queries=calls.filter(c=>c.kind==="query"&&c.name==="clientes_direcciones_entrega");
+ assert(queries.every(c=>c.filters.cliente_numero===11));
+ assertEquals((await send("logout",{token})).status,200);
+ assert(calls.some(c=>c.name==="ed_cliente_sesion_privada"&&(c.args as any).p_revocar===true));
+ assertEquals((await send("profile",{token:"bad"})).status,401);
+});
+Deno.test("oversized streaming body rejected without Content-Length",async()=>{
+ reset();const body=JSON.stringify({action:"login",padding:"x".repeat(5000)});
+ const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:new ReadableStream({start(c){c.enqueue(new TextEncoder().encode(body));c.close()}})}));
+ assertEquals(r.status,413);
+ assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
+});
