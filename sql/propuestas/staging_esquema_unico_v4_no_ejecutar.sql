@@ -1,5 +1,7 @@
--- PROPOSAL ONLY. STAGING xqahthghvozeigbojhyi. DO NOT EXECUTE.
--- INCOMPLETE: DO NOT APPLY. Required RPCs and server-side contract not yet migrated.
+-- STAGING SCHEMA-ONLY PROPOSAL for xqahthghvozeigbojhyi.
+-- NOT AUTHORIZED FOR EXECUTION: requires new explicit approval for this exact revision.
+-- This schema is independently installable; customer RPCs and Edge server contract
+-- are separate later phases and MUST NOT be activated by this migration.
 -- Production schema reconciled for delivery columns and route types; no data operations authorized.
 -- Existing public.clientes_oficiales: numero integer PK, codigo text unique,
 -- nombre text, auth_user_id uuid nullable, residencia text nullable, creado_en timestamptz.
@@ -14,6 +16,18 @@ DO $preflight$
 BEGIN
  IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN
   RAISE EXCEPTION 'Staging customers no longer empty; stop and reconcile sequence';
+ END IF;
+ -- A clean schema-only installation must not silently reuse partial objects.
+ IF pg_catalog.to_regclass('public.clientes_destinatarios') IS NOT NULL
+    OR pg_catalog.to_regclass('public.clientes_direcciones_entrega') IS NOT NULL THEN
+  RAISE EXCEPTION 'Staging auxiliary customer tables already exist; stop and inspect';
+ END IF;
+ IF EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='clientes_oficiales'
+    AND column_name IN ('telefono','correo','estado','provincia','municipio','barrio','direccion_habitual')
+ ) THEN
+  RAISE EXCEPTION 'Staging customer columns already partially migrated; stop and inspect';
  END IF;
  IF pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL THEN
   RAISE EXCEPTION 'Customer sequence already exists; inspect state before migration';
