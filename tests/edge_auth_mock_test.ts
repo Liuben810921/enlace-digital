@@ -171,7 +171,7 @@ Deno.test("invalid input and unknown actions reject without protected writes",as
 Deno.test("method and invalid JSON rejected before database operations",async()=>{
  reset();
  const get=await handler(new Request("https://staging-preview.invalid",{method:"GET"}));assertEquals(get.status,405);
- const bad=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:"{broken"}));assertEquals(bad.status,400);
+ const bad=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"apikey":"sb_publishable_mock_staging"},body:"{broken"}));assertEquals(bad.status,400);
  assertEquals(calls.filter(c=>c.kind==="rpc").length,0);
 });
 
@@ -180,9 +180,9 @@ Deno.test("CORS rejects unapproved origin and ignores spoofed proxy IP",async()=
  const preflight=await handler(new Request("https://staging-preview.invalid",{method:"OPTIONS",headers:{origin:"https://attacker.invalid"}}));
  assertEquals(preflight.status,403);
  assertEquals(preflight.headers.get("access-control-allow-origin"),null);
- const ok=await handler(new Request("https://staging-preview.invalid",{method:"OPTIONS",headers:{origin:"https://staging.example.invalid"}}));
+ const ok=await handler(new Request("https://staging-preview.invalid",{method:"OPTIONS",headers:{origin:"https://liuben810921.github.io"}}));
  assertEquals(ok.status,204);
- assertEquals(ok.headers.get("access-control-allow-origin"),"https://staging.example.invalid");
+ assertEquals(ok.headers.get("access-control-allow-origin"),"https://liuben810921.github.io");
  await send("unrecognized",{},{"x-forwarded-for":"203.0.113.42","cf-connecting-ip":"198.51.100.10"});
  assert(calls.some(c=>c.name==="ed_cliente_limite_privado"&&(c.args as any).p_clave==="staging-auth-global"));
 });
@@ -322,7 +322,7 @@ Deno.test("global rate limit fails closed before private authentication and tabl
 });
 Deno.test("response security headers prevent caching and disallow wildcard CORS",async()=>{
  reset();const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"origin":"https://attacker.invalid","content-type":"application/json"},body:JSON.stringify({action:"unrecognized"})}));
- assertEquals(r.status,400);
+ assertEquals(r.status,403);
  assertEquals(r.headers.get("cache-control"),"no-store");
  assertEquals(r.headers.get("access-control-allow-origin"),null);
  assertEquals(r.headers.get("content-type"),"application/json");
@@ -330,7 +330,7 @@ Deno.test("response security headers prevent caching and disallow wildcard CORS"
 Deno.test("invalid request bodies are rejected without private RPCs",async()=>{
  for(const raw of ["null","[]","42","true","\"string\"","{"]){
   reset();
-  const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",body:raw}));
+  const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"apikey":"sb_publishable_mock_staging"},body:raw}));
   assertEquals(r.status,400);
   assertEquals(calls.filter(c=>c.kind==="rpc"&&c.name!=="ed_cliente_limite_privado").length,0);
  }
