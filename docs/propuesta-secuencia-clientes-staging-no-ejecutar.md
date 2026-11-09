@@ -64,3 +64,15 @@ El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inici
 - La función existente `public.ed_cliente_limite_privado` tiene propietario `postgres`, `SECURITY DEFINER`, `search_path` vacío; EXECUTE para `service_role`, no para `anon` ni `authenticated`.
 - CI del commit `ec6590e` aprobado (#42693371763); los commits posteriores con bloqueo deben obtener CI verde antes de solicitar la autorización.
 - **Alcance de la futura autorización**: instalar únicamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en proyecto staging `xqahthghvozeigbojhyi`, con preflight en la misma transacción, bloqueo de escritores, revisión del SQL exacto y validación posterior. Las cinco RPC, pruebas con datos ficticios, Edge Function, correo y pedidos reales quedan fuera de esa autorización y requerirán pasos separados.
+
+## Dictamen previo a autorización de esquema — 2026-11-09
+
+**CI:** commit `dfae530` aprobado, GitHub Actions #42693793144. No equivale a ejecución ni compilación de funciones PL/pgSQL en staging.
+
+**Lecturas recientes del proyecto staging**: clientes 0; secuencia ausente; CHECK de residencia ausente; cinco RPC propuestas ausentes; `pgcrypto` disponible; tablas de destinatarios y direcciones de entrega ausentes; `service_role` tiene USAGE de esquema `public`. Las tres tablas de clientes/credenciales/sesiones existentes tienen propietario `postgres`, RLS activo y carecen de SELECT/INSERT/UPDATE directos para `service_role`. Este último hecho es **intencional** para las RPC futuras `SECURITY DEFINER`; dichas RPC no forman parte de la autorización de esquema.
+
+**Evaluación**: las precondiciones observadas permiten solicitar autorización **solo para el esquema**. El SQL contiene transacción, bloqueo de clientes antes del preflight, secuencia nueva, columnas, CHECK de residencia, tablas auxiliares con RLS y permisos de acceso directo limitados al rol de servicio. Debe ejecutarse exclusivamente desde una sesión administrativa autorizada, nunca mediante un rol público. Se mantiene desactivada la Edge Function y no se habilita autenticación ni compras reales.
+
+**Condiciones obligatorias inmediatamente antes de ejecutar**: reconfirmar el ID de proyecto, CI verde del commit exacto, contenido y checksum del archivo, ausencia de clientes/secuencia/CHECK/tablas auxiliares, no concurrencia de escritores y disponibilidad de ventana de mantenimiento. Si cambia cualquier precondición, detenerse. Después de instalar, verificar columnas, restricciones, RLS, permisos, índices y secuencias por consultas de lectura. No ejecutar las RPC ni las pruebas de integración sin autorizaciones separadas.
+
+**Solicitud propuesta (aún no autorizada):** «Autorizo ejecutar exclusivamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en Supabase staging `xqahthghvozeigbojhyi`, sujeto a la repetición del preflight, a su bloqueo transaccional y a la verificación posterior. No autorizo instalar RPC, desplegar Edge Functions, enviar correos, activar pedidos reales ni modificar producción, productos, departamentos o administradores».
