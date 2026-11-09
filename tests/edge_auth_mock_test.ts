@@ -384,3 +384,20 @@ Deno.test("session response returns authenticated customer and never echoes bear
  assertEquals((auth.args as any).p_revocar,false);
  assertEquals((auth.args as any).p_token_hash===token,false);
 });
+
+Deno.test("malformed successful registration RPC cannot be reported as account created",async()=>{
+ for(const data of [null,{}, {numero:0},{numero:"11"}]){
+  reset();queueRpc("ed_cliente_registrar_residencia_privado",{data,error:null});
+  const r=await send("register",{name:"Prueba Exterior",phone:"+15550001001",password:"ClaveFicticia2026!",residence:"extranjero"});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).cliente,undefined);
+ }
+});
+Deno.test("malformed successful login RPC cannot issue usable token",async()=>{
+ for(const data of [{},{numero:0},{numero:"11"}]){
+  reset();queueRpc("ed_cliente_login_privado",{data,error:null});
+  const r=await send("login",{phone:"+15550001001",password:"ClaveFicticia2026!"});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).token,undefined);
+ }
+});
