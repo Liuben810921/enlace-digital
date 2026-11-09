@@ -1,5 +1,6 @@
 -- PROPOSAL ONLY. STAGING xqahthghvozeigbojhyi. DO NOT EXECUTE.
--- Review server-side Edge Function contract and backup before deployment.
+-- INCOMPLETE: DO NOT APPLY. Required RPCs and server-side contract not yet migrated.
+-- Production schema reconciled for delivery columns and route types; no data operations authorized.
 -- Existing public.clientes_oficiales: numero integer PK, codigo text unique,
 -- nombre text, auth_user_id uuid nullable, residencia text nullable, creado_en timestamptz.
 -- Existing enlace_auth.cliente_credenciales and cliente_sesiones are retained.
@@ -7,7 +8,7 @@ BEGIN;
 ALTER TABLE public.clientes_oficiales
   ADD COLUMN IF NOT EXISTS telefono text,
   ADD COLUMN IF NOT EXISTS correo text,
-  ADD COLUMN IF NOT EXISTS estado text NOT NULL DEFAULT 'activo',
+  ADD COLUMN IF NOT EXISTS estado text NOT NULL DEFAULT 'pendiente_activacion',
   ADD COLUMN IF NOT EXISTS provincia text,
   ADD COLUMN IF NOT EXISTS municipio text,
   ADD COLUMN IF NOT EXISTS barrio text,
@@ -22,12 +23,12 @@ ALTER TABLE public.clientes_oficiales
 
 CREATE TABLE IF NOT EXISTS public.clientes_destinatarios (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
- cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE RESTRICT,
- nombre text NOT NULL CHECK (length(btrim(nombre)) >= 3),
- telefono text NOT NULL CHECK (telefono ~ '^\\+53[0-9]{8}$'),
+ cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE CASCADE,
+ nombre text NOT NULL CHECK (length(btrim(nombre)) >= 2),
+ telefono text NOT NULL CHECK (length(btrim(telefono)) >= 8),
  provincia text NOT NULL, municipio text NOT NULL,
- barrio text, direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
- referencias text, creado_en timestamptz NOT NULL DEFAULT now(),
+ barrio text NOT NULL DEFAULT '', direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
+ referencias text NOT NULL DEFAULT '', creado_en timestamptz NOT NULL DEFAULT now(),
  actualizado_en timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ed_destinatarios_cliente_idx ON public.clientes_destinatarios(cliente_numero);
@@ -36,9 +37,13 @@ CREATE TABLE IF NOT EXISTS public.clientes_direcciones_entrega (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
  cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE RESTRICT,
  nombre_receptor text NOT NULL, telefono_receptor text NOT NULL,
- provincia text NOT NULL, municipio text NOT NULL, barrio text,
- direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
- referencias text, creado_en timestamptz NOT NULL DEFAULT now()
+ provincia text NOT NULL, municipio text NOT NULL, barrio text NOT NULL DEFAULT '',
+ direccion text NOT NULL CHECK (length(direccion) BETWEEN 8 AND 500),
+ referencias text NOT NULL DEFAULT '', latitud double precision CHECK (latitud BETWEEN -90 AND 90),
+ longitud double precision CHECK (longitud BETWEEN -180 AND 180),
+ distancia_km numeric CHECK (distancia_km >= 0), punto_salida_id text, ruta_version text,
+ calculado_en timestamptz, usado_en timestamptz NOT NULL DEFAULT now(),
+ creado_en timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ed_direcciones_cliente_idx ON public.clientes_direcciones_entrega(cliente_numero);
 
