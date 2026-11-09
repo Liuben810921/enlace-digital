@@ -77,7 +77,7 @@ def table_definition(table):
 for table, columns in (("clientes_destinatarios",recipient_columns),("clientes_direcciones_entrega",delivery_columns)):
     definition = table_definition(table)
     for column in columns:
-        assert re.search(r"\\b" + column + r"\\s+(?:bigint|integer|text|timestamptz|numeric)", definition) or (column == "id" and "id bigint GENERATED ALWAYS AS IDENTITY" in definition), (table,column)
+        assert re.search(r"\b" + column + r"\s+(?:bigint|integer|text|timestamptz|numeric)", definition) or (column == "id" and "id bigint GENERATED ALWAYS AS IDENTITY" in definition), (table,column)
 # Every SECURITY DEFINER RPC must be restricted by the proposal's privilege block.
 assert rpc.count("CREATE OR REPLACE FUNCTION public.ed_cliente_") == 5
 assert "FROM PUBLIC,anon,authenticated;" in rpc and "TO service_role;" in rpc
