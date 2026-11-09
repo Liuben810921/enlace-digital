@@ -67,6 +67,23 @@ for table in ("clientes_destinatarios", "clientes_direcciones_entrega"):
     assert f'ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY;' in schema
     assert f'cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero)' in schema
     assert f'db.from("{table}")' in edge
+# Cross-file compatibility: Edge columns must exist in proposed table definitions.
+recipient_columns = ("id","cliente_numero","nombre","telefono","provincia","municipio","barrio","direccion","referencias","creado_en")
+delivery_columns = ("id","cliente_numero","nombre_receptor","telefono_receptor","provincia","municipio","barrio","direccion","referencias","usado_en","distancia_km","punto_salida_id","ruta_version","calculado_en")
+def table_definition(table):
+    start = schema.index("CREATE TABLE IF NOT EXISTS public." + table + " (")
+    end = schema.index("\n);", start)
+    return schema[start:end]
+for table, columns in (("clientes_destinatarios",recipient_columns),("clientes_direcciones_entrega",delivery_columns)):
+    definition = table_definition(table)
+    for column in columns:
+        assert re.search(r"\\b" + column + r"\\s+(?:bigint|integer|text|timestamptz|numeric)", definition) or (column == "id" and "id bigint GENERATED ALWAYS AS IDENTITY" in definition), (table,column)
+# Every SECURITY DEFINER RPC must be restricted by the proposal's privilege block.
+assert rpc.count("CREATE OR REPLACE FUNCTION public.ed_cliente_") == 5
+assert "FROM PUBLIC,anon,authenticated;" in rpc and "TO service_role;" in rpc
+assert "REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;" in schema
+assert "ALTER TABLE public.clientes_destinatarios ENABLE ROW LEVEL SECURITY;" in schema
+assert "ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;" in schema
 assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
