@@ -1,0 +1,22 @@
+-- PROPOSAL ONLY — DO NOT EXECUTE. STAGING xqahthghvozeigbojhyi.
+-- NOT A MIGRATION. Needs separate explicit authorization and consumer inventory.
+-- Reason: Edge handler uses SELECT/INSERT/UPDATE, never DELETE/TRUNCATE.
+-- Actual ACL (read-only 2026-11-09) grants service_role DELETE and TRUNCATE.
+-- IMPORTANT: service_role is a shared privileged role; other consumers may rely on grants.
+-- Precondition: verify all external consumers, current ACL, project identity,
+-- and that effective privileges do not persist through PUBLIC or role membership.
+-- Apply only in an independently authorized change window, after tests/backups.
+-- BEGIN;
+-- REVOKE DELETE, TRUNCATE ON TABLE
+--   public.clientes_destinatarios,
+--   public.clientes_direcciones_entrega
+-- FROM service_role;
+-- Confirm with has_table_privilege('service_role',...,'DELETE'/'TRUNCATE')
+-- and rerun all relevant staging integration tests before COMMIT.
+-- COMMIT;
+-- ROLLBACK PLAN (requires independent authorization):
+-- GRANT DELETE, TRUNCATE ON TABLE
+--   public.clientes_destinatarios,
+--   public.clientes_direcciones_entrega
+-- TO service_role;
+-- Do not run either statement in production. Do not revoke from postgres.
