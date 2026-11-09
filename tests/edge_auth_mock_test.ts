@@ -401,3 +401,25 @@ Deno.test("malformed successful login RPC cannot issue usable token",async()=>{
   assertEquals((r.body as any).token,undefined);
  }
 });
+
+Deno.test("session and profile reject malformed owner without querying customer tables",async()=>{
+ for(const action of ["session","profile"]){
+  for(const data of [{}, {numero:0}, {numero:"11"}]){
+   reset();queueRpc("ed_cliente_sesion_privada",{data,error:null});
+   const r=await send(action,{token});
+   assertEquals(r.status,500);
+   assertEquals((r.body as any).cliente,undefined);
+   assertEquals(calls.filter(c=>c.kind==="query"||c.kind==="insert").length,0);
+  }
+ }
+});
+Deno.test("logout requires explicit revocation confirmation from SQL",async()=>{
+ for(const data of [{}, {cerrada:false}, {numero:11}]){
+  reset();queueRpc("ed_cliente_sesion_privada",{data,error:null});
+  const r=await send("logout",{token});
+  assertEquals(r.status,500);
+  assertEquals((r.body as any).closed,undefined);
+  const rpc=calls.find(c=>c.name==="ed_cliente_sesion_privada")!;
+  assertEquals((rpc.args as any).p_revocar,true);
+ }
+});
