@@ -58,3 +58,32 @@ ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;
 COMMIT;
+),
+ provincia text NOT NULL, municipio text NOT NULL,
+ barrio text NOT NULL DEFAULT '', direccion text NOT NULL CHECK (length(btrim(direccion)) >= 8),
+ referencias text NOT NULL DEFAULT '', creado_en timestamptz NOT NULL DEFAULT now(),
+ actualizado_en timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ed_destinatarios_cliente_idx ON public.clientes_destinatarios(cliente_numero);
+
+CREATE TABLE IF NOT EXISTS public.clientes_direcciones_entrega (
+ id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ cliente_numero integer NOT NULL REFERENCES public.clientes_oficiales(numero) ON DELETE CASCADE,
+ nombre_receptor text NOT NULL, telefono_receptor text NOT NULL,
+ provincia text NOT NULL, municipio text NOT NULL, barrio text NOT NULL DEFAULT '',
+ direccion text NOT NULL CHECK (length(direccion) BETWEEN 8 AND 500),
+ referencias text NOT NULL DEFAULT '', latitud double precision CHECK (latitud BETWEEN -90 AND 90),
+ longitud double precision CHECK (longitud BETWEEN -180 AND 180),
+ distancia_km numeric CHECK (distancia_km >= 0), punto_salida_id text, ruta_version text,
+ calculado_en timestamptz, usado_en timestamptz NOT NULL DEFAULT now(),
+ creado_en timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ed_direcciones_cliente_idx ON public.clientes_direcciones_entrega(cliente_numero);
+
+-- Historical order snapshots are a separate future proposal, not enabled here.
+-- No customer policies until authentication/ownership contract is verified.
+ALTER TABLE public.clientes_destinatarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clientes_direcciones_entrega ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.clientes_destinatarios,public.clientes_direcciones_entrega FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;
+COMMIT;
