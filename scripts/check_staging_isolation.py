@@ -103,6 +103,23 @@ assert rpc.count("SECURITY DEFINER SET search_path TO ''") == 5
 assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~") == 2
 assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;" in schema
 assert "nextval('public.clientes_oficiales_numero_seq')" in rpc
+# Migration must stop before CREATE SEQUENCE if live staging state drifted.
+assert schema.index('DO $preflight never treat an old production cleanup as proof
+# that staging remains empty when a future migration actually runs.
+assert schema.count("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;") == 1
+assert "REVOKE ALL ON SEQUENCE public.clientes_oficiales_numero_seq FROM PUBLIC,anon,authenticated;" in schema
+assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_oficiales_numero_seq TO service_role;" in schema
+assert "ALTER TABLE public.clientes_oficiales" in schema
+# There must be no destructive reset or automatic migration-time counter rewinding.
+assert not re.search(r"\\b(?:DROP\\s+SEQUENCE|ALTER\\s+SEQUENCE[^;]*RESTART|TRUNCATE\\s+[^;]*clientes_oficiales)\\b", schema, re.I | re.S)
+# No automatic setval/seed step exists: this is a documented deployment blocker.
+assert not re.search(r"\bsetval\s*\(", schema, re.I)
+print("Static recipient/delivery ownership and sequence readiness checks PASS")
+print("PREFLIGHT REQUIRED: recheck staging empty and sequence absent immediately before approved migration")
+) < schema.index('CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq')
+assert "IF EXISTS (SELECT 1 FROM public.clientes_oficiales) THEN" in schema
+assert "pg_catalog.to_regclass('public.clientes_oficiales_numero_seq') IS NOT NULL" in schema
+assert "Existing Cuba address constraint requires manual definition review" in schema
 # Empty-staging sequence preflight: never treat an old production cleanup as proof
 # that staging remains empty when a future migration actually runs.
 assert schema.count("CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq AS integer START WITH 1;") == 1
