@@ -1147,10 +1147,9 @@ async function edRequestPasswordRecovery(){
 function edOpenEmailTokenLink(){
  const fragment=String(location.hash||'').replace(/^#/,'');
  if(!fragment.startsWith('ed-email='))return;
- let payload;
- try{payload=new URLSearchParams(fragment).get('ed-email')}catch{return}
- if(!payload)return;
- const parts=payload.split(':');
+ let payload=null;
+ try{payload=new URLSearchParams(fragment).get('ed-email')}catch{}
+ const parts=String(payload||'').split(':');
  // Eliminar cualquier token de la URL antes de mostrar una ventana, incluso si el enlace es invalido.
  const valid=parts.length===2&&['verificar_correo','recuperar_clave'].includes(parts[0])&&/^[a-f0-9]{64}$/i.test(parts[1]);
  history.replaceState(history.state,'',location.pathname+location.search);
