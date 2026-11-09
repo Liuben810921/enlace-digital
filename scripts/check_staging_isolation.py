@@ -89,6 +89,13 @@ assert "DO $guard$" in schema
 assert "FROM pg_catalog.pg_constraint" in schema
 assert "conname='ed_cliente_cuba_direccion_ck'" in schema
 assert schema.count("ADD CONSTRAINT ed_cliente_cuba_direccion_ck") == 1
+# A name-only guard is not a proof that an existing CHECK has the same
+# definition or validation status. Keep this a deployment preflight requirement.
+assert "conrelid='public.clientes_oficiales'::pg_catalog.regclass" in schema
+assert "conname='ed_cliente_cuba_direccion_ck'" in schema
+assert "NOT VALID;" in schema
+assert "VALIDATE CONSTRAINT ed_cliente_cuba_direccion_ck" not in schema
+
 assert "GRANT SELECT,INSERT,UPDATE ON public.clientes_destinatarios,public.clientes_direcciones_entrega TO service_role;" in schema
 assert "GRANT USAGE,SELECT ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq TO service_role;" in schema
 assert "REVOKE ALL ON SEQUENCE public.clientes_destinatarios_id_seq,public.clientes_direcciones_entrega_id_seq FROM PUBLIC,anon,authenticated;" in schema
