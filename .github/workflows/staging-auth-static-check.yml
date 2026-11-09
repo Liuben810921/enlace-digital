@@ -8,6 +8,8 @@ on:
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
       - 'tests/edge_auth_mock_test.ts'
+      - 'tests/staging_customer_web_adapter_test.mjs'
+      - 'scripts/staging_customer_web_adapter.mjs'
       - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   pull_request:
@@ -18,6 +20,8 @@ on:
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
       - 'tests/edge_auth_mock_test.ts'
+      - 'tests/staging_customer_web_adapter_test.mjs'
+      - 'scripts/staging_customer_web_adapter.mjs'
       - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
       - '.github/workflows/staging-auth-static-check.yml'
   workflow_dispatch:
@@ -38,6 +42,8 @@ jobs:
         run: deno check supabase/functions/enlace-cliente-auth-staging/index.ts
       - name: Offline Edge handler mock tests (no network or database)
         run: deno test --no-check --allow-read --allow-write tests/edge_auth_mock_test.ts
+      - name: Offline browser transport tests (no network or database)
+        run: node --test tests/staging_customer_web_adapter_test.mjs
       - name: Static recipient and delivery isolation checks (no database connection)
         run: python3 scripts/check_staging_isolation.py
       - name: Install PostgreSQL parser (no database connection)
