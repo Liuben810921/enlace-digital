@@ -8,7 +8,7 @@ for token in ("xqahthghvozeigbojhyi","clientes_oficiales","clientes_destinatario
               "clientes_direcciones_entrega","int4","int8","NOT VALID",
               "ON DELETE CASCADE","RLS","SECURITY DEFINER","SECURITY INVOKER",
               "service_role","pg_depend","NORM-v1","NO-GO","Reversión",
-              "no se consultó la base de producción","sin DML"):
+              "no se consultó la base de producción","no DDL/DML"):
     assert token.lower() in p.lower(), f"Missing safeguard: {token}"
 assert "no se probó serialización PostgREST" in p
 assert "no hay cambios en Supabase" in p
