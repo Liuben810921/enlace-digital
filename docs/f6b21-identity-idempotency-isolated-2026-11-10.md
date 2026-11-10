@@ -29,4 +29,4 @@ No hay conexión a Supabase, datos históricos, pedidos, correo, secretos reales
 **Autorización A (independiente):** necesaria antes de cualquier modificación de staging. **Autorización B (independiente):** necesaria antes de cualquier lectura de datos históricos, incluso agregados. Ninguna está concedida.
 
 ## Verificación CI
-Pendiente de observar el resultado de GitHub Actions del commit F6-B21; no se declara PASS antes de verificar jobs.
+**PASS sintético verificado:** GitHub Actions #75, run `42908940873`, commit `ee953b0a64a489439820802c67e25f59da191cf5`, job `130154165925` concluido `success`. Los pasos F6-B21 de configuración y ejecución finalizaron `success`; las denegaciones SQL visibles en logs corresponden a pruebas negativas esperadas. No hubo pasos fallidos. El contenedor se eliminó al terminar. La validación no equivale a autorización de despliegue ni a pruebas con identidades reales.
