@@ -1,0 +1,65 @@
+-- DOCUMENTARY PSEUDOSQL ONLY. EVERY LINE IS A COMMENT. NEVER EXECUTE.
+-- Base: 2c0ef99c612b231b62e9d08bd41103ffa3ca1061
+-- NOT A MIGRATION. Missing final catalog/color schema, privileges, triggers, and business approval.
+--
+-- FUNCTION PROPOSAL: ed_pedido_crear_privado(session_token_hash, idempotency_key, request_json)
+-- SECURITY DEFINER, fixed empty search_path; EXECUTE restricted to trusted backend.
+-- BEGIN TRANSACTION IS MANAGED BY SINGLE POSTGRES FUNCTION CALL; NO COMMIT INSIDE.
+-- 1) Resolve valid customer from token hash, expiry, revocation; never trust customer ID from JSON.
+-- 2) Validate payload size, UUID, unique product IDs, positive quantities, delivery ownership.
+-- 3) Canonicalize payload deterministically; calculate request_sha256 over all material fields.
+-- 4) Insert idempotency claim with UNIQUE(cliente_numero,idempotency_key);
+--    ON CONFLICT lock existing claim, compare hash, return stored order on identical replay;
+--    reject differing payload with IDEMPOTENCY_CONFLICT; wait for concurrent winner safely.
+--    Failed transaction rolls back claim. No external side effects before commit.
+-- 5) Sort product IDs ascending; SELECT rows FOR UPDATE in deterministic order.
+--    Re-read precio_usd, disponible, archivado, origen_producto, variantes_color.
+-- 6) OWN stock: verify exact variant/global available quantity; decrement/reserve atomically
+--    with predicate >= requested; update stock and insert order within same transaction.
+--    Variant stock schema must be confirmed before any executable implementation.
+-- 7) SUPPLIER: check visible/available and selected variant; do not decrement fictitious stock.
+--    Mark procurement_pending until supplier availability is confirmed; do not promise fulfillment.
+-- 8) Decimal NUMERIC price * quantity; subtotal SUM(items), USD products only; CUP shipping separate.
+--    Record exchange rate snapshot if applicable. No client-supplied price or state accepted.
+-- 9) Copy recipient name/phone, full entrega_direccion, location, lines, unit prices and metadata.
+-- 10) Insert pending order + lines + append-only initial status event; finalize idempotency result.
+-- 11) Return immutable order ID; errors abort ALL database writes; sequences may advance.
+--
+-- FUNCTION PROPOSAL: ed_pedido_transicionar_privado(admin_identity, order_id, expected_version, new_state, reason)
+-- 1) Authenticate admin JWT in trusted boundary; re-check enabled and role/capability server-side.
+-- 2) SELECT order FOR UPDATE; require current version == expected_version.
+-- 3) Check transition graph: pendiente->confirmado/cancelado;
+--    confirmado->preparando/cancelado; preparando->en_camino/cancelado;
+--    en_camino->entregado; entregado/cancelado terminal (business review pending).
+-- 4) Supplier procurement_pending blocks confirmado until explicit supplier confirmation.
+-- 5) Append event with actor, old/new state, reason, version; update projected state+version atomically.
+-- 6) On cancellation, compensate stock only if previously reserved, once, in same transaction;
+--    policy for post-dispatch cancellation and payment reconciliation must be approved.
+-- 7) Supervisor read-only, operative limited to assigned orders and allowed transitions.
+--
+-- FUNCTION PROPOSAL: ed_pedido_verificar_pago_privado(admin_identity, order_id, expected_version, decision)
+-- Check explicit payment capability; append separate payment event; update payment projection
+-- atomically. Payment verification is NOT implied by order state. Never store credentials.
+--
+-- CONSTRAINTS TO ADD TO FUTURE SCHEMA DESIGN (NOT IMPLEMENTED):
+-- UNIQUE(cliente_numero,idempotency_key) for order request claims;
+-- request_sha256 and order_id persisted in idempotency ledger;
+-- status_version bigint NOT NULL DEFAULT 0;
+-- status events unique(pedido_id,version) and immutable;
+-- payment events separately append-only;
+-- foreign keys RESTRICT, RLS, least-privilege grants, no direct table writes by browser roles;
+-- protective triggers for snapshots/events; audit retention policy;
+-- optional reservation ledger with unique(pedido_id,producto_id,variante) for exactly-once stock.
+--
+-- CONCURRENCY PROOFS TO RUN LATER WITH AUTHORIZATION:
+-- C01: two sessions buy final own unit -> exactly one success, other OUT_OF_STOCK.
+-- C02: identical key/payload simultaneous -> one order, one stock deduction, same ID.
+-- C03: same key/different payload -> one success, other IDEMPOTENCY_CONFLICT.
+-- C04: reversed multi-item order -> deterministic lock ordering, no deadlock.
+-- C05: concurrent status changes same expected_version -> one success, one VERSION_CONFLICT.
+-- C06: failed second item -> zero order/lines/events/stock changes; sequence gaps permitted.
+-- C07: supplier order -> zero fictitious stock changes, cannot confirm without procurement check.
+-- C08: replay after cancellation -> same original order, no new stock movement.
+-- C09: client cross-account and supervisor mutation -> FORBIDDEN.
+-- C10: timeout after DB commit -> retry same key returns original order, no duplicate.
+-- ALL TESTS ARE SCENARIOS, NOT EXECUTED. NO PRODUCTION, NO REAL ORDERS.
