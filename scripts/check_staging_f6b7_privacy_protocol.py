@@ -9,7 +9,7 @@ for t in ("NORM-v1","cliente_numero","provincia","municipio","barrio","direccion
           "NO-GO","NO AUTORIZADA","NO DEMOSTRADA","NO DEFINIDO","NULL",
           "una sola ejecución","statement_timeout","lock_timeout",
           "sin exportación de filas","sin DDL/DML","git revert",
-          "autorización independiente","no se conoce","no se ejecutó SQL"):
+          "próxima autorización, independiente","no se conoce","no se ejecutó SQL"):
     assert t.lower() in s.lower(),t
 assert "no se deben devolver `count(*)`" in s.lower(), "counts must be suppressed"
 assert "No se deben devolver" in s
