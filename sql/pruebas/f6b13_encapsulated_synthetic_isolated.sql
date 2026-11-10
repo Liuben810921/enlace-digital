@@ -68,8 +68,8 @@ REVOKE CREATE ON SCHEMA f6b13_fixture FROM f6b13_owner;
 GRANT EXECUTE ON FUNCTION f6b13_fixture.audit_suppressed() TO f6b13_caller;
 DO $check$
 BEGIN
- IF f6b13_fixture.norm_v1_toy(U&'Cafe\\0301') <> U&'Caf\\00E9' THEN RAISE EXCEPTION 'NFC mismatch'; END IF;
- IF f6b13_fixture.norm_v1_toy(U&' A\\00A0\\3000B ') <> 'A B' THEN RAISE EXCEPTION 'White_Space mismatch'; END IF;
+ IF f6b13_fixture.norm_v1_toy(U&'Cafe\0301') <> U&'Caf\00E9' THEN RAISE EXCEPTION 'NFC mismatch'; END IF;
+ IF f6b13_fixture.norm_v1_toy(U&' A\00A0\3000B ') <> 'A B' THEN RAISE EXCEPTION 'White_Space mismatch'; END IF;
  IF (SELECT count(*) FROM f6b13_fixture.direcciones) <> 4 THEN RAISE EXCEPTION 'fixture count mismatch'; END IF;
  IF NOT (SELECT EXISTS(SELECT 1 FROM f6b13_fixture.direcciones GROUP BY cliente_numero,provincia,municipio,barrio,direccion HAVING count(*)>1)) THEN
   RAISE EXCEPTION 'synthetic duplicate fixture missing';
