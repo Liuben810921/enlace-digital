@@ -7,6 +7,13 @@ on:
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b13_isolated_security.py'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - '.github/workflows/f6b13-isolated-postgres-security.yml'
   workflow_dispatch:
 permissions:
   contents: read
