@@ -1,0 +1,570 @@
+name: staging-auth-static-check
+on:
+  push:
+    branches: [audit/registro-staging-aislado-20261109]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'supabase/config.toml'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/**'
+      - 'scripts/check_staging_isolation.py'
+      - 'scripts/check_orders_design_contract.py'
+      - 'scripts/check_orders_api_contract.py'
+      - 'scripts/check_orders_transaction_design.py'
+      - 'scripts/check_orders_variant_stock_contract.py'
+      - 'scripts/check_unified_inventory_reservations.py'
+      - 'scripts/check_inventory_migration_proposal.py'
+      - 'scripts/check_staging_inventory_schema_audit.py'
+      - 'scripts/check_staging_catalog_orders_minimal_schema.py'
+      - 'scripts/check_full_catalog_staging_contract.py'
+      - 'scripts/check_master_catalog_orders_inventory_plan.py'
+      - 'scripts/check_staging_migration_manifest.py'
+      - 'scripts/check_staging_preflight_matrix.py'
+      - 'scripts/check_staging_preflight_p01_p08_results.py'
+      - 'scripts/check_staging_auth_function_metadata_audit.py'
+      - 'scripts/check_staging_rpc_controller_reconciliation.py'
+      - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'scripts/check_staging_remediation_v4_race_bigint.py'
+      - 'scripts/check_staging_incremental_dedup_bigint_spec.py'
+      - 'scripts/check_github_actions_diagnostic.py'
+      - 'scripts/check_staging_f0_metadata_results.py'
+      - 'scripts/check_staging_f1_contracts.py'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'scripts/check_staging_f3_atomic_rpc_plan.py'
+      - 'scripts/check_staging_f4_bigint_adapters_plan.py'
+      - 'scripts/check_staging_f5_offline_simulations.py'
+      - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'scripts/check_staging_f6b_no_go.py'
+      - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'scripts/check_staging_f6b6_synthetic_results.py'
+      - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'scripts/check_staging_f6b9_metadata_roles.py'
+      - 'scripts/check_staging_f6b10_least_privilege_design.py'
+      - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'scripts/check_staging_f6b16_final_risk_gates.py'
+      - 'scripts/check_staging_f6b17_prospective_decisions.py'
+      - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
+      - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
+      - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
+      - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
+      - 'scripts/check_staging_norm_v1_postgres_isolated.py'
+      - 'scripts/check_staging_f6b4_pg_results.py'
+      - 'docs/f6b4-resultados-postgresql-aislado-ci488-2026-11-10.md'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
+      - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
+      - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
+      - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
+      - 'docs/f3-rpc-direcciones-atomica-no-ejecutable-2026-11-10.md'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'scripts/check_staging_f3_atomic_rpc_plan.py'
+      - 'scripts/check_staging_f4_bigint_adapters_plan.py'
+      - 'scripts/check_staging_f5_offline_simulations.py'
+      - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'scripts/check_staging_f6b_no_go.py'
+      - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'scripts/check_staging_f6b6_synthetic_results.py'
+      - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'scripts/check_staging_f6b9_metadata_roles.py'
+      - 'scripts/check_staging_f6b10_least_privilege_design.py'
+      - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'scripts/check_staging_f6b16_final_risk_gates.py'
+      - 'scripts/check_staging_f6b17_prospective_decisions.py'
+      - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
+      - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
+      - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
+      - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
+      - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
+      - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
+      - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
+      - 'docs/f3-rpc-direcciones-atomica-no-ejecutable-2026-11-10.md'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
+      - 'docs/f1-contratos-norm-v1-id-string-v1-offline-2026-11-10.md'
+      - 'docs/resultados-f0-metadatos-staging-lectura-2026-11-10.md'
+      - 'docs/diagnostico-visibilidad-github-actions-2026-11-10.md'
+      - 'docs/especificacion-incremental-direcciones-bigint-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/cierre-coherencia-contratos-staging-offline-2026-11-10.md'
+      - 'docs/plan-remediacion-v4-concurrencia-bigint-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
+      - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
+      - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
+      - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
+      - 'docs/matriz-preflight-migraciones-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/especificacion-unica-migraciones-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/plan-maestro-catalogo-pedidos-inventario-reservas-no-ejecutable-2026-11-10.md'
+      - 'docs/auditoria-contrato-completo-catalogo-staging-2026-11-10.md'
+      - 'docs/contrato-minimo-catalogo-pedidos-staging-no-ejecutar-2026-11-10.md'
+      - 'docs/auditoria-esquema-inventario-supabase-staging-lectura-2026-11-10.md'
+      - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
+      - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
+      - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
+      - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
+      - 'scripts/check_orders_transactions_contract.py'
+      - 'docs/plan-concurrencia-pedidos-staging-no-ejecutar-2026-11-09.md'
+      - 'docs/contrato-api-pedidos-oficiales-no-ejecutable-2026-11-09.md'
+      - 'staging-preview/index.html'
+      - 'tests/edge_auth_mock_test.ts'
+      - 'tests/staging_customer_web_adapter_test.mjs'
+      - 'scripts/staging_customer_web_adapter.mjs'
+      - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
+      - '.github/workflows/staging-auth-static-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/enlace-cliente-auth-staging/**'
+      - 'supabase/config.toml'
+      - 'sql/propuestas/**'
+      - 'sql/pruebas/**'
+      - 'scripts/check_staging_isolation.py'
+      - 'scripts/check_orders_design_contract.py'
+      - 'scripts/check_orders_api_contract.py'
+      - 'scripts/check_orders_transaction_design.py'
+      - 'scripts/check_orders_variant_stock_contract.py'
+      - 'scripts/check_unified_inventory_reservations.py'
+      - 'scripts/check_inventory_migration_proposal.py'
+      - 'scripts/check_staging_inventory_schema_audit.py'
+      - 'scripts/check_staging_catalog_orders_minimal_schema.py'
+      - 'scripts/check_full_catalog_staging_contract.py'
+      - 'scripts/check_master_catalog_orders_inventory_plan.py'
+      - 'scripts/check_staging_migration_manifest.py'
+      - 'scripts/check_staging_preflight_matrix.py'
+      - 'scripts/check_staging_preflight_p01_p08_results.py'
+      - 'scripts/check_staging_auth_function_metadata_audit.py'
+      - 'scripts/check_staging_rpc_controller_reconciliation.py'
+      - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'scripts/check_staging_remediation_v4_race_bigint.py'
+      - 'scripts/check_staging_incremental_dedup_bigint_spec.py'
+      - 'scripts/check_github_actions_diagnostic.py'
+      - 'scripts/check_staging_f0_metadata_results.py'
+      - 'scripts/check_staging_f1_contracts.py'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'scripts/check_staging_f3_atomic_rpc_plan.py'
+      - 'scripts/check_staging_f4_bigint_adapters_plan.py'
+      - 'scripts/check_staging_f5_offline_simulations.py'
+      - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'scripts/check_staging_f6b_no_go.py'
+      - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'scripts/check_staging_f6b6_synthetic_results.py'
+      - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'scripts/check_staging_f6b9_metadata_roles.py'
+      - 'scripts/check_staging_f6b10_least_privilege_design.py'
+      - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'scripts/check_staging_f6b16_final_risk_gates.py'
+      - 'scripts/check_staging_f6b17_prospective_decisions.py'
+      - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
+      - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
+      - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
+      - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
+      - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
+      - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
+      - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
+      - 'docs/f3-rpc-direcciones-atomica-no-ejecutable-2026-11-10.md'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'scripts/check_staging_f3_atomic_rpc_plan.py'
+      - 'scripts/check_staging_f4_bigint_adapters_plan.py'
+      - 'scripts/check_staging_f5_offline_simulations.py'
+      - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'scripts/check_staging_f6b_no_go.py'
+      - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'scripts/check_staging_f6b6_synthetic_results.py'
+      - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'scripts/check_staging_f6b9_metadata_roles.py'
+      - 'scripts/check_staging_f6b10_least_privilege_design.py'
+      - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'scripts/check_staging_f6b16_final_risk_gates.py'
+      - 'scripts/check_staging_f6b17_prospective_decisions.py'
+      - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
+      - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
+      - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
+      - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
+      - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
+      - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
+      - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
+      - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
+      - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
+      - 'docs/f3-rpc-direcciones-atomica-no-ejecutable-2026-11-10.md'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
+      - 'docs/f1-contratos-norm-v1-id-string-v1-offline-2026-11-10.md'
+      - 'docs/resultados-f0-metadatos-staging-lectura-2026-11-10.md'
+      - 'docs/diagnostico-visibilidad-github-actions-2026-11-10.md'
+      - 'docs/especificacion-incremental-direcciones-bigint-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/cierre-coherencia-contratos-staging-offline-2026-11-10.md'
+      - 'docs/plan-remediacion-v4-concurrencia-bigint-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
+      - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
+      - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
+      - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
+      - 'docs/matriz-preflight-migraciones-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/especificacion-unica-migraciones-staging-no-ejecutable-2026-11-10.md'
+      - 'docs/plan-maestro-catalogo-pedidos-inventario-reservas-no-ejecutable-2026-11-10.md'
+      - 'docs/auditoria-contrato-completo-catalogo-staging-2026-11-10.md'
+      - 'docs/contrato-minimo-catalogo-pedidos-staging-no-ejecutar-2026-11-10.md'
+      - 'docs/auditoria-esquema-inventario-supabase-staging-lectura-2026-11-10.md'
+      - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
+      - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
+      - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
+      - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
+      - 'scripts/check_orders_transactions_contract.py'
+      - 'docs/plan-concurrencia-pedidos-staging-no-ejecutar-2026-11-09.md'
+      - 'docs/contrato-api-pedidos-oficiales-no-ejecutable-2026-11-09.md'
+      - 'staging-preview/index.html'
+      - 'tests/edge_auth_mock_test.ts'
+      - 'tests/staging_customer_web_adapter_test.mjs'
+      - 'scripts/staging_customer_web_adapter.mjs'
+      - 'docs/auditoria-contratos-rpc-staging-2026-11-09.md'
+      - '.github/workflows/staging-auth-static-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: TypeScript typecheck (no execution of function)
+        run: deno check supabase/functions/enlace-cliente-auth-staging/index.ts
+      - name: Offline Edge handler mock tests (no network or database)
+        run: deno test --no-check --allow-read --allow-write tests/edge_auth_mock_test.ts
+      - name: Offline browser transport tests (no network or database)
+        run: node --test tests/staging_customer_web_adapter_test.mjs
+      - name: Static recipient and delivery isolation checks (no database connection)
+        run: python3 scripts/check_staging_isolation.py
+      - name: Static historical order design checks (no database connection)
+        run: python3 scripts/check_orders_design_contract.py
+      - name: Static orders API contract checks (no database connection)
+        run: python3 scripts/check_orders_api_contract.py
+      - name: Static orders transaction and concurrency checks (no database connection)
+        run: python3 scripts/check_orders_transactions_contract.py
+      - name: Static orders transaction design checks (no database connection)
+        run: python3 scripts/check_orders_transaction_design.py
+      - name: Static variant stock and cancellation contracts (no database connection)
+        run: python3 scripts/check_orders_variant_stock_contract.py
+      - name: Static unified inventory and reservation design checks
+        run: python3 scripts/check_unified_inventory_reservations.py
+      - name: Static inventory staging migration proposal (no database)
+        run: python3 scripts/check_inventory_migration_proposal.py
+      - name: Static staging inventory schema audit documentation
+        run: python3 scripts/check_staging_inventory_schema_audit.py
+      - name: Static minimal catalog and official orders schema contract
+        run: python3 scripts/check_staging_catalog_orders_minimal_schema.py
+      - name: Static full catalog serialization and staging schema contract
+        run: python3 scripts/check_full_catalog_staging_contract.py
+      - name: Static canonical master implementation plan (no database)
+        run: python3 scripts/check_master_catalog_orders_inventory_plan.py
+      - name: Static staging migration manifest and gates (no database)
+        run: python3 scripts/check_staging_migration_manifest.py
+      - name: Static staging preflight matrix (no database)
+        run: python3 scripts/check_staging_preflight_matrix.py
+      - name: Static P01-P08 staging metadata results (no database)
+        run: python3 scripts/check_staging_preflight_p01_p08_results.py
+      - name: Static auth function metadata audit (no database)
+        run: python3 scripts/check_staging_auth_function_metadata_audit.py
+      - name: Static RPC controller and metadata reconciliation (offline)
+        run: python3 scripts/check_staging_rpc_controller_reconciliation.py
+      - name: Static staging auth route dependencies (offline)
+        run: python3 scripts/check_staging_auth_route_dependencies.py
+      - name: Static staging remediation decisions (offline)
+        run: python3 scripts/check_staging_remediation_v4_race_bigint.py
+      - name: Static incremental migration and bigint spec (offline)
+        run: python3 scripts/check_staging_incremental_dedup_bigint_spec.py
+      - name: Static GitHub Actions diagnostics (offline)
+        run: python3 scripts/check_github_actions_diagnostic.py
+      - name: Static F0 staging metadata audit results (offline)
+        run: python3 scripts/check_staging_f0_metadata_results.py
+      - name: Offline F1 normalization and bigint contract checks
+        run: python3 scripts/check_staging_f1_contracts.py
+      - name: Offline F2 incremental migration plan checks
+        run: python3 scripts/check_staging_f2_migration_plan.py
+      - name: Offline F2 incremental migration plan checks
+        run: python3 scripts/check_staging_f2_migration_plan.py
+      - name: Offline F3 atomic delivery RPC design checks
+        run: python3 scripts/check_staging_f3_atomic_rpc_plan.py
+      - name: Offline F4 bigint-safe adapter contract checks
+        run: python3 scripts/check_staging_f4_bigint_adapters_plan.py
+      - name: Offline F5 synthetic concurrency migration and bigint simulations
+        run: python3 scripts/check_staging_f5_offline_simulations.py
+      - name: Offline F6 staging test protocol checks
+        run: python3 scripts/check_staging_f6_protocol.py
+      - name: Offline F6-A metadata report checks
+        run: python3 scripts/check_staging_f6a_metadata_report.py
+      - name: Offline F6-B privacy and normalization NO-GO checks
+        run: python3 scripts/check_staging_f6b_no_go.py
+      - name: Offline F6-B2 Unicode NORM-v1 contract checks
+        run: python3 scripts/check_staging_f6b2_unicode_contract.py
+      - name: Offline NORM-v1 shared UTF-8 fixture parity (Python and JavaScript)
+        run: |
+          python3 scripts/check_staging_norm_v1_python.py
+          node scripts/check_staging_norm_v1_js.cjs
+      - name: Offline F6-B3 CI evidence and Unicode version record
+        run: python3 scripts/check_staging_f6b3_ci_closure.py
+      - name: Offline F6-B4 PostgreSQL protocol safety checks
+        run: python3 scripts/check_staging_f6b4_pg_protocol.py
+      - name: Offline F6-B4 isolated PostgreSQL result evidence
+        run: python3 scripts/check_staging_f6b4_pg_results.py
+      - name: Offline F6-B5 staging PostgreSQL metadata preflight documentation
+        run: python3 scripts/check_staging_f6b5_metadata_preflight.py
+      - name: Offline F6-B6 synthetic-only staging results report
+        run: python3 scripts/check_staging_f6b6_synthetic_results.py
+      - name: Offline F6-B7 historical aggregate privacy NO-GO
+        run: python3 scripts/check_staging_f6b7_privacy_protocol.py
+      - name: Offline F6-B8 privacy risk and historical NO-GO checks
+        run: python3 scripts/check_staging_f6b8_privacy_spec.py
+      - name: Offline F6-B9 staging metadata roles and RLS audit
+        run: python3 scripts/check_staging_f6b9_metadata_roles.py
+      - name: Offline F6-B10 least-privilege and privacy design
+        run: python3 scripts/check_staging_f6b10_least_privilege_design.py
+      - name: Offline F6-B11 minimum audit role and rollback plan
+        run: python3 scripts/check_staging_f6b11_audit_role_plan.py
+      - name: Offline F6-B12 encapsulated aggregate security design
+        run: python3 scripts/check_staging_f6b12_encapsulated_security.py
+      - name: Offline F6-B13 synthetic isolated security guard
+        run: python3 scripts/check_staging_f6b13_isolated_security.py
+      - name: Offline F6-B14 synthetic Unicode and security boundary guard
+        run: python3 scripts/check_staging_f6b14_synthetic_security.py
+      - name: Offline F6-B15 adversarial security guard
+        run: python3 scripts/check_staging_f6b15_adversarial_security.py
+      - name: Offline F6-B16 final residual risk and GO-NO-GO checks
+        run: python3 scripts/check_staging_f6b16_final_risk_gates.py
+      - name: Offline F6-B17 prospective deduplication decision matrix
+        run: python3 scripts/check_staging_f6b17_prospective_decisions.py
+      - name: Offline F6-B18 prospective concurrency scope guard
+        run: python3 scripts/check_staging_f6b18_prospective_concurrency.py
+      - name: Offline F6-B19 recovery scope guard
+        run: python3 scripts/check_staging_f6b19_recovery_scope.py
+      - name: Offline F6-B20 operation idempotency scope guard
+        run: python3 scripts/check_staging_f6b20_operation_scope.py
+      - name: Install PostgreSQL parser (no database connection)
+        run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
+      - name: PostgreSQL syntax parse (no database connection)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from pglast import parse_sql
+          files=[
+            "sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql",
+            "sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql",
+            "sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql"
+          ]
+          for file in files:
+              statements=parse_sql(Path(file).read_text())
+              print(f"PostgreSQL parse PASS: {file} ({len(statements)} statements)")
+          PY
+      - name: Static SQL contract checks (no database connection)
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          backend=Path("supabase/functions/enlace-cliente-auth-staging/index.ts").read_text()
+          config=Path("supabase/config.toml").read_text()
+          assert "[functions.enlace-cliente-auth-staging]" in config and "verify_jwt = false" in config
+          assert "https://liuben810921.github.io" in backend
+          assert 'req.headers.get("apikey")' in backend
+          assert 'SUPABASE_PUBLISHABLE_KEYS' in backend
+          assert 'ED_STAGING_PUBLISHABLE_KEY' not in backend
+          rpc=Path("sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql").read_text()
+          schema=Path("sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql").read_text()
+          tests=Path("sql/pruebas/staging_registro_sesiones_rollback_ejecutable_tras_aprobacion.sql").read_text()
+          assert "ubrvuplslconfxwpfzxj" not in backend
+          assert "ED_STAGING_CUSTOMER_AUTH_ENABLED" in backend
+          assert 'expectedProject="xqahthghvozeigbojhyi"' in backend
+          assert "if(!enabled||!validProject||!key||!allowedOrigin||!publishableKey.startsWith" in backend
+          assert rpc.count("CREATE OR REPLACE FUNCTION")==5
+          assert rpc.count("COMMIT;")==1 and schema.count("COMMIT;")==1
+          assert rpc.count("BEGIN;")==1 and schema.count("BEGIN;")==1
+          assert rpc.count("END; $fn$;")==5
+          assert "p_telefono !~ (" in rpc and "correo !~ (" in rpc
+          assert "telefono ~ (" in schema
+          assert "SECURITY DEFINER SET search_path TO" in rpc
+          assert "FROM PUBLIC,anon,authenticated" in rpc
+          assert "TO service_role" in rpc
+          assert "CREATE SEQUENCE IF NOT EXISTS public.clientes_oficiales_numero_seq" in schema
+          assert "punto_salida_id text" in schema
+          assert tests.count("n:=n+1;")==17
+          assert "BEGIN;" in tests and "ROLLBACK;" in tests
+          # Verify explicit RPC contracts, isolation and staging-only safety.
+          expected={
+            "ed_cliente_registrar_privado":4,
+            "ed_cliente_registrar_residencia_privado":9,
+            "ed_cliente_login_privado":3,
+            "ed_cliente_sesion_privada":2,
+            "ed_cliente_direccion_privada":5,
+          }
+          import re
+          definitions=re.findall(r"CREATE OR REPLACE FUNCTION public\.(ed_cliente_\w+)\((.*?)\) RETURNS",rpc,re.S)
+          assert len(definitions)==5, "Five function signatures required"
+          for name,arguments in definitions:
+              assert name in expected, f"Unexpected RPC {name}"
+              assert len(re.findall(r"\bp_\w+\s+(?:text|boolean)\b",arguments))==expected[name], f"Signature mismatch {name}"
+          assert len(re.findall(r"SECURITY DEFINER SET search_path TO ''",rpc))==5
+          assert "REVOKE ALL ON FUNCTION" in rpc and "FROM PUBLIC,anon,authenticated" in rpc
+          assert "GRANT EXECUTE ON FUNCTION" in rpc and "TO service_role" in rpc
+          for action in ('register','login','address-save','recipient-save','delivery-location-save','session','logout','profile'):
+              assert f'action==="{action}"' in backend, f"Missing route {action}"
+          for name in ("ed_cliente_registrar_residencia_privado","ed_cliente_login_privado","ed_cliente_sesion_privada","ed_cliente_direccion_privada","ed_cliente_limite_privado"):
+              assert f'db.rpc("{name}"' in backend, f"Missing Edge RPC {name}"
+          assert "p_residencia='cuba'" in rpc and "Direccion habitual requerida" in rpc
+          assert "p_residencia NOT IN ('cuba','extranjero')" in rpc
+          assert '.eq("cliente_numero",customer.numero)' in backend
+          assert "cliente_numero:customer.numero" in backend
+          assert "revocada_en=now()" in rpc and "expira_en>now()" in rpc
+          assert rpc.count("CREATE OR REPLACE FUNCTION public.ed_cliente_")==5, "Duplicated or missing RPC definitions"
+          assert rpc.count("END; $fn$;")==5, "Truncated or duplicated PL/pgSQL bodies"
+          assert rpc.count("\nCOMMIT;")==1, "Duplicated SQL transaction"
+          assert rpc.rstrip().endswith("COMMIT;"), "Unexpected trailing SQL"
+          assert rpc.count("AS $fn$")==5, "Missing PL/pgSQL body delimiter"
+          assert rpc.count("IF p_token_hash IS NULL OR p_token_hash !~")==2, "Missing explicit NULL token checks"
+          assert "IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Token invalido'; END IF;" in rpc
+          assert "IF p_token_hash IS NULL OR p_token_hash !~ '^[a-f0-9]{64}$' THEN RETURN NULL; END IF;" in rpc
+          assert "FAIL cruce de clientes" in tests and "FAIL replay revocado" in tests
+          assert "FAIL expiracion" in tests and "FAIL permisos RPC" in tests
+          assert "ed_cliente_limite_privado" in Path("docs/auditoria-contratos-rpc-staging-2026-11-09.md").read_text()
+          print("RPC contracts and staging safety PASS")
+          print("Static guards PASS")
+          PY
