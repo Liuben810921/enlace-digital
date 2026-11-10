@@ -8,6 +8,8 @@ on:
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
+      - 'scripts/check_orders_design_contract.py'
+      - 'staging-preview/index.html'
       - 'tests/edge_auth_mock_test.ts'
       - 'tests/staging_customer_web_adapter_test.mjs'
       - 'scripts/staging_customer_web_adapter.mjs'
@@ -21,6 +23,8 @@ on:
       - 'sql/propuestas/**'
       - 'sql/pruebas/**'
       - 'scripts/check_staging_isolation.py'
+      - 'scripts/check_orders_design_contract.py'
+      - 'staging-preview/index.html'
       - 'tests/edge_auth_mock_test.ts'
       - 'tests/staging_customer_web_adapter_test.mjs'
       - 'scripts/staging_customer_web_adapter.mjs'
@@ -48,6 +52,8 @@ jobs:
         run: node --test tests/staging_customer_web_adapter_test.mjs
       - name: Static recipient and delivery isolation checks (no database connection)
         run: python3 scripts/check_staging_isolation.py
+      - name: Static historical order design checks (no database connection)
+        run: python3 scripts/check_orders_design_contract.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
