@@ -24,12 +24,12 @@ def total(n):
     assert_value("SELECT count(*) FROM f6b18_synthetic.prospective_keys",str(n))
 def role_call(c,street):
     return "SET ROLE f6b18_caller; SELECT "+call(c,street)+";"
-def wait_for_sleep(process,deadline=12):
+def wait_for_sleep(process,deadline=12,seconds=15):
     until=time.monotonic()+deadline
     while time.monotonic()<until:
         if process.poll() is not None:
             raise AssertionError("session exited before hold")
-        p=psql("SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%pg_sleep(15); COMMIT%' AND state='active' AND wait_event_type='Timeout' AND pid<>pg_backend_pid()")
+        p=psql(f"SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%pg_sleep({seconds}); COMMIT%' AND state='active' AND wait_event_type='Timeout' AND pid<>pg_backend_pid()")
         if p.stdout.strip().isdigit() and int(p.stdout.strip())>0:
             return
         time.sleep(.1)
@@ -70,7 +70,7 @@ total(2)
 # A concurrent retry of an uncommitted transaction blocks and becomes DUPLICATE after commit.
 first=background("BEGIN; SET ROLE f6b18_caller; SELECT "+call(94,905)+"; SELECT pg_sleep(4); COMMIT;")
 try:
-    wait_for_sleep(first)
+    wait_for_sleep(first,seconds=4)
     retry=psql(role_call(94,905),timeout=20)
     out,err=first.communicate(timeout=12)
     if first.returncode!=0 or "RESERVED_SYNTHETIC" not in out:
