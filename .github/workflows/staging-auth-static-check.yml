@@ -12,6 +12,8 @@ on:
       - 'scripts/check_orders_api_contract.py'
       - 'scripts/check_orders_transaction_design.py'
       - 'scripts/check_orders_variant_stock_contract.py'
+      - 'scripts/check_unified_inventory_reservations.py'
+      - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
       - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
       - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
       - 'scripts/check_orders_transactions_contract.py'
@@ -35,6 +37,8 @@ on:
       - 'scripts/check_orders_api_contract.py'
       - 'scripts/check_orders_transaction_design.py'
       - 'scripts/check_orders_variant_stock_contract.py'
+      - 'scripts/check_unified_inventory_reservations.py'
+      - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
       - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
       - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
       - 'scripts/check_orders_transactions_contract.py'
@@ -78,6 +82,8 @@ jobs:
         run: python3 scripts/check_orders_transaction_design.py
       - name: Static variant stock and cancellation contracts (no database connection)
         run: python3 scripts/check_orders_variant_stock_contract.py
+      - name: Static unified inventory and reservation design checks
+        run: python3 scripts/check_unified_inventory_reservations.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
