@@ -18,6 +18,8 @@ on:
       - 'scripts/run_f6b24_raw_json_contract_isolated.py'
       - 'scripts/run_f6b25_adversarial_contract_isolated.py'
       - 'scripts/run_f6b26_crash_retries_isolated.py'
+      - 'scripts/run_f6b27_transient_cancellation_isolated.py'
+      - 'docs/f6b27-transient-cancellation-2026-11-10.md'
       - 'docs/f6b26-crash-retry-isolation-2026-11-10.md'
       - 'docs/f6b25-adversarial-contract-2026-11-10.md'
       - 'docs/f6b24-raw-json-contract-2026-11-10.md'
@@ -54,6 +56,8 @@ on:
       - 'scripts/run_f6b24_raw_json_contract_isolated.py'
       - 'scripts/run_f6b25_adversarial_contract_isolated.py'
       - 'scripts/run_f6b26_crash_retries_isolated.py'
+      - 'scripts/run_f6b27_transient_cancellation_isolated.py'
+      - 'docs/f6b27-transient-cancellation-2026-11-10.md'
       - 'docs/f6b26-crash-retry-isolation-2026-11-10.md'
       - 'docs/f6b25-adversarial-contract-2026-11-10.md'
       - 'docs/f6b24-raw-json-contract-2026-11-10.md'
@@ -239,3 +243,12 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b26_crash_retries_isolated.py
+
+      - name: Run F6-B27 synthetic cancellation, lock timeout and ACL RLS
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: python3 scripts/run_f6b27_transient_cancellation_isolated.py
