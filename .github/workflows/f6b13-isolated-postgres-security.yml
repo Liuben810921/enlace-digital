@@ -6,6 +6,9 @@ on:
       - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
   pull_request:
     branches: [main]
@@ -13,6 +16,9 @@ on:
       - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
   workflow_dispatch:
 permissions:
@@ -50,3 +56,13 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql
+      - name: Generate F6-B14 30-vector synthetic SQL (no database access)
+        run: python3 scripts/generate_f6b14_synthetic_sql.py
+      - name: Execute F6-B14 28 transportable vectors and negative security tests in disposable PostgreSQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f /tmp/f6b14_synthetic_generated.sql
