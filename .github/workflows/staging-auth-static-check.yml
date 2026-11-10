@@ -42,6 +42,8 @@ on:
       - 'scripts/check_staging_f6b3_ci_closure.py'
       - 'scripts/check_staging_f6b4_pg_protocol.py'
       - 'scripts/check_staging_norm_v1_postgres_isolated.py'
+      - 'scripts/check_staging_f6b4_pg_results.py'
+      - 'docs/f6b4-resultados-postgresql-aislado-ci488-2026-11-10.md'
       - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
@@ -305,18 +307,8 @@ jobs:
         run: python3 scripts/check_staging_f6b3_ci_closure.py
       - name: Offline F6-B4 PostgreSQL protocol safety checks
         run: python3 scripts/check_staging_f6b4_pg_protocol.py
-      - name: F6-B4 disposable PostgreSQL 17 synthetic-only local test
-        run: |
-          set -euo pipefail
-          docker run -d --name ed-norm-v1-pg --network none -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17
-          trap 'docker rm -f ed-norm-v1-pg >/dev/null 2>&1 || true' EXIT
-          for i in $(seq 1 40); do
-            if docker exec ed-norm-v1-pg pg_isready -U postgres >/dev/null 2>&1; then break; fi
-            sleep 2
-          done
-          docker exec ed-norm-v1-pg pg_isready -U postgres
-          docker exec ed-norm-v1-pg psql -U postgres -Atqc 'SHOW server_encoding; SHOW server_version; SELECT datcollate,datctype,datlocprovider,datcollversion FROM pg_database WHERE datname=current_database();'
-          python3 scripts/check_staging_norm_v1_postgres_isolated.py
+      - name: Offline F6-B4 isolated PostgreSQL result evidence
+        run: python3 scripts/check_staging_f6b4_pg_results.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
