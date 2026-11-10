@@ -21,6 +21,8 @@ on:
       - 'scripts/run_f6b27_transient_cancellation_isolated.py'
       - 'scripts/run_f6b28_deadlock_serializable_isolated.py'
       - 'scripts/run_f6b29_retry_budget_isolated.py'
+      - 'scripts/run_f6b30_ambiguous_commit_isolated.py'
+      - 'docs/f6b30-ambiguous-commit-2026-11-10.md'
       - 'docs/f6b29-retry-budget-2026-11-10.md'
       - 'docs/f6b28-deadlock-serialization-2026-11-10.md'
       - 'docs/f6b27-transient-cancellation-2026-11-10.md'
@@ -63,6 +65,8 @@ on:
       - 'scripts/run_f6b27_transient_cancellation_isolated.py'
       - 'scripts/run_f6b28_deadlock_serializable_isolated.py'
       - 'scripts/run_f6b29_retry_budget_isolated.py'
+      - 'scripts/run_f6b30_ambiguous_commit_isolated.py'
+      - 'docs/f6b30-ambiguous-commit-2026-11-10.md'
       - 'docs/f6b29-retry-budget-2026-11-10.md'
       - 'docs/f6b28-deadlock-serialization-2026-11-10.md'
       - 'docs/f6b27-transient-cancellation-2026-11-10.md'
@@ -278,3 +282,12 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b29_retry_budget_isolated.py
+
+      - name: Run F6-B30 synthetic ambiguous COMMIT and identity reconciliation
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: python3 scripts/run_f6b30_ambiguous_commit_isolated.py
