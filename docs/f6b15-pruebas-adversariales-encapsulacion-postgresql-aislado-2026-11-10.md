@@ -38,3 +38,9 @@ La batería F6-B14 (30 vectores: 28 transportables y 2 rechazados en la frontera
 El runner gratuito está sujeto a minutos y cuotas de GitHub Actions, sin servicio permanente. `ROLLBACK` elimina objetos sintéticos y `git revert` revierte los cambios de GitHub.
 
 **Autorización A:** se requiere autorización específica futura para cualquier cambio de roles, funciones, grants o RLS en staging. **Autorización B:** otra autorización independiente para cualquier lectura histórica, incluso agregada. Ambas siguen **NO AUTORIZADAS**. **NO-GO** para staging y datos históricos.
+
+## Resultados CI verificados (2026-11-10)
+- `f6b13-isolated-postgres-security` #25, run `42903936626`: **SUCCESS**. PostgreSQL 17 desechable; pruebas sintéticas B13/B14/B15, sin pasos fallidos.
+- `staging-auth-static-check` #570, run `42903936803`: **SUCCESS**. Validación estática B15 y comprobaciones previas, sin pasos fallidos.
+- Commit probado: `ccadb209d4189a174c0fcdcfca17a557370777b5`.
+- Conclusión: controles adversariales sintéticos PASS; riesgos de tiempo, logs y reintentos en un entorno real siguen **NO-GO**. Ningún cambio ni lectura en Supabase.
