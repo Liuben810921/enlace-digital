@@ -24,6 +24,8 @@ on:
       - 'scripts/check_staging_auth_function_metadata_audit.py'
       - 'scripts/check_staging_rpc_controller_reconciliation.py'
       - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'scripts/check_staging_remediation_v4_race_bigint.py'
+      - 'docs/plan-remediacion-v4-concurrencia-bigint-staging-no-ejecutable-2026-11-10.md'
       - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
       - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
       - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
@@ -71,6 +73,8 @@ on:
       - 'scripts/check_staging_auth_function_metadata_audit.py'
       - 'scripts/check_staging_rpc_controller_reconciliation.py'
       - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'scripts/check_staging_remediation_v4_race_bigint.py'
+      - 'docs/plan-remediacion-v4-concurrencia-bigint-staging-no-ejecutable-2026-11-10.md'
       - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
       - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
       - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
@@ -150,6 +154,8 @@ jobs:
         run: python3 scripts/check_staging_rpc_controller_reconciliation.py
       - name: Static staging auth route dependencies (offline)
         run: python3 scripts/check_staging_auth_route_dependencies.py
+      - name: Static staging remediation decisions (offline)
+        run: python3 scripts/check_staging_remediation_v4_race_bigint.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
