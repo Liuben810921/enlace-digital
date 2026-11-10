@@ -19,3 +19,11 @@ for gate,n in (("G2",5),("G3",4),("G4",6)):
 for phrase in ("G2 sigue BLOCKED","G3 sigue BLOCKED","G4 sigue PARCIAL/BLOCKED","NO-GO","auth.users","CASCADE","RESTRICT","0 Edge","sin valores","No se ejecutaron funciones operativas"):
     assert phrase.lower() in report.lower(), f"missing audit finding: {phrase}"
 print("PASS: 15 audited subgates and NO-GO preserved")
+
+states=Path("docs/st-pre-04-estados-g2-g3-g4-solo-lectura-2026-11-10.md").read_text()
+for gate,n in (("G2",5),("G3",4),("G4",6)):
+    for i in range(1,n+1):
+        assert f"| {gate}.{i} " in states, f"missing state-only gate {gate}.{i}"
+for required in ("G2 BLOCKED", "G3 BLOCKED", "G4 PARCIAL/BLOCKED", "NO-GO", "no se consultó valor alguno", "pg_cron", "pg_net", "supabase_vault", "sin cambios en Supabase"):
+    assert required.lower() in states.lower(), f"missing safe state-only assertion: {required}"
+print("PASS: state-only inspection retains 15 gate statuses and NO-GO")
