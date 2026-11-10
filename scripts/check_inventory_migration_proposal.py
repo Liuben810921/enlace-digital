@@ -21,6 +21,6 @@ for marker in (
     assert marker in doc, f"Missing plan safeguard: {marker}"
 for i in range(1, 17):
     assert f"| M{i:02d} |" in doc, f"Missing scenario M{i:02d}"
-assert "no se ha ejecutado SQL" in doc.lower()
+assert "no se ha ejecutado sql" in doc.lower()
 print("PASS: commented migration proposal, compatibility gates, security, rollback, 16 scenarios")
 print("NOTE: no SQL or concurrency test was executed")
