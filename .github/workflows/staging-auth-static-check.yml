@@ -37,6 +37,10 @@ on:
       - 'scripts/check_staging_f6a_metadata_report.py'
       - 'scripts/check_staging_f6b_no_go.py'
       - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
       - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
       - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
@@ -53,6 +57,10 @@ on:
       - 'scripts/check_staging_f6a_metadata_report.py'
       - 'scripts/check_staging_f6b_no_go.py'
       - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
       - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
       - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
@@ -127,6 +135,10 @@ on:
       - 'scripts/check_staging_f6a_metadata_report.py'
       - 'scripts/check_staging_f6b_no_go.py'
       - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
       - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
       - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
@@ -143,6 +155,10 @@ on:
       - 'scripts/check_staging_f6a_metadata_report.py'
       - 'scripts/check_staging_f6b_no_go.py'
       - 'scripts/check_staging_f6b2_unicode_contract.py'
+      - 'scripts/check_staging_norm_v1_js.cjs'
+      - 'scripts/check_staging_norm_v1_python.py'
+      - 'tests/fixtures/norm_v1_utf8_vectors.json'
+      - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
       - 'docs/f6b2-diseno-equivalencia-unicode-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b-no-go-normalizacion-agregados-sin-consulta-2026-11-10.md'
       - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
@@ -264,6 +280,10 @@ jobs:
         run: python3 scripts/check_staging_f6b_no_go.py
       - name: Offline F6-B2 Unicode NORM-v1 contract checks
         run: python3 scripts/check_staging_f6b2_unicode_contract.py
+      - name: Offline NORM-v1 shared UTF-8 fixture parity (Python and JavaScript)
+        run: |
+          python3 scripts/check_staging_norm_v1_python.py
+          node scripts/check_staging_norm_v1_js.cjs
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
