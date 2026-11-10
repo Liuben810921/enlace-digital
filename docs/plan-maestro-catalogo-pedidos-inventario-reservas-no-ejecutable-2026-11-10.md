@@ -47,7 +47,7 @@ Fecha: 2026-11-10. Base autorizada: `5d03e746cab6239188f594da3fec6da07d895aa5`. 
 - **P0:** discrepancias de stock por color, IDs no seguros, nombres duplicados o faltas de FK: bloquear backfill; nunca ajustar silenciosamente.
 - **P0:** reservas hechas desde navegador sin bloqueo transaccional: no admitir ventas reales.
 - **P1:** `marca/modelo` pueden perderse en roundtrip; `imagenes` y fotos por color pueden quedar huérfanas si Storage/POST falla.
-- **P1:** `service_role` sin grants directos de tabla de clientes observado en auditoría previa; validar rutas RPC y no ampliar permisos automáticamente.
+- **P1:** `service_role` sin grants directos de tabla de clientes observado en auditoría previa; validar rutas RPC y no ampliar permisos automáticamente. Cualquier función `SECURITY DEFINER` futura deberá tener `search_path` fijo, EXECUTE restringido y controles de identidad y pertenencia.
 - **P1:** `deleteProductForever` debe bloquearse ante historia referenciada; snapshots no se alteran.
 - **P1:** política de expiración, instante de consumo, devolución y proveedor requiere decisión antes de SQL ejecutable.
 - **Aceptación documental:** los 15 campos, dependencias F0–F6, decisiones canónicas, límites de privilegios, matriz de pruebas y reversión deben pasar CI offline. Esto **no demuestra** integridad de datos ni ausencia de carreras en base de datos.
