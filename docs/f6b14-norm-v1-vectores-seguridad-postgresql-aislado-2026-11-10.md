@@ -33,3 +33,9 @@ Se crean tres roles sintéticos `NOLOGIN`, un owner sin `BYPASSRLS` ni privilegi
 | B14-10 | Sin cambios ni lecturas de staging/producción |
 
 **Autorización A** específica e independiente para cualquier cambio de permisos, funciones o RLS en staging; **autorización B** distinta para cualquier lectura histórica. Ninguna de ellas se concede por estas pruebas.
+
+## Resultados comprobados de GitHub Actions
+- `f6b13-isolated-postgres-security` **#16**, run `42902972129`: **SUCCESS**; incluye generación de SQL sintético F6-B14 y ejecución PostgreSQL 17, sin pasos fallidos.
+- `staging-auth-static-check` **#561**, run `42902972143`: **SUCCESS**, sin pasos fallidos.
+- Commit de los tests verificados: `8f910fb60e65b512f79978c0a66e187e32bf885b`.
+- Evidencia limitada a fixture sintético. **NO-GO** para implementación en staging, permisos o consulta histórica.
