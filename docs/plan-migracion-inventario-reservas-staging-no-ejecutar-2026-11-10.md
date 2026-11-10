@@ -2,6 +2,9 @@
 
 Base autorizada: `cc7895c33005c17451c3f1f1e1712217eb83eeae`. Borrador inerte: `sql/propuestas/staging_migracion_inventario_reservas_borrador_no_ejecutar.sql`. **No se ha ejecutado SQL ni cambiado Supabase, producción, servicios o pedidos.**
 
+## Estado verificado de staging (2026-11-10)
+La auditoría de solo lectura confirma que **no existen** `public.productos` ni `public.pedidos_oficiales` en staging. Por tanto, este borrador **no puede aplicarse**: sus claves foráneas dependen de tablas ausentes. `clientes_oficiales.numero` es `integer/int4`, y la comprobación de privilegios muestra ausencia de privilegios directos de tabla para `service_role` sobre `clientes_oficiales`; revisar rutas RPC y permisos antes de integrar. No se pudieron evaluar datos de variantes o integridad de stock. Detalle en `docs/auditoria-esquema-inventario-supabase-staging-lectura-2026-11-10.md`.
+
 ## Orden de dependencias y puertas de aprobación
 1. **Preflight de solo lectura futuro:** inspeccionar tipos reales de `productos.id`, `cantidad`, `variantes_color`, `origen_producto`; verificar si existen `pedidos_oficiales` y roles/permisos; validar cantidades negativas, nulas, fraccionarias, duplicados normalizados, suma de colores frente a total y productos archivados. La existencia de tablas no está demostrada por este documento.
 2. **Migración estructural futura:** tabla `inventario_variantes` con UUID inmutable, FK producto, `stock_fisico`, `stock_reservado`, versión, nombre normalizado, variante sintética sin color y restricciones de no negativos; `inventario_reservas` con FK pedido y variante compuesta, estado terminal único; `inventario_movimientos` append-only con correlación e idempotencia. FK a `pedidos_oficiales` impide desplegar antes de aprobar su esquema.
