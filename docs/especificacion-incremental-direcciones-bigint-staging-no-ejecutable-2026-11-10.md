@@ -27,6 +27,14 @@
 
 **Precondiciones BIGINT-P01–P04:** inventario de rutas y consumidores, serialización REST/RPC real, almacenamiento y comparación en UI, esquema de snapshots/historial. **Aceptación BIGINT-A01–A06:** A01 valores `1`, `9007199254740991`, `9007199254740992` y `9223372036854775807` se conservan; A02 se rechazan `0`, negativos, decimales y >int8; A03 no se mezclan IDs entre clientes; A04 búsqueda/actualización usa igualdad textual exacta; A05 adaptadores antiguos seguros siguen funcionando durante transición; A06 rollback de versión de API sin reescribir PK.
 
+## Registro de controles individuales para verificación estática
+- INC-P01: identidad de staging; INC-P02: inventario de tablas y columnas; INC-P03: claves, constraints y secuencias; INC-P04: permisos y políticas; INC-P05: datos agregados sin PII; INC-P06: backup y restauración.
+- INC-A01: preservar tipos; INC-A02: preservar clientes; INC-A03: verificar NOT VALID; INC-A04: no ampliar grants; INC-A05: idempotencia y aborto seguro.
+- DEDUP-P01: normalización aprobada; DEDUP-P02: duplicados; DEDUP-P03: referencias y snapshots; DEDUP-P04: RPC y EXECUTE; DEDUP-P05: observabilidad.
+- DEDUP-A01: carrera de 20; DEDUP-A02: aislamiento; DEDUP-A03: normalización; DEDUP-A04: metadatos fuera de clave; DEDUP-A05: reintentos; DEDUP-A06: preservar historia.
+- BIGINT-P01: consumidores; BIGINT-P02: serialización REST; BIGINT-P03: almacenamiento UI; BIGINT-P04: referencias históricas.
+- BIGINT-A01: extremos de rango; BIGINT-A02: rechazos; BIGINT-A03: aislamiento; BIGINT-A04: igualdad exacta; BIGINT-A05: transición; BIGINT-A06: rollback de API.
+
 ## 4. Dependencias, permisos, pruebas y reversión
 | Orden | Entrega futura | Dependencia | Bloqueo |
 |---|---|---|---|
