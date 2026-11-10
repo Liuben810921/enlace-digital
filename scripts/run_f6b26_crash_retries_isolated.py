@@ -48,20 +48,28 @@ p=subprocess.Popen(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",sql],
 try:
     # Wait until the transaction inserted the key, then terminate its connection.
     ready=False
+    target_pid=None
     for _ in range(80):
         status=run("a","SELECT count(*) FROM pg_stat_activity WHERE usename='f6b23_a' AND state='active' AND query LIKE '%pg_sleep(30)%';")
         if int(status)>0:
             # pg_stat_activity alone does not guarantee insert completion;
             # confirm via a separate privileged observer seeing an uncommitted lock.
             lock=subprocess.run(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",
-                "SELECT count(*) FROM pg_locks l JOIN pg_stat_activity a USING(pid) WHERE a.usename='f6b23_a' AND a.query LIKE '%pg_sleep(30)%' AND l.mode='RowExclusiveLock' AND l.granted;"],
+                "SELECT a.pid FROM pg_locks l JOIN pg_stat_activity a USING(pid) WHERE a.usename='f6b23_a' AND a.query LIKE '%pg_sleep(30)%' AND l.mode='RowExclusiveLock' AND l.granted LIMIT 1;"],
                 env=os.environ,capture_output=True,text=True,timeout=10)
-            if lock.returncode==0 and int(lock.stdout.strip())>0:
+            if lock.returncode==0 and lock.stdout.strip().isdigit():
+                target_pid=int(lock.stdout.strip())
                 ready=True
                 break
         if p.poll() is not None: break
         time.sleep(0.1)
-    assert ready,"transaction did not reach uncommitted write"
+    assert ready and target_pid,"transaction did not reach uncommitted write"
+    # Killing a local psql client alone can leave pg_sleep running and locks held.
+    # Terminate the specific disposable PostgreSQL backend to simulate connection loss.
+    terminated=subprocess.run(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",
+        "SELECT pg_terminate_backend("+str(target_pid)+");"],env=os.environ,
+        capture_output=True,text=True,timeout=10)
+    assert terminated.returncode==0 and terminated.stdout.strip()=="t",terminated.stderr
 finally:
     p.kill()
     p.communicate(timeout=10)
