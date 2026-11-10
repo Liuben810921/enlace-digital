@@ -27,6 +27,8 @@ on:
       - 'scripts/check_staging_remediation_v4_race_bigint.py'
       - 'scripts/check_staging_incremental_dedup_bigint_spec.py'
       - 'scripts/check_github_actions_diagnostic.py'
+      - 'scripts/check_staging_f0_metadata_results.py'
+      - 'docs/resultados-f0-metadatos-staging-lectura-2026-11-10.md'
       - 'docs/diagnostico-visibilidad-github-actions-2026-11-10.md'
       - 'docs/especificacion-incremental-direcciones-bigint-staging-no-ejecutable-2026-11-10.md'
       - 'docs/cierre-coherencia-contratos-staging-offline-2026-11-10.md'
@@ -81,6 +83,8 @@ on:
       - 'scripts/check_staging_remediation_v4_race_bigint.py'
       - 'scripts/check_staging_incremental_dedup_bigint_spec.py'
       - 'scripts/check_github_actions_diagnostic.py'
+      - 'scripts/check_staging_f0_metadata_results.py'
+      - 'docs/resultados-f0-metadatos-staging-lectura-2026-11-10.md'
       - 'docs/diagnostico-visibilidad-github-actions-2026-11-10.md'
       - 'docs/especificacion-incremental-direcciones-bigint-staging-no-ejecutable-2026-11-10.md'
       - 'docs/cierre-coherencia-contratos-staging-offline-2026-11-10.md'
@@ -170,6 +174,8 @@ jobs:
         run: python3 scripts/check_staging_incremental_dedup_bigint_spec.py
       - name: Static GitHub Actions diagnostics (offline)
         run: python3 scripts/check_github_actions_diagnostic.py
+      - name: Static F0 staging metadata audit results (offline)
+        run: python3 scripts/check_staging_f0_metadata_results.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
