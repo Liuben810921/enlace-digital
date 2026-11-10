@@ -27,7 +27,7 @@ def good(query,role="postgres"):
     return r.stdout.strip()
 def state(r,expected):
     assert r.returncode!=0,(r.stdout,r.stderr)
-    assert re.search(r"\\b"+expected+r"\\b",r.stderr),(expected,r.stderr)
+    assert expected in r.stderr,(expected,r.stderr)
 def reserve(role,key,raw=RAW):
     return good("SELECT f6b23_synthetic.reserve('"+key+"','"+strict(raw)+"'::jsonb);",role)
 
