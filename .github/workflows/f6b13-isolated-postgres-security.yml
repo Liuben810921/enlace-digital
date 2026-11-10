@@ -7,6 +7,9 @@ on:
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b13_isolated_security.py'
       - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
@@ -17,6 +20,9 @@ on:
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b13_isolated_security.py'
       - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'scripts/generate_f6b15_adversarial_sql.py'
+      - 'scripts/check_staging_f6b15_adversarial_security.py'
+      - 'docs/f6b15-pruebas-adversariales-encapsulacion-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
@@ -66,3 +72,15 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: psql -X -v ON_ERROR_STOP=1 -f /tmp/f6b14_synthetic_generated.sql
+      - name: Static F6-B15 adversarial boundary checks
+        run: python3 scripts/check_staging_f6b15_adversarial_security.py
+      - name: Generate F6-B15 synthetic adversarial extension
+        run: python3 scripts/generate_f6b15_adversarial_sql.py
+      - name: Execute F6-B15 isolated PostgreSQL adversarial tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f /tmp/f6b15_adversarial_generated.sql
