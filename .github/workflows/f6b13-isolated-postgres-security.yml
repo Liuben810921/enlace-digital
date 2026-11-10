@@ -10,6 +10,9 @@ on:
       - 'scripts/generate_f6b15_adversarial_sql.py'
       - 'sql/pruebas/f6b18_prospective_isolated_setup.sql'
       - 'scripts/run_f6b18_concurrency_isolated.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b15_adversarial_security.py'
@@ -27,6 +30,9 @@ on:
       - 'scripts/generate_f6b15_adversarial_sql.py'
       - 'sql/pruebas/f6b18_prospective_isolated_setup.sql'
       - 'scripts/run_f6b18_concurrency_isolated.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'scripts/check_staging_f6b15_adversarial_security.py'
@@ -110,3 +116,15 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b18_concurrency_isolated.py
+      - name: Static F6-B19 recovery isolation guards
+        run: python3 scripts/check_staging_f6b19_recovery_scope.py
+      - name: Run F6-B19 synthetic crash recovery and retry consistency
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -c 'TRUNCATE f6b18_synthetic.prospective_keys RESTART IDENTITY;'
+          python3 scripts/run_f6b19_recovery_isolated.py
