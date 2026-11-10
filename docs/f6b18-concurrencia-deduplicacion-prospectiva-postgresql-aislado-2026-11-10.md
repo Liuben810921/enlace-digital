@@ -39,3 +39,9 @@ La implementación real requeriría análisis de privacidad y posibles canales d
 **Costos:** runner PostgreSQL y GitHub Actions sujetos a cuotas; el plan gratuito de Supabase no se ha verificado en esta fase. No se crean servicios persistentes. Reversión GitHub: `git revert`; objetos sintéticos: destruir el contenedor PostgreSQL. Para un futuro staging se necesita plan específico de backup/rollback y comprobación de índices, locks, grants y RLS antes de actuar.
 
 **Autorización A**: obligatoria, explícita e independiente antes de modificar staging (funciones, roles, grants, políticas, índices o tablas). **Autorización B**: distinta antes de cualquier lectura histórica, incluso agregada. Ninguna se ha concedido. **NO-GO** para producción, staging y lectura histórica.
+
+## Resultados de CI verificados
+- Commit de las pruebas: `949184f44b99b94c415362cf7aa7f7e451daccfa`.
+- GitHub Actions **#43**, run `42905881418`: **SUCCESS**, sin pasos fallidos; PostgreSQL 17 desechable, dos sesiones sintéticas y aserciones negativas.
+- GitHub Actions **#591**, run `42905881423`: **SUCCESS**, sin pasos fallidos; validadores offline.
+- Se corrigió un escape Unicode de NBSP en el fixture antes de esta verificación. Los resultados no prueban deduplicación contra filas históricas ni autorización de despliegue.
