@@ -75,7 +75,7 @@ state(timed,"57014")
 # SQLSTATE 55P03: lock_timeout while another transaction holds a row.
 holder=subprocess.Popen(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",
   "BEGIN; UPDATE f6b28_synthetic.serial SET value=value WHERE id=1; "
-  "SELECT pg_sleep(2); ROLLBACK;"],env=ADMIN,capture_output=True,text=True)
+  "SELECT pg_sleep(2); ROLLBACK;"],env=ADMIN,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 try:
     import time
     ready=False
