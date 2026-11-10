@@ -63,3 +63,10 @@ F6-B16 no crea infraestructura ni utiliza Supabase; la ejecución de validadores
 | B16-10 — Sin SQL, Supabase, clientes ni producción en F6-B16 | PASS |
 
 **Próxima etapa segura recomendada:** F6-B17 exclusivamente offline para consolidar un checklist de decisión y revisar alternativas que no necesiten leer datos históricos. No solicitar aún permisos de staging ni lectura histórica mientras persistan bloqueos críticos.
+
+## Resultado de CI de F6-B16
+
+- Commit verificado: `10b6502977483b3f057f8c6033dcd451c1618345`.
+- `staging-auth-static-check` #576, run `42904524480`: **SUCCESS**, sin pasos fallidos; incluye validador F6-B16.
+- `f6b13-isolated-postgres-security` #30, run `42904524625`: **SUCCESS**, sin pasos fallidos; únicamente fixtures sintéticos en PostgreSQL desechable.
+- Esta evidencia no cambia la decisión: **NO-GO** para cambios de staging y para lectura histórica.
