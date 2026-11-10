@@ -6,7 +6,7 @@ doc=Path("docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-202
 workflow=Path(".github/workflows/f6b13-isolated-postgres-security.yml").read_text()
 for token in ("first.kill()","ROLLBACK;","ROLLBACK TO SAVEPOINT","pg_stat_activity",
               "DUPLICATE_SYNTHETIC","RESERVED_SYNTHETIC","permission denied",
-              "pg_has_role","relrowsecurity","count(3)"):
+              "pg_has_role","relrowsecurity","total(3)"):
     assert token in runner,token
 for i in range(1,11):
     assert f"B19-{i:02d}" in doc
