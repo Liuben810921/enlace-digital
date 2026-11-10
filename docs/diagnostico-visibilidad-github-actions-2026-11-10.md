@@ -34,3 +34,8 @@ El conector `fetch_commit_workflow_runs` indica explícitamente que **filtra las
 5. Mantener estado CI **NO VERIFICADO** hasta obtener un run y job concluidos.
 
 **NO-GO:** sin activar servicios, correos, pedidos reales, despliegues ni cambios a producción. **Reversión:** git revert del informe y su verificador estático; ninguna modificación a Supabase.
+
+## Verificación adicional de ejecución histórica (lectura)
+- Run **42850363760**: consulta por ID existente; job **129949044393**, nombre `static`, estado `completed`, conclusión **success**. Se observaron pasos completados y con `success` para typecheck, pruebas offline, validadores estáticos y parser SQL. Esta es evidencia **histórica**, no certifica commits recientes.
+- Commit de inicio de esta etapa `5906c6c08a9f99de6ea0735b6528d668bf420fc0`: el conector `fetch_commit_workflow_runs` no devolvió runs de `pull_request`; `get_commit_combined_status` tampoco devolvió estados. No se dispone en las acciones de GitHub conectadas de una función que liste todos los runs `push` por rama/SHA. Sin run_id no se pueden leer sus jobs ni logs. Se intentó consultar la vista pública del workflow, pero no se obtuvo contenido verificable.
+- **Decisión:** no modificar workflow ni validadores, ya que no se comprobó fallo actual. Estado de CI reciente **NO VERIFICADO**, no FAIL ni PASS.
