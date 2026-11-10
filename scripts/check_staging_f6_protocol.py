@@ -17,6 +17,6 @@ for token in ("F6-A","F6-B","F6-C","F6-D","NO EJECUTABLE",
     assert token.lower() in s.lower(), f"missing {token}"
 assert "NO-GO para T03–T12" in s
 assert "requiere autorización independiente" in s
-assert "no contiene instrucciones SQL listas para ejecutar" in s.lower()
+assert "no contiene instrucciones sql listas para ejecutar" in s.lower()
 print("PASS F6: 12 preflight gates, 16 pending staging tests, four authorization boundaries, NO-GO and rollback")
 print("NOTE: static protocol validation only; no Supabase access, SQL, staging tests or deployment")
