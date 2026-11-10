@@ -64,7 +64,7 @@ try:
             # Avoid blocking if the transaction has not committed yet.
             probe=command("SET statement_timeout='150ms'; SELECT f6b23_synthetic.reserve('"+
                           key+"','"+strict(ALT)+"'::jsonb);")
-            if probe.returncode==0 and probe.stdout.strip()=="REPLAY":
+            if probe.returncode==0 and probe.stdout.strip().splitlines()[-1]=="REPLAY":
                 pid=int(r.stdout.strip())
                 break
         if after.poll() is not None: break
