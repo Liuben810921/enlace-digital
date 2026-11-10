@@ -16,6 +16,7 @@ ACT_RE=re.compile(r'^[a-z][a-z0-9_]{0,39}$',re.ASCII)
 CUR_RE=re.compile(r'^[A-Z]{3}$',re.ASCII)
 AMT_RE=re.compile(r'^(0|[1-9][0-9]{0,14})$',re.ASCII)
 class Reject(ValueError): pass
+class RawInteger(str): pass
 def no_dupes(pairs):
     out={}
     for k,v in pairs:
@@ -28,7 +29,7 @@ def reject_constant(s):
     raise Reject("nonfinite number")
 def parse_int(s):
     if not AMT_RE.fullmatch(s): raise Reject("invalid integer")
-    return s
+    return RawInteger(s)
 def strict(raw):
     if not isinstance(raw,bytes) or len(raw)>MAX_BYTES or not raw or any(c>127 for c in raw):
         raise Reject("non ASCII or overlong")
@@ -44,7 +45,7 @@ def strict(raw):
     if not isinstance(obj["version"],str) or obj["version"]!="ED-OP-v1": raise Reject("version")
     if not isinstance(obj["action"],str) or not ACT_RE.fullmatch(obj["action"]): raise Reject("action")
     if not isinstance(obj["currency"],str) or not CUR_RE.fullmatch(obj["currency"]): raise Reject("currency")
-    if not isinstance(obj["amount_minor"],str) or not AMT_RE.fullmatch(obj["amount_minor"]): raise Reject("amount")
+    if not isinstance(obj["amount_minor"],RawInteger) or not AMT_RE.fullmatch(obj["amount_minor"]): raise Reject("amount")
     # Construct server-bound JSON from verified scalars only; no raw payload pass-through.
     canonical=json.dumps(obj,separators=(",",":"),ensure_ascii=True,sort_keys=True)
     return canonical
