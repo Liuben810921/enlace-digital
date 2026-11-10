@@ -48,6 +48,8 @@ on:
       - 'scripts/check_staging_f6b9_metadata_roles.py'
       - 'scripts/check_staging_f6b10_least_privilege_design.py'
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
       - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
       - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
@@ -89,6 +91,8 @@ on:
       - 'scripts/check_staging_f6b9_metadata_roles.py'
       - 'scripts/check_staging_f6b10_least_privilege_design.py'
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
       - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
       - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
@@ -185,6 +189,8 @@ on:
       - 'scripts/check_staging_f6b9_metadata_roles.py'
       - 'scripts/check_staging_f6b10_least_privilege_design.py'
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
       - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
       - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
@@ -223,6 +229,8 @@ on:
       - 'scripts/check_staging_f6b9_metadata_roles.py'
       - 'scripts/check_staging_f6b10_least_privilege_design.py'
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
+      - 'scripts/check_staging_f6b12_encapsulated_security.py'
+      - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
       - 'docs/f6b10-diseno-acceso-minimo-auditoria-historica-offline-2026-11-10.md'
       - 'docs/f6b9-auditoria-metadatos-roles-rls-staging-2026-11-10.md'
@@ -379,6 +387,8 @@ jobs:
         run: python3 scripts/check_staging_f6b10_least_privilege_design.py
       - name: Offline F6-B11 minimum audit role and rollback plan
         run: python3 scripts/check_staging_f6b11_audit_role_plan.py
+      - name: Offline F6-B12 encapsulated aggregate security design
+        run: python3 scripts/check_staging_f6b12_encapsulated_security.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
