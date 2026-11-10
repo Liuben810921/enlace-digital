@@ -17,7 +17,7 @@ assert "ed_cliente_registrar_privado" in doc
 for table in ("clientes_destinatarios","clientes_direcciones_entrega"):
     assert f'db.from("{table}")' in s and table in schema and table in doc
 assert "IF pg_catalog.to_regclass('public.clientes_destinatarios') IS NOT NULL" in schema
-assert "IF pg_catalog.to_regclass('public.clientes_direcciones_entrega') IS NOT NULL" in schema
+assert "OR pg_catalog.to_regclass('public.clientes_direcciones_entrega') IS NOT NULL" in schema
 assert '.eq("cliente_numero",customer.numero)' in s
 assert "Number.isSafeInteger" in s
 assert 'ED_STAGING_CUSTOMER_AUTH_ENABLED' in s
