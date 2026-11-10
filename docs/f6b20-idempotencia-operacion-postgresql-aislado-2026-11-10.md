@@ -34,3 +34,9 @@ La función `SECURITY DEFINER` usa `search_path=pg_catalog,pg_temp`, owner `NOLO
 Los costos de GitHub Actions están sujetos a cuota; no se garantiza costo cero de una implementación Supabase. No se modifica producción, staging, clientes, pedidos ni correos. El contenedor PostgreSQL es desechable; `git revert` revierte los archivos de GitHub.
 
 **Decisión:** GO para análisis y pruebas offline; **NO-GO staging**, **NO-GO producción**, **NO-GO lectura histórica**, **NO-GO activación de TTL o servicios**. Se requiere **autorización A** explícita para cualquier modificación de staging y **autorización B independiente** para cualquier lectura histórica, incluso agregada. Ninguna está concedida.
+
+## CI verificado
+- Commit probado: `d185d365bc231d6e02de8ee9cea49203e7622a24`.
+- PostgreSQL aislado **#69**, run `42907798268`: **SUCCESS**, sin pasos fallidos.
+- Validación estática **#618**, run `42907798122`: **SUCCESS**, sin pasos fallidos.
+- El éxito acredita únicamente el prototipo sintético. El digest se suministra como fixture y no verifica identidad, autenticación ni canonicalización de payload real; no se ha implantado TTL.
