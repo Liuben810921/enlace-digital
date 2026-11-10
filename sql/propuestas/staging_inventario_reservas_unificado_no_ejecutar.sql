@@ -39,13 +39,13 @@
 -- increment stock_reservado exactly once, insert active reservation + reservar movement;
 -- create order, item snapshots and status event in same transaction; on failure ROLLBACK.
 -- TRANSACTION CONSUME OWN:
--- active -> consumida exactly once; stock_fisico -= cantidad; stock_reservado -= cantidad;
+-- activa -> consumida exactly once; stock_fisico -= cantidad; stock_reservado -= cantidad;
 -- append consumir movement; no second physical deduction.
 -- TRANSACTION RELEASE OWN:
--- active -> liberada exactly once; stock_reservado -= cantidad, stock_fisico unchanged;
+-- activa -> liberada exactly once; stock_reservado -= cantidad, stock_fisico unchanged;
 -- append liberar movement. Duplicate cancellation returns original outcome.
 -- TRANSACTION EXPIRE OWN:
--- active -> expirada only if policy permits; release reserved count once; no cron enabled.
+-- activa -> expirada only if policy permits; release reserved count once; no cron enabled.
 -- POST-CONSUMPTION RETURN:
 -- never automatically restock; require inspected return and auditable devolver movement.
 -- SUPPLIER:
