@@ -9,6 +9,8 @@ on:
       - 'docs/st00c-edge-draft-hardening-2026-11-10.md'
       - 'docs/st01-st12-plan-definitivo-ejecucion-controlada-2026-11-10.md'
       - 'docs/st-pre-g1-g5-verificacion-administrativa-2026-11-10.md'
+      - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
+      - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   pull_request:
     paths:
@@ -17,6 +19,8 @@ on:
       - '.github/workflows/staging-edge-draft-security.yml'
       - 'docs/st01-st12-plan-definitivo-ejecucion-controlada-2026-11-10.md'
       - 'docs/st-pre-g1-g5-verificacion-administrativa-2026-11-10.md'
+      - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
+      - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   workflow_dispatch:
 permissions:
@@ -32,6 +36,8 @@ jobs:
           deno-version: v2.x
       - name: Mocked Edge regression, validation and concurrent isolation (no network)
         run: deno test --no-check --allow-read --allow-write tests/edge_auth_mock_test.ts
+      - name: Validate G2-G4 administrative evidence protocol offline
+        run: python3 scripts/check_st_pre_g2_g3_g4_protocol.py
       - name: Validate ST-01 to ST-12 definitive plan offline
         run: python3 scripts/check_st01_st12_definitive_plan.py
       - name: Fail-closed static assertions
