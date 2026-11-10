@@ -8,10 +8,11 @@ from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
 
 # Executes the already CI-validated F6-B24 fixture, then reuses its strict parser.
-scope=runpy.run_path("scripts/run_f6b24_raw_json_contract_isolated.py")
+source=open("scripts/run_f6b24_raw_json_contract_isolated.py",encoding="utf-8").read().split("GOOD=b",1)[0]
+scope={}
+exec(compile(source,"f6b24_parser_only","exec"),scope)
 strict=scope["strict"]
 Reject=scope["Reject"]
-reserve=scope["reserve"]
 GOOD=scope["GOOD"]
 REORDER=scope["GOOD_REORDER"]
 
@@ -83,6 +84,9 @@ def as_role(role,sql,expect_success=True):
     if (result.returncode==0)!=expect_success:
         raise AssertionError((role,sql,result.stderr))
     return result.stdout.strip() if expect_success else result.stderr
+def reserve(key,raw):
+    canonical=accepts(raw)
+    return as_role("a","SELECT f6b23_synthetic.reserve(\'"+key+"\',\'"+canonical+"\'::jsonb);")
 # Different identities may use same operation key without sharing state.
 assert reserve("key-b25-isolate",GOOD)=="NEW"
 assert as_role("b","SELECT f6b23_synthetic.reserve('key-b25-isolate','"+
