@@ -9,7 +9,7 @@ for t in ("#519","no sql ejecutado","no acceso a supabase","rol dedicado","rls",
           "por columna","cliente_numero","provincia","municipio","barrio",
           "direccion","nfc","white_space","utf-8","suppressed","null",
           "statement_timeout","lock_timeout","read only","gratuito",
-          "costos","no-go","autorización independiente","autorización separada",
+          "costos","no-go","aprobación independiente","autorización separada",
           "git revert","revoke","drop","security definer"):
     assert t in s,t
 assert "sin conteos, booleanos, hashes, grupos" in s
