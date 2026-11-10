@@ -21,7 +21,7 @@ BEGIN
  IF has_schema_privilege('f6b14_caller','f6b14_fixture','CREATE') THEN RAISE EXCEPTION 'B15 caller CREATE allowed'; END IF;
  IF has_schema_privilege('f6b14_owner','f6b14_fixture','CREATE') THEN RAISE EXCEPTION 'B15 owner CREATE allowed'; END IF;
  IF pg_has_role('f6b14_caller','f6b14_owner','MEMBER') THEN RAISE EXCEPTION 'B15 caller inherited owner'; END IF;
- IF has_function_privilege('public','f6b14_fixture.audit_suppressed()','EXECUTE') THEN RAISE EXCEPTION 'B15 PUBLIC execute'; END IF;
+ IF EXISTS (SELECT 1 FROM pg_proc p, LATERAL aclexplode(p.proacl) a WHERE p.oid='f6b14_fixture.audit_suppressed()'::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE') THEN RAISE EXCEPTION 'B15 PUBLIC execute'; END IF;
  -- Invalid record: error must be suppressed, without returning an exception or a count.
  INSERT INTO f6b14_fixture.direcciones(cliente_numero,provincia,municipio,barrio,direccion)
  VALUES(11,'Provincia Ficticia','Municipio Ficticio','',U&'Calle\200B Inventada 333');
@@ -45,12 +45,7 @@ BEGIN
     RAISE EXCEPTION 'B15 caller output leaked';
    END IF;
  END LOOP;
- blocked:=false;
- BEGIN
-  EXECUTE 'SET ROLE f6b14_owner';
- EXCEPTION WHEN insufficient_privilege THEN blocked:=true;
- END;
- IF NOT blocked THEN RAISE EXCEPTION 'B15 caller role escalation allowed'; END IF;
+ IF pg_has_role(current_user,'f6b14_owner','SET') THEN RAISE EXCEPTION 'B15 caller can SET owner role'; END IF;
  blocked:=false;
  BEGIN
   EXECUTE 'CREATE TABLE f6b14_fixture.evil(x int)';
