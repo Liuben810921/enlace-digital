@@ -13,6 +13,9 @@ on:
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'sql/pruebas/f6b20_operation_idempotency_isolated.sql'
       - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
+      - 'sql/pruebas/f6b23_portable_contract_isolated.sql'
+      - 'scripts/run_f6b23_portable_contract_isolated.py'
+      - 'docs/f6b23-portable-canonical-contract-2026-11-10.md'
       - 'scripts/run_f6b21_identity_operation_isolated.py'
       - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
       - 'scripts/run_f6b20_operation_idempotency_isolated.py'
@@ -40,6 +43,9 @@ on:
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'sql/pruebas/f6b20_operation_idempotency_isolated.sql'
       - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
+      - 'sql/pruebas/f6b23_portable_contract_isolated.sql'
+      - 'scripts/run_f6b23_portable_contract_isolated.py'
+      - 'docs/f6b23-portable-canonical-contract-2026-11-10.md'
       - 'scripts/run_f6b21_identity_operation_isolated.py'
       - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
       - 'scripts/run_f6b20_operation_idempotency_isolated.py'
@@ -177,3 +183,20 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b21_identity_operation_isolated.py
+
+      - name: Setup F6-B23 disposable portable contract
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/f6b23_portable_contract_isolated.sql
+      - name: Run F6-B23 independent digest and adversarial validation
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: python3 scripts/run_f6b23_portable_contract_isolated.py
