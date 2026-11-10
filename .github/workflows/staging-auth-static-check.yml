@@ -55,6 +55,9 @@ on:
       - 'scripts/check_staging_f6b16_final_risk_gates.py'
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
@@ -112,6 +115,9 @@ on:
       - 'scripts/check_staging_f6b16_final_risk_gates.py'
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
@@ -224,6 +230,9 @@ on:
       - 'scripts/check_staging_f6b16_final_risk_gates.py'
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
@@ -278,6 +287,9 @@ on:
       - 'scripts/check_staging_f6b16_final_risk_gates.py'
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
+      - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/run_f6b19_recovery_isolated.py'
+      - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b17-matriz-alternativas-deduplicacion-prospectiva-norm-v1-offline-2026-11-10.md'
       - 'docs/f6b16-evaluacion-final-riesgos-go-no-go-offline-2026-11-10.md'
@@ -457,6 +469,8 @@ jobs:
         run: python3 scripts/check_staging_f6b17_prospective_decisions.py
       - name: Offline F6-B18 prospective concurrency scope guard
         run: python3 scripts/check_staging_f6b18_prospective_concurrency.py
+      - name: Offline F6-B19 recovery scope guard
+        run: python3 scripts/check_staging_f6b19_recovery_scope.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
