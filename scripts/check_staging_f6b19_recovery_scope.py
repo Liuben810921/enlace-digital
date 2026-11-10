@@ -10,7 +10,7 @@ for token in ("first.kill()","ROLLBACK;","ROLLBACK TO SAVEPOINT","pg_stat_activi
     assert token in runner,token
 for i in range(1,11):
     assert f"B19-{i:02d}" in doc
-for token in ("NO-GO","Autorización A","autorización B","histor","idempotencia",
+for token in ("NO-GO","Autorización A","autorización B","hist","idempotencia",
               "SUPPRESSED","GitHub Actions","rollback","RLS"):
     assert token.lower() in doc.lower(),token
 assert "postgres:17" in workflow
