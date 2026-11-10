@@ -7,8 +7,10 @@ for term in ("xqahthghvozeigbojhyi","ACTIVE_HEALTHY","int4","int8",
              "service_role","anon/authenticated","SECURITY DEFINER",
              "SECURITY INVOKER","search_path","F0","NO-GO","F6-B",
              "sin enlace de ownership","Supabase no sufrió cambios",
-             "no PII","no DDL/DML","pendiente de cobertura documental"):
+             "no PII","no DDL/DML","enlace_auth","10 funciones","9/10"):
     assert term.lower() in s.lower(), term
 assert "No se ha comprobado la existencia o ausencia de duplicados reales" in s
-assert "No declarar igualdad del total de funciones" in s
+assert "Coincide con F0" in s
+assert "ed_consumir_token_correo_privado" in s
+assert "ed_emitir_token_correo_privado" in s
 print("PASS F6-A: scope, read-only metadata comparisons, unresolved function inventory and NO-GO")
