@@ -43,6 +43,8 @@ try:
     assert pid,"pre-commit transaction never reached uncommitted write"
     assert ok("SELECT pg_terminate_backend("+str(pid)+");","admin")=="t"
 finally:
+    if before.poll() is None:
+        before.kill()
     before.communicate(timeout=10)
 assert reserve("a",key)=="NEW"
 assert reserve("a",key,ALT)=="REPLAY"
@@ -71,6 +73,8 @@ try:
     assert pid,"post-commit durable replay not observed"
     assert ok("SELECT pg_terminate_backend("+str(pid)+");","admin")=="t"
 finally:
+    if after.poll() is None:
+        after.kill()
     after.communicate(timeout=10)
 assert reserve("a",key,ALT)=="REPLAY"
 assert reserve("a",key,OTHER)=="CONFLICT"
