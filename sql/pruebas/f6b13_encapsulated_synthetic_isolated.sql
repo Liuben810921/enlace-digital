@@ -65,7 +65,7 @@ BEGIN
  IF has_function_privilege('f6b13_unauthorized','f6b13_fixture.audit_suppressed()','EXECUTE') THEN RAISE EXCEPTION 'unauthorized EXECUTE'; END IF;
  IF NOT has_function_privilege('f6b13_caller','f6b13_fixture.audit_suppressed()','EXECUTE') THEN RAISE EXCEPTION 'caller EXECUTE missing'; END IF;
  IF (SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname='f6b13_owner') THEN RAISE EXCEPTION 'owner privileged'; END IF;
-END $check$;
+END; $check$;
 SET ROLE f6b13_caller;
 DO $test$
 BEGIN
@@ -80,7 +80,7 @@ BEGIN
     RAISE EXCEPTION 'unexpected UPDATE';
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
-END $test$;
+END; $test$;
 RESET ROLE;
 SET ROLE f6b13_unauthorized;
 DO $test$
@@ -90,7 +90,7 @@ BEGIN
    RAISE EXCEPTION 'unexpected EXECUTE';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
-END $test$;
+END; $test$;
 RESET ROLE;
 ROLLBACK;
 \echo 'PASS F6-B13: isolated synthetic SECURITY DEFINER, RLS, privileges, SUPPRESSED; transaction rolled back'
