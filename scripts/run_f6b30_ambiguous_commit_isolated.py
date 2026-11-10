@@ -81,7 +81,19 @@ assert reserve("a",key,OTHER)=="CONFLICT"
 assert reserve("b",key,OTHER)=="NEW"
 assert reserve("b",key,RAW)=="CONFLICT"
 
-# Bounded reconciliations never create duplicate operations per identity.
+# Reconciliation budget is explicit; never mint a new key on uncertainty.
+def reconcile(role,key,raw,max_attempts=3):
+    assert 1<=max_attempts<=3
+    for attempt_number in range(1,max_attempts+1):
+        outcome=reserve(role,key,raw)
+        if outcome in ("NEW","REPLAY","CONFLICT"):
+            return attempt_number,outcome
+    raise AssertionError("bounded reconciliation exhausted")
+assert reconcile("a","key-b30-after",RAW)==(1,"REPLAY")
+assert reconcile("a","key-b30-after",OTHER)==(1,"CONFLICT")
+assert reconcile("b","key-b30-after",OTHER)==(1,"REPLAY")
+
+# Concurrent reconciliations never create duplicate operations per identity.
 def attempt(pair):
     role,i=pair
     return role,reserve(role,"key-b30-storm",ALT if role=="a" and i%2 else RAW if role=="a" else OTHER)
