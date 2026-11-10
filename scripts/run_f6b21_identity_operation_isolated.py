@@ -12,7 +12,7 @@ def run(user, statement, success=True, password=None, timeout=25):
 def op(key, payload):
     return "SELECT f6b21_synthetic.reserve('"+key+"','"+payload+"'::jsonb);"
 A='{"action":"reserve","amount":1}'
-A_REORDER=' { "amount": 1.0, "action" : "reserve" } '
+A_REORDER=' { "amount": 1, "action" : "reserve" } '
 B='{"action":"reserve","amount":2}'
 def expect(user,stmt,needle):
     out=run(user,stmt).stdout
