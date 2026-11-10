@@ -306,7 +306,6 @@ jobs:
       - name: Offline F6-B4 PostgreSQL protocol safety checks
         run: python3 scripts/check_staging_f6b4_pg_protocol.py
       - name: F6-B4 disposable PostgreSQL 17 synthetic-only local test
-        if: contains(github.event.head_commit.message, 'test(pg-isolated)')
         run: |
           set -euo pipefail
           docker run -d --name ed-norm-v1-pg --network none -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17
