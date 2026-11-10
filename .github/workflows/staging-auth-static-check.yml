@@ -34,6 +34,8 @@ on:
       - 'scripts/check_staging_f4_bigint_adapters_plan.py'
       - 'scripts/check_staging_f5_offline_simulations.py'
       - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
       - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
       - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
       - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
@@ -44,6 +46,8 @@ on:
       - 'scripts/check_staging_f4_bigint_adapters_plan.py'
       - 'scripts/check_staging_f5_offline_simulations.py'
       - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
       - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
       - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
       - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
@@ -112,6 +116,8 @@ on:
       - 'scripts/check_staging_f4_bigint_adapters_plan.py'
       - 'scripts/check_staging_f5_offline_simulations.py'
       - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
       - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
       - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
       - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
@@ -122,6 +128,8 @@ on:
       - 'scripts/check_staging_f4_bigint_adapters_plan.py'
       - 'scripts/check_staging_f5_offline_simulations.py'
       - 'scripts/check_staging_f6_protocol.py'
+      - 'scripts/check_staging_f6a_metadata_report.py'
+      - 'docs/f6a-resultados-metadatos-staging-solo-lectura-2026-11-10.md'
       - 'docs/f6-protocolo-pruebas-controladas-staging-no-ejecutable-2026-11-10.md'
       - 'docs/f5-resultados-y-matriz-pruebas-offline-no-ejecutable-2026-11-10.md'
       - 'docs/f4-adaptadores-id-string-v1-edge-rpc-frontend-no-ejecutable-2026-11-10.md'
@@ -234,6 +242,8 @@ jobs:
         run: python3 scripts/check_staging_f5_offline_simulations.py
       - name: Offline F6 staging test protocol checks
         run: python3 scripts/check_staging_f6_protocol.py
+      - name: Offline F6-A metadata report checks
+        run: python3 scripts/check_staging_f6a_metadata_report.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
