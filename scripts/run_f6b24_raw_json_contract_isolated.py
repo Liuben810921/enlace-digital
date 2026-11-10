@@ -46,7 +46,7 @@ def strict(raw):
     if not isinstance(obj["currency"],str) or not CUR_RE.fullmatch(obj["currency"]): raise Reject("currency")
     if not isinstance(obj["amount_minor"],str) or not AMT_RE.fullmatch(obj["amount_minor"]): raise Reject("amount")
     # Construct server-bound JSON from verified scalars only; no raw payload pass-through.
-    canonical=json.dumps(obj,separators=(",",":"),ensure_ascii=True)
+    canonical=json.dumps(obj,separators=(",",":"),ensure_ascii=True,sort_keys=True)
     return canonical
 GOOD=b'{"version":"ED-OP-v1","action":"reserve","currency":"USD","amount_minor":12345}'
 GOOD_REORDER=b' { "amount_minor":12345, "currency":"USD", "action":"reserve", "version":"ED-OP-v1" } '
