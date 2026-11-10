@@ -16,5 +16,5 @@ for token in ("#526","no autorización para sql","no se consultó supabase","aut
     if token=="no login":continue
     assert token in s,token
 assert "select por columna sigue exponiendo direcciones" in s
-assert "la lectura histórica exige autorización b aparte" in s
+assert "el acceso a datos reales exige autorización b aparte" in s
 print("PASS F6-B11: 10 gates, 8 synthetic tests, privilege and RLS risks, independent A/B approvals, rollback")
