@@ -7,6 +7,8 @@ Fecha 2026-11-10. Base autorizada `d060f4a77be451d2f0b076c7e0919f82b8a20ea7`. Ú
 
 **Alternativa A:** reinicializar staging (destructivo; no recomendado). **Alternativa B (recomendada):** diseñar nueva migración incremental y condicionada a un preflight actualizado, con diferencias de catálogo/constraints/grants, sin re-crear objetos existentes y sin alterar datos previos. **Alternativa C:** omitir v4 y documentar esquema vigente como baseline; válido solo si se comprueba integridad y trazabilidad de migraciones.
 
+**Control de permisos:** conservar los permisos mínimos existentes de `service_role`; no ampliar EXECUTE ni DML sin revisión independiente y autorización específica.
+
 **Dependencias:** identificar versión y hash de objetos, PK/FK, restricciones NOT VALID, secuencia, propietarios, grants y RLS; comparar con contratos v4, separar preflight de DDL, acordar plan de backfill y validación sin PII. No inferir tablas vacías. **Aceptación M01:** la propuesta incremental no presupone ausencia de tablas existentes; M02: no borra ni recrea datos; M03: secuencia e integridad conciliadas; M04: cualquier cambio requiere aprobación específica. **Reversión:** backup de staging autorizado, transacciones donde sean viables, migración compensatoria diseñada y validada; el plan actual se revierte con git revert.
 
 ## Decisión 2 — deduplicación concurrente de direcciones (P0)
