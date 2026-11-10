@@ -41,7 +41,7 @@ BEGIN
  -- PostgreSQL jsonb canonicalizes object key order and whitespace; exact JSON numeric
  -- semantics are PostgreSQL-specific, not a cross-language canonicalization standard.
  canonical := payload::text;
- d := digest(convert_to('F6B21-v1|'||canonical,'UTF8'),'sha256');
+ d := public.digest(convert_to('F6B21-v1|'||canonical,'UTF8'),'sha256');
  INSERT INTO f6b21_synthetic.operations(identity_name,operation_key,digest)
  VALUES(who,k,d) ON CONFLICT DO NOTHING RETURNING identity_name INTO inserted;
  IF inserted IS NOT NULL THEN RETURN 'NEW_SYNTHETIC'; END IF;
