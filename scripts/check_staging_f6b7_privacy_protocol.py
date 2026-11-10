@@ -11,6 +11,6 @@ for t in ("NORM-v1","cliente_numero","provincia","municipio","barrio","direccion
           "sin exportación de filas","sin DDL/DML","git revert",
           "autorización independiente","no se conoce","no se ejecutó SQL"):
     assert t.lower() in s.lower(),t
-assert "no se deben devolver `COUNT(*)`" in s.lower(), "counts must be suppressed"
+assert "no se deben devolver `count(*)`" in s.lower(), "counts must be suppressed"
 assert "No se deben devolver" in s
 print("PASS F6-B7: 10 gates, versioned identity, fail-closed privacy, separate historical authorization")
