@@ -40,6 +40,8 @@ on:
       - 'scripts/check_staging_norm_v1_js.cjs'
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
@@ -62,6 +64,8 @@ on:
       - 'scripts/check_staging_norm_v1_js.cjs'
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
@@ -142,6 +146,8 @@ on:
       - 'scripts/check_staging_norm_v1_js.cjs'
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
@@ -164,6 +170,8 @@ on:
       - 'scripts/check_staging_norm_v1_js.cjs'
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
+      - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - 'docs/f6b3-equivalencia-js-python-y-protocolo-postgresql-offline-2026-11-10.md'
@@ -294,6 +302,8 @@ jobs:
           node scripts/check_staging_norm_v1_js.cjs
       - name: Offline F6-B3 CI evidence and Unicode version record
         run: python3 scripts/check_staging_f6b3_ci_closure.py
+      - name: Offline F6-B4 PostgreSQL protocol safety checks
+        run: python3 scripts/check_staging_f6b4_pg_protocol.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
