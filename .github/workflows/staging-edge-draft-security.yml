@@ -12,6 +12,8 @@ on:
       - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
       - 'docs/st-pre-03-evidencia-g2-g3-g4-solo-lectura-2026-11-10.md'
       - 'docs/st-pre-04-estados-g2-g3-g4-solo-lectura-2026-11-10.md'
+      - 'docs/st-pre-05-guia-owner-evidencias-redactadas-g2-g3-g4-2026-11-10.md'
+      - 'scripts/check_st_pre_05_owner_evidence.py'
       - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   pull_request:
@@ -24,6 +26,8 @@ on:
       - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
       - 'docs/st-pre-03-evidencia-g2-g3-g4-solo-lectura-2026-11-10.md'
       - 'docs/st-pre-04-estados-g2-g3-g4-solo-lectura-2026-11-10.md'
+      - 'docs/st-pre-05-guia-owner-evidencias-redactadas-g2-g3-g4-2026-11-10.md'
+      - 'scripts/check_st_pre_05_owner_evidence.py'
       - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   workflow_dispatch:
@@ -40,6 +44,8 @@ jobs:
           deno-version: v2.x
       - name: Mocked Edge regression, validation and concurrent isolation (no network)
         run: deno test --no-check --allow-read --allow-write tests/edge_auth_mock_test.ts
+      - name: Validate Owner redacted evidence checklist offline
+        run: python3 scripts/check_st_pre_05_owner_evidence.py
       - name: Validate G2-G4 administrative evidence protocol offline
         run: python3 scripts/check_st_pre_g2_g3_g4_protocol.py
       - name: Validate ST-01 to ST-12 definitive plan offline
