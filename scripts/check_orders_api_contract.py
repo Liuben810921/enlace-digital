@@ -11,7 +11,7 @@ for term in (
     "create-order", "get-own-order", "list-own-orders", "list-admin-orders",
     "get-admin-order", "transition-order", "verify-payment",
     "departamentos_admins", "principal", "general", "operativo", "supervisor",
-    "solo lectura", "idempotency_key", "IDEMPOTENCY_CONFLICT", "VERSION_CONFLICT",
+    "Solo lectura", "idempotency_key", "IDEMPOTENCY_CONFLICT", "VERSION_CONFLICT",
     "OUT_OF_STOCK", "PRODUCT_UNAVAILABLE", "SUPPLIER_UNCONFIRMED",
     "ORDERS_DISABLED", "UNAUTHENTICATED", "FORBIDDEN", "RATE_LIMITED",
     "numeric(14,2)", "entrega_direccion", "append-only", "compare-and-swap",
