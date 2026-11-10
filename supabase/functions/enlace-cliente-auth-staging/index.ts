@@ -17,14 +17,14 @@ const sameKey=(a:string,b:string)=>{if(!a||!b||a.length!==b.length)return false;
 
 // Reject duplicate object keys (including escaped equivalents) at every nesting level.
 function parseUniqueJson(raw:string):unknown {
- let i=0; const ws=()=>{while(i<raw.length&&/[\\t\\n\\r ]/.test(raw[i]))i++};
- const string=():string=>{const start=i++;let escaped=false;for(;i<raw.length;i++){const ch=raw[i];if(!escaped&&ch==='"'){i++;return JSON.parse(raw.slice(start,i))}if(!escaped&&ch==="\\\\")escaped=true;else escaped=false}throw Error("unterminated string")};
+ let i=0; const ws=()=>{while(i<raw.length&&/[\t\n\r ]/.test(raw[i]))i++};
+ const string=():string=>{const start=i++;let escaped=false;for(;i<raw.length;i++){const ch=raw[i];if(!escaped&&ch==='"'){i++;return JSON.parse(raw.slice(start,i))}if(!escaped&&ch==="\\")escaped=true;else escaped=false}throw Error("unterminated string")};
  const value=(depth:number):void=>{
   if(depth>16)throw Error("too deep");ws();const ch=raw[i];
   if(ch==='{'){i++;ws();const keys=new Set<string>();if(raw[i]==='}'){i++;return}while(true){ws();if(raw[i]!=='"')throw Error("object key");const k=string();if(keys.has(k))throw Error("duplicate key");keys.add(k);ws();if(raw[i++]!==':')throw Error("colon");value(depth+1);ws();const sep=raw[i++];if(sep==='}')return;if(sep!==',')throw Error("object separator")}}
   if(ch==='['){i++;ws();if(raw[i]===']'){i++;return}while(true){value(depth+1);ws();const sep=raw[i++];if(sep===']')return;if(sep!==',')throw Error("array separator")}}
   if(ch==='"'){string();return}
-  const rest=raw.slice(i),m=/^(?:true|false|null|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/.exec(rest);
+  const rest=raw.slice(i),m=/^(?:true|false|null|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/.exec(rest);
   if(!m)throw Error("primitive");i+=m[0].length;
  };
  value(0);ws();if(i!==raw.length)throw Error("trailing data");return JSON.parse(raw);
