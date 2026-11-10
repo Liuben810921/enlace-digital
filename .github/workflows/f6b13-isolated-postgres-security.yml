@@ -15,6 +15,8 @@ on:
       - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
       - 'sql/pruebas/f6b23_portable_contract_isolated.sql'
       - 'scripts/run_f6b23_portable_contract_isolated.py'
+      - 'scripts/run_f6b24_raw_json_contract_isolated.py'
+      - 'docs/f6b24-raw-json-contract-2026-11-10.md'
       - 'docs/f6b23-portable-canonical-contract-2026-11-10.md'
       - 'scripts/run_f6b21_identity_operation_isolated.py'
       - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
@@ -45,6 +47,8 @@ on:
       - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
       - 'sql/pruebas/f6b23_portable_contract_isolated.sql'
       - 'scripts/run_f6b23_portable_contract_isolated.py'
+      - 'scripts/run_f6b24_raw_json_contract_isolated.py'
+      - 'docs/f6b24-raw-json-contract-2026-11-10.md'
       - 'docs/f6b23-portable-canonical-contract-2026-11-10.md'
       - 'scripts/run_f6b21_identity_operation_isolated.py'
       - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
@@ -200,3 +204,12 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b23_portable_contract_isolated.py
+
+      - name: Run F6-B24 raw JSON lexical and parser divergence tests
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: python3 scripts/run_f6b24_raw_json_contract_isolated.py
