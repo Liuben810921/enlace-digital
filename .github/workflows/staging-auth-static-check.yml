@@ -15,6 +15,8 @@ on:
       - 'scripts/check_unified_inventory_reservations.py'
       - 'scripts/check_inventory_migration_proposal.py'
       - 'scripts/check_staging_inventory_schema_audit.py'
+      - 'scripts/check_staging_catalog_orders_minimal_schema.py'
+      - 'docs/contrato-minimo-catalogo-pedidos-staging-no-ejecutar-2026-11-10.md'
       - 'docs/auditoria-esquema-inventario-supabase-staging-lectura-2026-11-10.md'
       - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
       - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
@@ -44,6 +46,8 @@ on:
       - 'scripts/check_unified_inventory_reservations.py'
       - 'scripts/check_inventory_migration_proposal.py'
       - 'scripts/check_staging_inventory_schema_audit.py'
+      - 'scripts/check_staging_catalog_orders_minimal_schema.py'
+      - 'docs/contrato-minimo-catalogo-pedidos-staging-no-ejecutar-2026-11-10.md'
       - 'docs/auditoria-esquema-inventario-supabase-staging-lectura-2026-11-10.md'
       - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
       - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
@@ -96,6 +100,8 @@ jobs:
         run: python3 scripts/check_inventory_migration_proposal.py
       - name: Static staging inventory schema audit documentation
         run: python3 scripts/check_staging_inventory_schema_audit.py
+      - name: Static minimal catalog and official orders schema contract
+        run: python3 scripts/check_staging_catalog_orders_minimal_schema.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
