@@ -13,6 +13,8 @@ on:
       - 'scripts/check_orders_transaction_design.py'
       - 'scripts/check_orders_variant_stock_contract.py'
       - 'scripts/check_unified_inventory_reservations.py'
+      - 'scripts/check_inventory_migration_proposal.py'
+      - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
       - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
       - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
       - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
@@ -38,6 +40,8 @@ on:
       - 'scripts/check_orders_transaction_design.py'
       - 'scripts/check_orders_variant_stock_contract.py'
       - 'scripts/check_unified_inventory_reservations.py'
+      - 'scripts/check_inventory_migration_proposal.py'
+      - 'docs/plan-migracion-inventario-reservas-staging-no-ejecutar-2026-11-10.md'
       - 'docs/diseno-unificado-inventario-reservas-no-ejecutable-2026-11-09.md'
       - 'docs/auditoria-variantes-reservas-cancelaciones-offline-2026-11-09.md'
       - 'docs/plan-transacciones-concurrencia-pedidos-no-ejecutar-2026-11-09.md'
@@ -84,6 +88,8 @@ jobs:
         run: python3 scripts/check_orders_variant_stock_contract.py
       - name: Static unified inventory and reservation design checks
         run: python3 scripts/check_unified_inventory_reservations.py
+      - name: Static inventory staging migration proposal (no database)
+        run: python3 scripts/check_inventory_migration_proposal.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
