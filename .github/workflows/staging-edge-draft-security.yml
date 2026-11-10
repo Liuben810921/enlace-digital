@@ -10,6 +10,7 @@ on:
       - 'docs/st01-st12-plan-definitivo-ejecucion-controlada-2026-11-10.md'
       - 'docs/st-pre-g1-g5-verificacion-administrativa-2026-11-10.md'
       - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
+      - 'docs/st-pre-03-evidencia-g2-g3-g4-solo-lectura-2026-11-10.md'
       - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   pull_request:
@@ -20,6 +21,7 @@ on:
       - 'docs/st01-st12-plan-definitivo-ejecucion-controlada-2026-11-10.md'
       - 'docs/st-pre-g1-g5-verificacion-administrativa-2026-11-10.md'
       - 'docs/st-pre-02-protocolo-desbloqueo-g2-g3-g4-2026-11-10.md'
+      - 'docs/st-pre-03-evidencia-g2-g3-g4-solo-lectura-2026-11-10.md'
       - 'scripts/check_st_pre_g2_g3_g4_protocol.py'
       - 'scripts/check_st01_st12_definitive_plan.py'
   workflow_dispatch:
