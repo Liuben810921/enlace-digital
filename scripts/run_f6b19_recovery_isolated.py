@@ -29,7 +29,7 @@ def wait_for_sleep(process,deadline=12):
     while time.monotonic()<until:
         if process.poll() is not None:
             raise AssertionError("session exited before hold")
-        p=psql("SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%pg_sleep(4); COMMIT%' AND state='active' AND pid<>pg_backend_pid()")
+        p=psql("SELECT count(*) FROM pg_stat_activity WHERE query LIKE '%pg_sleep(15); COMMIT%' AND state='active' AND wait_event_type='Timeout' AND pid<>pg_backend_pid()")
         if p.stdout.strip().isdigit() and int(p.stdout.strip())>0:
             return
         time.sleep(.1)
@@ -40,10 +40,12 @@ def background(sql):
 
 total(0)
 # A process is killed after writing but BEFORE COMMIT; PostgreSQL must roll back the uncommitted key.
-first=background("BEGIN; SET ROLE f6b18_caller; SELECT "+call(91,901)+"; SELECT pg_sleep(4); COMMIT;")
+first=background("BEGIN; SET ROLE f6b18_caller; SELECT "+call(91,901)+"; SELECT pg_sleep(15); COMMIT;")
 try:
     wait_for_sleep(first)
-    first.kill()
+    terminated=psql("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query LIKE '%pg_sleep(15); COMMIT%' AND state='active' AND wait_event_type='Timeout' AND pid<>pg_backend_pid()")
+    if "t" not in terminated.stdout.splitlines():
+        raise AssertionError("synthetic backend not terminated before commit")
     first.communicate(timeout=10)
 finally:
     if first.poll() is None:
