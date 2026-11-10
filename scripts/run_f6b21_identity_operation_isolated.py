@@ -58,4 +58,36 @@ def concurrent(key, second_payload, expected):
 concurrent("key-race-same",A,"REPLAY_SYNTHETIC")
 concurrent("key-race-diff",B,"CONFLICT_SYNTHETIC")
 expect("f6b21_a",op("key-0001",A),"REPLAY_SYNTHETIC")
-print("PASS F6-B21 identity, canonical server hash, isolation, concurrency, rollback, ACL/RLS")
+# F6-B22: adversarial canonicalization and identity boundaries; no external effects.
+# These checks assert observed PostgreSQL-specific distinctions, not cross-platform equivalence.
+expect("f6b21_a",op("key-numeric",A),"NEW_SYNTHETIC")
+expect("f6b21_a",op("key-numeric",'{"action":"reserve","amount":1.0}'),"CONFLICT_SYNTHETIC")
+expect("f6b21_a",op("key-numeric",A_REORDER),"REPLAY_SYNTHETIC")
+expect("f6b21_b",op("key-numeric",'{"action":"reserve","amount":1.0}'),"NEW_SYNTHETIC")
+# NFC and NFD strings are not silently conflated by PostgreSQL JSONB.
+expect("f6b21_a",op("key-unicode",'{"action":"caf\\u00e9","amount":1}'),"NEW_SYNTHETIC")
+expect("f6b21_a",op("key-unicode",'{"action":"cafe\\u0301","amount":1}'),"CONFLICT_SYNTHETIC")
+# Reject malformed shape, unexpected fields, invalid key and wrong scalar types.
+invalid=[
+    ('short',A), ('key-invalid-null','null'),
+    ('key-invalid-array','[1,2]'),
+    ('key-invalid-extra','{"action":"reserve","amount":1,"client_id":"f6b21_a"}'),
+    ('key-invalid-string','{"action":"reserve","amount":"1"}'),
+    ('key-invalid-bool','{"action":"reserve","amount":true}'),
+    ('key-invalid-action','{"action":"","amount":1}'),
+    ('key-invalid-long','{"action":"'+('x'*41)+'","amount":1}'),
+    ('key-invalid-duplicate','{"action":"reserve","amount":1,"extra":null}'),
+]
+for key,payload in invalid:
+    result=run("f6b21_a",op(key,payload),False)
+    if "invalid synthetic payload" not in result.stderr:
+        raise AssertionError(("unexpected validation failure",key,result.stderr))
+# An invalid request must not reserve the operation key.
+expect("f6b21_a",op("key-invalid-null",A),"NEW_SYNTHETIC")
+# Repeated same operation in the other tenant remains independent.
+expect("f6b21_b",op("key-invalid-null",A),"NEW_SYNTHETIC")
+# No direct schema mutation, RLS bypass or unauthorized function invocation.
+denied("f6b21_a","UPDATE f6b21_synthetic.operations SET operation_key='tampered';")
+denied("f6b21_a","TRUNCATE f6b21_synthetic.operations;")
+denied("f6b21_stranger",op("key-stranger",A))
+print("PASS F6-B21/B22 identity, adversarial canonicalization, tenant isolation, concurrency, rollback, ACL/RLS")
