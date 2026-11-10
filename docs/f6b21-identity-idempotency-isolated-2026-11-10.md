@@ -30,3 +30,10 @@ No hay conexión a Supabase, datos históricos, pedidos, correo, secretos reales
 
 ## Verificación CI
 **PASS sintético verificado:** GitHub Actions #75, run `42908940873`, commit `ee953b0a64a489439820802c67e25f59da191cf5`, job `130154165925` concluido `success`. Los pasos F6-B21 de configuración y ejecución finalizaron `success`; las denegaciones SQL visibles en logs corresponden a pruebas negativas esperadas. No hubo pasos fallidos. El contenedor se eliminó al terminar. La validación no equivale a autorización de despliegue ni a pruebas con identidades reales.
+
+## F6-B22 — extensión adversarial sintética (sin despliegue)
+Se incorporan pruebas reproducibles al mismo ejecutor de PostgreSQL 17 desechable: (a) equivalencia de orden/espacios JSONB frente a diferencia representacional `1` vs `1.0`; (b) distinción Unicode NFC/NFD; (c) rechazo de claves cortas, null, arrays, campos adicionales, valores de tipo incorrecto y acciones vacías o excesivas; (d) ausencia de reserva tras petición inválida; (e) independencia entre identidades; (f) rechazo de UPDATE/TRUNCATE directos y de invocación por rol extraño.
+
+**Límite de diseño:** `payload::text` de JSONB no proporciona canonicalización monetaria ni Unicode portable. Para una eventual implementación real deberán definirse un esquema versionado, unidades monetarias enteras, normalización Unicode explícita, una identidad validada por el backend y políticas de retención. El prototipo deliberadamente demuestra divergencias, no las corrige en producción.
+
+**Estado CI F6-B22:** pendiente de ejecución y revisión del commit que incorpora esta extensión; no declarar PASS hasta consultar el job correspondiente. El CI #75 citado arriba valida F6-B21 anterior, no esta ampliación.
