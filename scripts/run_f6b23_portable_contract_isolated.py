@@ -28,7 +28,7 @@ got=subprocess.run(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",
  "SELECT encode(digest,'hex') FROM f6b23_synthetic.operations WHERE identity_name='f6b23_a' AND operation_key='key-0001';"],env=env,text=True,capture_output=True,check=True).stdout.strip()
 if got!=digest: raise AssertionError(("cross-language hash mismatch",got,digest))
 invalid=[
- ("key-short",base),
+ ("short",base),
  ("key-null","null"),
  ("key-array",'[1,2]'),
  ("key-version",base.replace("ED-OP-v1","ED-OP-v2")),
