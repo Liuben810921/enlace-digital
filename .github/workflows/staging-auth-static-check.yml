@@ -31,6 +31,8 @@ on:
       - 'scripts/check_staging_f1_contracts.py'
       - 'scripts/check_staging_f2_migration_plan.py'
       - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
       - 'docs/f1-contratos-norm-v1-id-string-v1-offline-2026-11-10.md'
       - 'docs/resultados-f0-metadatos-staging-lectura-2026-11-10.md'
       - 'docs/diagnostico-visibilidad-github-actions-2026-11-10.md'
@@ -89,6 +91,8 @@ on:
       - 'scripts/check_github_actions_diagnostic.py'
       - 'scripts/check_staging_f0_metadata_results.py'
       - 'scripts/check_staging_f1_contracts.py'
+      - 'scripts/check_staging_f2_migration_plan.py'
+      - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
       - 'scripts/check_staging_f2_migration_plan.py'
       - 'docs/f2-migracion-incremental-staging-norm-bigint-no-ejecutable-2026-11-10.md'
       - 'docs/f1-contratos-norm-v1-id-string-v1-offline-2026-11-10.md'
@@ -186,6 +190,8 @@ jobs:
         run: python3 scripts/check_staging_f0_metadata_results.py
       - name: Offline F1 normalization and bigint contract checks
         run: python3 scripts/check_staging_f1_contracts.py
+      - name: Offline F2 incremental migration plan checks
+        run: python3 scripts/check_staging_f2_migration_plan.py
       - name: Offline F2 incremental migration plan checks
         run: python3 scripts/check_staging_f2_migration_plan.py
       - name: Install PostgreSQL parser (no database connection)
