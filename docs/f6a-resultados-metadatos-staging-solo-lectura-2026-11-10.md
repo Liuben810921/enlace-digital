@@ -14,12 +14,12 @@ Fecha 2026-11-10. Base `b3c220d69ab6c66d8e6640ef5664c1c4a91fc9b7`. GitHub Action
 | Índices | PK únicas, índices no únicos por cliente_numero en ambas hijas; sin UNIQUE de identidad NORM-v1 | Igual |
 | RLS | Habilitado en tres tablas, FORCE RLS false, cero policies | Igual |
 | Grants | anon/authenticated sin SELECT/INSERT/UPDATE/DELETE; service_role DML en hijas, ninguno en clientes_oficiales | Igual |
-| Funciones | 8 funciones con prefijo ed_cliente_/ed_correo_: 6 SECURITY DEFINER, 2 SECURITY INVOKER; owner postgres, search_path vacío | Compatible con subconjunto F0; F0 registró 10 funciones relevantes bajo alcance más amplio |
-| EXECUTE | anon/authenticated sin EXECUTE en esas 8; service_role EXECUTE en 7/8, excepto ed_cliente_registrar_privado | Igual |
+| Funciones | 10 funciones `ed_%` en dos esquemas: `public` (6 SECURITY DEFINER y 2 SECURITY INVOKER) y `enlace_auth` (2 SECURITY DEFINER) | Coincide con F0: 8 DEFINER, 2 INVOKER |
+| EXECUTE | En `public`, service_role EXECUTE en 7/8; en `enlace_auth`, service_role EXECUTE en 2/2; total 9/10, excepto `public.ed_cliente_registrar_privado` | Coincide con F0 |
 | Secuencias | 3; id_seq hijas dependencia interna; clientes_oficiales_numero_seq sin enlace de ownership; service_role USAGE, anon no | Igual |
 
-## Diferencia de cobertura de funciones
-La consulta F6-A buscó nombres `ed_%`, `%cliente%`, `%destinatario%`, `%direccion%`; devolvió 8 funciones (6 DEFINER, 2 INVOKER). El inventario F0 anotó 10 funciones relevantes (8 DEFINER, 2 INVOKER) usando un alcance distinto. **No declarar igualdad del total de funciones ni desaparición de dos funciones** sin reconciliar los criterios exactos de selección; tampoco concluir cambio de permisos. Este es un **pendiente de cobertura documental**, no una diferencia de esquema comprobada.
+## Reconciliación definitiva de funciones (solo metadatos)
+La consulta inicial F6-A filtró exclusivamente `n.nspname='public'` y devolvió ocho funciones. Una consulta de catálogo `pg_proc` + `pg_namespace` con `proname LIKE 'ed_%'` y exclusión de esquemas de sistema localizó las dos restantes en `enlace_auth`: `ed_consumir_token_correo_privado` y `ed_emitir_token_correo_privado`. Ambas son SECURITY DEFINER y permiten EXECUTE a service_role. Resultado combinado: **10 funciones, 8 SECURITY DEFINER, 2 SECURITY INVOKER, 9/10 con EXECUTE para service_role**. La excepción continúa siendo `public.ed_cliente_registrar_privado`. Coincide con F0. No se consultaron cuerpos de funciones ni filas de clientes.
 
 ## Conclusión y bloqueos
 - Los objetos inspeccionados conservan las propiedades estructurales F0 observadas. No se ha comprobado la existencia o ausencia de duplicados reales.
