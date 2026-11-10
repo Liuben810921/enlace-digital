@@ -50,6 +50,9 @@ on:
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
       - 'scripts/check_staging_f6b12_encapsulated_security.py'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
@@ -95,6 +98,9 @@ on:
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
       - 'scripts/check_staging_f6b12_encapsulated_security.py'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
@@ -195,6 +201,9 @@ on:
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
       - 'scripts/check_staging_f6b12_encapsulated_security.py'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
@@ -237,6 +246,9 @@ on:
       - 'scripts/check_staging_f6b11_audit_role_plan.py'
       - 'scripts/check_staging_f6b12_encapsulated_security.py'
       - 'scripts/check_staging_f6b13_isolated_security.py'
+      - 'scripts/check_staging_f6b14_synthetic_security.py'
+      - 'scripts/generate_f6b14_synthetic_sql.py'
+      - 'docs/f6b14-norm-v1-vectores-seguridad-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
       - 'docs/f6b12-diseno-seguridad-agregado-encapsulado-offline-2026-11-10.md'
       - 'docs/f6b11-plan-rol-auditoria-minimo-rollback-offline-2026-11-10.md'
@@ -399,6 +411,8 @@ jobs:
         run: python3 scripts/check_staging_f6b12_encapsulated_security.py
       - name: Offline F6-B13 synthetic isolated security guard
         run: python3 scripts/check_staging_f6b13_isolated_security.py
+      - name: Offline F6-B14 synthetic Unicode and security boundary guard
+        run: python3 scripts/check_staging_f6b14_synthetic_security.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
