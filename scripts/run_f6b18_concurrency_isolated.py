@@ -6,7 +6,7 @@ import time
 
 FN="f6b18_synthetic.reserve_new"
 CALL=f"{FN}(77,' Provincia Ficticia ','Municipio Ficticio','','Calle Inventada 100')"
-ALT=f"{FN}(77,'Provincia\\u00a0Ficticia','Municipio Ficticio','','Calle Inventada 100')"
+ALT=f"{FN}(77,'Provincia\u00a0Ficticia','Municipio Ficticio','','Calle Inventada 100')"
 def psql(sql, *, success=True, timeout=25):
     result=subprocess.run(["psql","-X","-A","-t","-v","ON_ERROR_STOP=1","-c",sql],
                           capture_output=True,text=True,timeout=timeout,env=os.environ.copy())
