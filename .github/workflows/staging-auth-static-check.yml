@@ -44,6 +44,8 @@ on:
       - 'scripts/check_staging_f6b5_metadata_preflight.py'
       - 'scripts/check_staging_f6b6_synthetic_results.py'
       - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
       - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
       - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
       - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
@@ -77,6 +79,8 @@ on:
       - 'scripts/check_staging_f6b5_metadata_preflight.py'
       - 'scripts/check_staging_f6b6_synthetic_results.py'
       - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
       - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
       - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
       - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
@@ -165,6 +169,8 @@ on:
       - 'scripts/check_staging_f6b5_metadata_preflight.py'
       - 'scripts/check_staging_f6b6_synthetic_results.py'
       - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
       - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
       - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
       - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
@@ -195,6 +201,8 @@ on:
       - 'scripts/check_staging_f6b5_metadata_preflight.py'
       - 'scripts/check_staging_f6b6_synthetic_results.py'
       - 'scripts/check_staging_f6b7_privacy_protocol.py'
+      - 'scripts/check_staging_f6b8_privacy_spec.py'
+      - 'docs/f6b8-evaluacion-privacidad-especificacion-historica-no-ejecutable-2026-11-10.md'
       - 'docs/f6b7-protocolo-privacidad-agregados-historicos-no-ejecutable-2026-11-10.md'
       - 'docs/f6b6-resultados-vectores-norm-v1-staging-2026-11-10.md'
       - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
@@ -339,6 +347,8 @@ jobs:
         run: python3 scripts/check_staging_f6b6_synthetic_results.py
       - name: Offline F6-B7 historical aggregate privacy NO-GO
         run: python3 scripts/check_staging_f6b7_privacy_protocol.py
+      - name: Offline F6-B8 privacy risk and historical NO-GO checks
+        run: python3 scripts/check_staging_f6b8_privacy_spec.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
