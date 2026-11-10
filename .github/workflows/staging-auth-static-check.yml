@@ -20,6 +20,8 @@ on:
       - 'scripts/check_master_catalog_orders_inventory_plan.py'
       - 'scripts/check_staging_migration_manifest.py'
       - 'scripts/check_staging_preflight_matrix.py'
+      - 'scripts/check_staging_preflight_p01_p08_results.py'
+      - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
       - 'docs/matriz-preflight-migraciones-staging-no-ejecutable-2026-11-10.md'
       - 'docs/especificacion-unica-migraciones-staging-no-ejecutable-2026-11-10.md'
       - 'docs/plan-maestro-catalogo-pedidos-inventario-reservas-no-ejecutable-2026-11-10.md'
@@ -59,6 +61,8 @@ on:
       - 'scripts/check_master_catalog_orders_inventory_plan.py'
       - 'scripts/check_staging_migration_manifest.py'
       - 'scripts/check_staging_preflight_matrix.py'
+      - 'scripts/check_staging_preflight_p01_p08_results.py'
+      - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
       - 'docs/matriz-preflight-migraciones-staging-no-ejecutable-2026-11-10.md'
       - 'docs/especificacion-unica-migraciones-staging-no-ejecutable-2026-11-10.md'
       - 'docs/plan-maestro-catalogo-pedidos-inventario-reservas-no-ejecutable-2026-11-10.md'
@@ -126,6 +130,8 @@ jobs:
         run: python3 scripts/check_staging_migration_manifest.py
       - name: Static staging preflight matrix (no database)
         run: python3 scripts/check_staging_preflight_matrix.py
+      - name: Static P01-P08 staging metadata results (no database)
+        run: python3 scripts/check_staging_preflight_p01_p08_results.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
