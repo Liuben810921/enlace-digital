@@ -1,0 +1,45 @@
+name: f6b13-isolated-postgres-security
+on:
+  push:
+    branches: [audit/registro-staging-aislado-20261109]
+    paths:
+      - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
+      - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
+      - 'scripts/check_staging_f6b13_isolated_security.py'
+      - '.github/workflows/f6b13-isolated-postgres-security.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic_ci_only
+          POSTGRES_DB: synthetic_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d synthetic_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static fail-closed staging isolation checks
+        run: python3 scripts/check_staging_f6b13_isolated_security.py
+      - name: Install isolated PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Run synthetic PostgreSQL transaction and rollback
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql
