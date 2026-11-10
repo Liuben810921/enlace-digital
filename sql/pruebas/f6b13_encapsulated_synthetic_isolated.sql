@@ -26,6 +26,18 @@ CREATE POLICY f6b13_owner_only ON f6b13_fixture.direcciones
  FOR SELECT TO f6b13_owner USING (true);
 -- CREATE on schema only for ownership transfer, revoked before any invocation.
 GRANT CREATE ON SCHEMA f6b13_fixture TO f6b13_owner;
+-- Toy NORM-v1 normalization. No production contract: full invalid-scalar/length handling remains NO-GO.
+CREATE FUNCTION f6b13_fixture.norm_v1_toy(v text)
+RETURNS text LANGUAGE sql IMMUTABLE STRICT
+SET search_path = pg_catalog, pg_temp
+AS $norm$
+ SELECT btrim(regexp_replace(translate(normalize(v,NFC),
+   chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(32) || chr(133) || chr(160) || chr(5760) || chr(8192) || chr(8193) || chr(8194) || chr(8195) || chr(8196) || chr(8197) || chr(8198) || chr(8199) || chr(8200) || chr(8201) || chr(8202) || chr(8232) || chr(8233) || chr(8239) || chr(8287) || chr(12288),
+   repeat(' ',25)), ' +', ' ', 'g'))
+$norm$;
+REVOKE ALL ON FUNCTION f6b13_fixture.norm_v1_toy(text) FROM PUBLIC;
+ALTER FUNCTION f6b13_fixture.norm_v1_toy(text) OWNER TO f6b13_owner;
+GRANT EXECUTE ON FUNCTION f6b13_fixture.norm_v1_toy(text) TO f6b13_owner;
 CREATE FUNCTION f6b13_fixture.audit_suppressed()
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
@@ -35,9 +47,13 @@ BEGIN
   -- Real values never returned; toy duplicate detection uses exact fixture strings.
   SELECT EXISTS (
     SELECT 1 FROM (
-      SELECT cliente_numero,provincia,municipio,barrio,direccion
+      SELECT cliente_numero,
+        convert_to(f6b13_fixture.norm_v1_toy(provincia),'UTF8') AS p,
+        convert_to(f6b13_fixture.norm_v1_toy(municipio),'UTF8') AS m,
+        convert_to(f6b13_fixture.norm_v1_toy(barrio),'UTF8') AS b,
+        convert_to(f6b13_fixture.norm_v1_toy(direccion),'UTF8') AS d
       FROM f6b13_fixture.direcciones
-      GROUP BY cliente_numero,provincia,municipio,barrio,direccion
+      GROUP BY cliente_numero,p,m,b,d
       HAVING count(*) > 1
     ) AS g
   ) INTO collision_seen;
@@ -52,6 +68,8 @@ REVOKE CREATE ON SCHEMA f6b13_fixture FROM f6b13_owner;
 GRANT EXECUTE ON FUNCTION f6b13_fixture.audit_suppressed() TO f6b13_caller;
 DO $check$
 BEGIN
+ IF f6b13_fixture.norm_v1_toy(U&'Cafe\\0301') <> U&'Caf\\00E9' THEN RAISE EXCEPTION 'NFC mismatch'; END IF;
+ IF f6b13_fixture.norm_v1_toy(U&' A\\00A0\\3000B ') <> 'A B' THEN RAISE EXCEPTION 'White_Space mismatch'; END IF;
  IF (SELECT count(*) FROM f6b13_fixture.direcciones) <> 4 THEN RAISE EXCEPTION 'fixture count mismatch'; END IF;
  IF NOT (SELECT EXISTS(SELECT 1 FROM f6b13_fixture.direcciones GROUP BY cliente_numero,provincia,municipio,barrio,direccion HAVING count(*)>1)) THEN
   RAISE EXCEPTION 'synthetic duplicate fixture missing';
