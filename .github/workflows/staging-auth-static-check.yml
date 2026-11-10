@@ -315,7 +315,7 @@ jobs:
             sleep 2
           done
           docker exec ed-norm-v1-pg pg_isready -U postgres
-          docker exec ed-norm-v1-pg psql -U postgres -Atqc 'SHOW server_encoding; SHOW server_version;'
+          docker exec ed-norm-v1-pg psql -U postgres -Atqc 'SHOW server_encoding; SHOW server_version; SHOW lc_collate; SHOW lc_ctype; SELECT datlocprovider, coalesce(datcollversion,\x27not-recorded\x27) FROM pg_database WHERE datname=current_database();'
           python3 scripts/check_staging_norm_v1_postgres_isolated.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
