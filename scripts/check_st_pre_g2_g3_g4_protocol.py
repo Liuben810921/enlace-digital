@@ -11,3 +11,11 @@ assert "No hay permiso para desplegar, escribir" in p
 assert "Ninguna inspección adicional a Supabase" in p
 assert "no sustituye una prueba futura de reversión de staging" in p
 print("PASS: 16 subpuertas G2/G3/G4, blocked status, evidence, rollback and authorization segregation")
+
+report=Path("docs/st-pre-03-evidencia-g2-g3-g4-solo-lectura-2026-11-10.md").read_text()
+for gate,n in (("G2",5),("G3",4),("G4",6)):
+    for i in range(1,n+1):
+        assert f"| {gate}.{i} " in report, f"missing audited subgate {gate}.{i}"
+for phrase in ("G2 sigue BLOCKED","G3 sigue BLOCKED","G4 sigue PARCIAL/BLOCKED","NO-GO","auth.users","CASCADE","RESTRICT","0 Edge","sin valores","No se ejecutaron funciones operativas"):
+    assert phrase.lower() in report.lower(), f"missing audit finding: {phrase}"
+print("PASS: 15 audited subgates and NO-GO preserved")
