@@ -47,10 +47,10 @@ b=("BEGIN; SET LOCAL deadlock_timeout='100ms'; "
 with ThreadPoolExecutor(max_workers=2) as pool:
     first,second=list(pool.map(execute,(a,b)))
 assert sum(x.returncode==0 for x in (first,second))==1,(first.stderr,second.stderr)
-victim=first if first.returncode else second
+victim=first if first.returncode!=0 else second
 state(victim,"40P01")
 # Retry entire transaction after deadlock: the victim's earlier writes rolled back.
-retry=a if first.returncode else b
+retry=a if first.returncode!=0 else b
 assert execute(retry).returncode==0
 assert good("SELECT string_agg(id||':'||value,',' ORDER BY id) FROM f6b28_synthetic.locks;")=="1:2,2:2"
 
