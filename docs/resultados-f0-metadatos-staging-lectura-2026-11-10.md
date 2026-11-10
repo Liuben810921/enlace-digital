@@ -13,7 +13,7 @@
 | F0-06 | Índices de hijas: PK única por id e índice NO único por cliente_numero; no UNIQUE de identidad de dirección | Carrera SELECT/INSERT no está protegida por unicidad |
 | F0-07 | RLS enabled en tres tablas; FORCE RLS false; 0 políticas `pg_policies` | Acceso a través de funciones privilegiadas requiere auditoría posterior |
 | F0-08 | `anon` y `authenticated` sin DML/SELECT directo en las tres; `service_role` SELECT/INSERT/UPDATE/DELETE en hijas, ninguno en `clientes_oficiales` | Conservar mínimos; no ampliar permisos |
-| F0-09 | 10 funciones de cliente/correo identificadas; 8 SECURITY DEFINER, 2 INVOKER; owner postgres; search_path vacío; ninguna EXECUTE para anon/authenticated | Auditar ownership y límites de RPC antes de cambios |
+| F0-09 | 10 funciones de cliente/correo identificadas; 8 SECURITY DEFINER, 2 SECURITY INVOKER; owner postgres; search_path vacío; ninguna EXECUTE para anon/authenticated | Auditar ownership y límites de RPC antes de cambios |
 | F0-10 | `service_role` EXECUTE en 9/10; `public.ed_cliente_registrar_privado` sin EXECUTE para service_role | Wrapper de registro sigue siendo dependencia |
 | F0-11 | Tres secuencias existentes; hijas `id_seq` asociadas por dependencia interna `i` a sus IDs, service_role USAGE; `clientes_oficiales_numero_seq` no mostró asociación de ownership en pg_depend (puede usarse explícitamente en funciones) | No asumir secuencia owned ni reiniciarla |
 | F0-12 | Columnas auxiliares de ubicación: latitud, longitud, distancia_km, punto_salida_id, ruta_version, calculado_en, usado_en | Preservar metadatos logísticos en migración incremental |
