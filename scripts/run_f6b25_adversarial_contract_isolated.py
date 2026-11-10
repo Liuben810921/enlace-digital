@@ -13,8 +13,8 @@ scope={}
 exec(compile(source,"f6b24_parser_only","exec"),scope)
 strict=scope["strict"]
 Reject=scope["Reject"]
-GOOD=scope["GOOD"]
-REORDER=scope["GOOD_REORDER"]
+GOOD=b'{"version":"ED-OP-v1","action":"reserve","currency":"USD","amount_minor":12345}'
+REORDER=b' { "amount_minor":12345, "currency":"USD", "action":"reserve", "version":"ED-OP-v1" } '
 
 def rejects(raw):
     try: strict(raw)
