@@ -1,7 +1,7 @@
 name: f6b13-isolated-postgres-security
 on:
   push:
-    branches: [audit/registro-staging-aislado-20261109]
+    branches: [audit/registro-staging-aislado-20261109, audit/f6b21-identity-idempotency-20261110]
     paths:
       - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
@@ -12,6 +12,9 @@ on:
       - 'scripts/run_f6b18_concurrency_isolated.py'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'sql/pruebas/f6b20_operation_idempotency_isolated.sql'
+      - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
+      - 'scripts/run_f6b21_identity_operation_isolated.py'
+      - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
       - 'scripts/run_f6b20_operation_idempotency_isolated.py'
       - 'scripts/check_staging_f6b20_operation_scope.py'
       - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
@@ -36,6 +39,9 @@ on:
       - 'scripts/run_f6b18_concurrency_isolated.py'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'sql/pruebas/f6b20_operation_idempotency_isolated.sql'
+      - 'sql/pruebas/f6b21_identity_operation_isolated.sql'
+      - 'scripts/run_f6b21_identity_operation_isolated.py'
+      - 'docs/f6b21-identity-idempotency-isolated-2026-11-10.md'
       - 'scripts/run_f6b20_operation_idempotency_isolated.py'
       - 'scripts/check_staging_f6b20_operation_scope.py'
       - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
@@ -154,3 +160,20 @@ jobs:
           PGPASSWORD: synthetic_ci_only
           PGDATABASE: synthetic_ci
         run: python3 scripts/run_f6b20_operation_idempotency_isolated.py
+
+      - name: Setup F6-B21 isolated identity and server-side hash fixture
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/f6b21_identity_operation_isolated.sql
+      - name: Run F6-B21 synthetic identity, canonicalization, concurrency, ACL and RLS
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: python3 scripts/run_f6b21_identity_operation_isolated.py
