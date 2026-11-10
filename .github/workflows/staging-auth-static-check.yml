@@ -56,6 +56,8 @@ on:
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
@@ -116,6 +118,8 @@ on:
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
@@ -231,6 +235,8 @@ on:
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
@@ -288,6 +294,8 @@ on:
       - 'scripts/check_staging_f6b17_prospective_decisions.py'
       - 'scripts/check_staging_f6b18_prospective_concurrency.py'
       - 'scripts/check_staging_f6b19_recovery_scope.py'
+      - 'scripts/check_staging_f6b20_operation_scope.py'
+      - 'docs/f6b20-idempotencia-operacion-postgresql-aislado-2026-11-10.md'
       - 'scripts/run_f6b19_recovery_isolated.py'
       - 'docs/f6b19-recuperacion-reintentos-idempotencia-postgresql-aislado-2026-11-10.md'
       - 'docs/f6b18-concurrencia-deduplicacion-prospectiva-postgresql-aislado-2026-11-10.md'
@@ -471,6 +479,8 @@ jobs:
         run: python3 scripts/check_staging_f6b18_prospective_concurrency.py
       - name: Offline F6-B19 recovery scope guard
         run: python3 scripts/check_staging_f6b19_recovery_scope.py
+      - name: Offline F6-B20 operation idempotency scope guard
+        run: python3 scripts/check_staging_f6b20_operation_scope.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
