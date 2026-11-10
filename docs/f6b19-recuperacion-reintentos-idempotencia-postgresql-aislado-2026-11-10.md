@@ -33,3 +33,9 @@ El runner `scripts/run_f6b19_recovery_isolated.py` reutiliza la tabla auxiliar y
 ## Decisión
 
 **GO exclusivamente para continuar pruebas sintéticas y revisión offline. NO-GO para despliegue, cambios de staging, lecturas históricas, deduplicación global y pedidos reales.** Una futura **autorización A** debe delimitar cambios de staging (roles, funciones, políticas, tablas, grants e índices). Otra **autorización B** distinta es obligatoria antes de cualquier lectura histórica, incluso agregada. A no implica B y ninguna se ha concedido.
+
+## Resultados CI verificados
+- Commit probado: `b8876d4ae71bcc01b8796dcfc5c40f9f4cbab7dd`.
+- PostgreSQL aislado **#60**, run `42906955621`: **SUCCESS**, sin pasos fallidos.
+- Validación estática **#608**, run `42906955609`: **SUCCESS**, sin pasos fallidos.
+- Durante la depuración, el primer ensayo de terminación del proceso cliente no garantizaba abortar la transacción del servidor. Se corrigió para identificar una sesión activa en `pg_sleep(15)` y terminar **el backend PostgreSQL antes de COMMIT**; después se comprueba ausencia de clave y reintento exitoso. Los primeros CI fallidos no constituyen evidencia de aprobación; únicamente la versión corregida aprobada.
