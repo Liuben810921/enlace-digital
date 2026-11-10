@@ -9,6 +9,10 @@ for prefix, n in (("INC-P",6),("INC-A",5),("DEDUP-P",5),("DEDUP-A",6),("BIGINT-P
     for i in range(1,n+1):
         assert f"{prefix}{i:02d}" in p, f"Missing {prefix}{i:02d}"
 for i in range(7): assert f"| S{i:02d} |" in p
+for word in ("NORM-v1", "Unicode NFC", "colapso", "tildes", "apartamentos",
+             "número JSON inseguro", "texto desde la fuente",
+             "no atómicos", "versionar respuesta", "int4"):
+    assert word.lower() in p.lower(), f"Missing consistency contract: {word}"
 for word in ("NOT VALID","ON CONFLICT","UPSERT","UNIQUE","SECURITY DEFINER",
              "search_path","service_role","Number.isSafeInteger",
              "9223372036854775807","9007199254740992","NO-GO","Reversión"):
