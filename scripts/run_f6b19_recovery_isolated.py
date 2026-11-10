@@ -60,7 +60,7 @@ total(1)
 psql("BEGIN; SET ROLE f6b18_caller; SAVEPOINT before_reserve; SELECT "+call(92,903)+"; ROLLBACK TO SAVEPOINT before_reserve; COMMIT;")
 total(1)
 # After a failed validation, a valid new request can succeed (no ghost reservation).
-invalid=psql(role_call(93,9),expect=False)
+invalid=psql("SET ROLE f6b18_caller; SELECT "+FN+"(93,'Provincia Ficticia','Municipio Ficticio','','x');",expect=False)
 if "invalid field" not in invalid.stderr:
     raise AssertionError("wrong validation failure")
 assert_value(role_call(93,904),"RESERVED_SYNTHETIC")
