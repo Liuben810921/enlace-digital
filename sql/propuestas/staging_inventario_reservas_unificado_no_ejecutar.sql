@@ -1,0 +1,58 @@
+-- ALL LINES ARE COMMENTS: NON-EXECUTABLE CONCEPTUAL SCHEMA ONLY.
+-- Base e4b6947e902436e22fff76974e36a453d28225d9.
+-- NOT A MIGRATION. No DDL, DML, functions or permissions may run from this file.
+--
+-- PROPOSED TABLE public.inventario_variantes (
+--   variant_id uuid PRIMARY KEY, producto_id bigint NOT NULL,
+--   nombre_visible text NOT NULL, nombre_normalizado text NOT NULL,
+--   activo boolean NOT NULL DEFAULT true,
+--   stock_fisico integer NOT NULL CHECK (stock_fisico >= 0),
+--   stock_reservado integer NOT NULL CHECK (stock_reservado >= 0),
+--   version bigint NOT NULL DEFAULT 0,
+--   CHECK (stock_reservado <= stock_fisico)
+-- );
+-- For uncolored own products, use one synthetic stable variant identity.
+-- Derive legacy productos.cantidad from variants; do not permit two stock authorities.
+--
+-- PROPOSED TABLE public.inventario_reservas (
+--   reserva_id uuid PRIMARY KEY, pedido_id bigint NOT NULL,
+--   producto_id bigint NOT NULL, variant_id uuid NOT NULL,
+--   cantidad integer NOT NULL CHECK (cantidad > 0),
+--   estado text NOT NULL CHECK (estado IN ('activa','consumida','liberada','expirada')),
+--   version bigint NOT NULL DEFAULT 0,
+--   created_at timestamptz NOT NULL, expires_at timestamptz NULL,
+--   UNIQUE (pedido_id, producto_id, variant_id)
+-- );
+--
+-- PROPOSED TABLE public.inventario_movimientos (
+--   movement_id uuid PRIMARY KEY, reserva_id uuid NULL,
+--   variant_id uuid NOT NULL, tipo text NOT NULL,
+--   delta integer NOT NULL, actor text NOT NULL,
+--   idempotency_key uuid NOT NULL, created_at timestamptz NOT NULL,
+--   motivo text NOT NULL, UNIQUE (idempotency_key, tipo, variant_id)
+-- );
+-- Append-only movements: reservar, consumir, liberar, ajustar, devolver.
+--
+-- TRANSACTION RESERVE OWN:
+-- lock product and variant rows in sorted (producto_id,variant_id) order FOR UPDATE;
+-- available = stock_fisico - stock_reservado; require available >= requested;
+-- increment stock_reservado exactly once, insert active reservation + reservar movement;
+-- create order, item snapshots and status event in same transaction; on failure ROLLBACK.
+-- TRANSACTION CONSUME OWN:
+-- active -> consumida exactly once; stock_fisico -= cantidad; stock_reservado -= cantidad;
+-- append consumir movement; no second physical deduction.
+-- TRANSACTION RELEASE OWN:
+-- active -> liberada exactly once; stock_reservado -= cantidad, stock_fisico unchanged;
+-- append liberar movement. Duplicate cancellation returns original outcome.
+-- TRANSACTION EXPIRE OWN:
+-- active -> expirada only if policy permits; release reserved count once; no cron enabled.
+-- POST-CONSUMPTION RETURN:
+-- never automatically restock; require inspected return and auditable devolver movement.
+-- SUPPLIER:
+-- no inventory reservation/decrement, even if productos.cantidad=0;
+-- procurement_pending -> confirmed/rejected by authorized verification.
+-- IDENTITY:
+-- variant_id immutable across rename, photo changes, archiving; preserve historic snapshot.
+-- SECURITY:
+-- backend-only transactions, role capability checks, no browser writes, least privilege RLS.
+-- NO SQL EXECUTION, NO DEPLOYMENT, NO REAL ORDERS.
