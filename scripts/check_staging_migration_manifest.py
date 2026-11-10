@@ -13,7 +13,7 @@ for token in ("clientes_oficiales.numero integer", "pedidos_oficiales.cliente_nu
               "stock_reservado <= stock_fisico", "UNIQUE(cliente_numero,idempotency_key)",
               "request_sha256", "SECURITY DEFINER", "search_path", "service_role",
               "append-only", "NO-GO", "ED_REAL_CHECKOUT_ENABLED=false",
-              "Reversión", "No ejecutar", "idempotencia"):
+              "Reversión", "no SQL ejecutado", "idempotencia"):
     assert token.lower() in p.lower(), f"Missing safety contract: {token}"
 for token in ("15 campos", "variant_id", "F0", "F6"):
     assert token in master, f"Master plan dependency absent: {token}"
