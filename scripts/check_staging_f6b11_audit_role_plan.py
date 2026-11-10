@@ -6,7 +6,7 @@ for i in range(1,11):
     assert f"b11-{i:02d}" in s,f"missing B11-{i:02d}"
 for i in range(1,9):
     assert f"t{i:02d}" in s,f"missing synthetic test T{i:02d}"
-for token in ("#526","no sql","no se consultó supabase","autorización a","autorización b",
+for token in ("#526","no autorización para sql","no se consultó supabase","autorización a","autorización b",
               "no autorizada","cliente_numero","provincia","municipio","barrio",
               "direccion","por columna","bypassrls","pg_read_all_data",
               "no login","nologin","rls","sin política","security definer",
