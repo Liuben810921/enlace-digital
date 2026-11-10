@@ -28,7 +28,7 @@ on:
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
       - '.github/workflows/f6b13-isolated-postgres-security.yml'
   pull_request:
-    branches: [main]
+    branches: [main, audit/registro-staging-aislado-20261109]
     paths:
       - 'sql/pruebas/f6b13_encapsulated_synthetic_isolated.sql'
       - 'docs/f6b13-prototipo-postgresql-encapsulado-aislado-2026-11-10.md'
