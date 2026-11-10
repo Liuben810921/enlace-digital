@@ -33,3 +33,9 @@ La función detecta internamente colisiones de la identidad ficticia `(cliente_n
 **Autorización A** posterior y explícita para modificar roles, grants, políticas o funciones en staging; **autorización B** independiente para cualquier lectura histórica, incluso agregada. Ninguna concedida por F6-B13. La reversión del prototipo en GitHub es `git revert`; el SQL de prueba se revierte con `ROLLBACK`. Cualquier futura función en staging requerirá un plan distinto de rollback y evaluación de exposición irreversible.
 
 **Decisión:** este prototipo no debe desplegarse ni copiarse como migración; sus pruebas son un requisito parcial, no una aprobación de auditoría histórica.
+
+## Resultados verificados de CI (2026-11-10)
+- `staging-auth-static-check` #552, run `42902357495`: **SUCCESS**, sin pasos fallidos.
+- `f6b13-isolated-postgres-security` #553, run `42902357963`: **SUCCESS**, sin pasos fallidos; PostgreSQL 17 aislado con SQL ficticio, transacción y ROLLBACK.
+- Primer intento de PostgreSQL aislado falló por escapes Unicode duplicados en el fixture (NFC mismatch); se corrigió únicamente el fixture SQL en commit `fd8c832d58d8cbdf857c1b99ee8028f2c647c256` y se verificó nuevamente. No hubo conexión a Supabase.
+- Estas pruebas no certifican resistencia a timing/logs ni cumplimiento completo de NORM-v1. **NO-GO** para cambios de staging y lecturas históricas hasta autorizaciones A y B separadas.
