@@ -41,6 +41,8 @@ on:
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
       - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
       - 'scripts/check_staging_norm_v1_postgres_isolated.py'
       - 'scripts/check_staging_f6b4_pg_results.py'
       - 'docs/f6b4-resultados-postgresql-aislado-ci488-2026-11-10.md'
@@ -68,6 +70,8 @@ on:
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
       - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
       - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
@@ -150,6 +154,8 @@ on:
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
       - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
       - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
@@ -174,6 +180,8 @@ on:
       - 'scripts/check_staging_norm_v1_python.py'
       - 'scripts/check_staging_f6b3_ci_closure.py'
       - 'scripts/check_staging_f6b4_pg_protocol.py'
+      - 'scripts/check_staging_f6b5_metadata_preflight.py'
+      - 'docs/f6b5-preflight-postgresql-staging-metadatos-2026-11-10.md'
       - 'docs/f6b4-protocolo-postgresql-30-vectores-no-ejecutable-2026-11-10.md'
       - 'docs/f6b3-cierre-ci469-versiones-unicode-2026-11-10.md'
       - 'tests/fixtures/norm_v1_utf8_vectors.json'
@@ -309,6 +317,8 @@ jobs:
         run: python3 scripts/check_staging_f6b4_pg_protocol.py
       - name: Offline F6-B4 isolated PostgreSQL result evidence
         run: python3 scripts/check_staging_f6b4_pg_results.py
+      - name: Offline F6-B5 staging PostgreSQL metadata preflight documentation
+        run: python3 scripts/check_staging_f6b5_metadata_preflight.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
