@@ -23,6 +23,8 @@ on:
       - 'scripts/check_staging_preflight_p01_p08_results.py'
       - 'scripts/check_staging_auth_function_metadata_audit.py'
       - 'scripts/check_staging_rpc_controller_reconciliation.py'
+      - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
       - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
       - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
       - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
@@ -68,6 +70,8 @@ on:
       - 'scripts/check_staging_preflight_p01_p08_results.py'
       - 'scripts/check_staging_auth_function_metadata_audit.py'
       - 'scripts/check_staging_rpc_controller_reconciliation.py'
+      - 'scripts/check_staging_auth_route_dependencies.py'
+      - 'docs/matriz-dependencias-rutas-clientes-staging-offline-2026-11-10.md'
       - 'docs/conciliacion-rpc-controlador-staging-offline-2026-11-10.md'
       - 'docs/auditoria-funciones-auth-staging-metadatos-2026-11-10.md'
       - 'docs/resultados-preflight-p01-p08-supabase-staging-lectura-2026-11-10.md'
@@ -144,6 +148,8 @@ jobs:
         run: python3 scripts/check_staging_auth_function_metadata_audit.py
       - name: Static RPC controller and metadata reconciliation (offline)
         run: python3 scripts/check_staging_rpc_controller_reconciliation.py
+      - name: Static staging auth route dependencies (offline)
+        run: python3 scripts/check_staging_auth_route_dependencies.py
       - name: Install PostgreSQL parser (no database connection)
         run: python3 -m pip install --disable-pip-version-check 'pglast==7.22'
       - name: PostgreSQL syntax parse (no database connection)
