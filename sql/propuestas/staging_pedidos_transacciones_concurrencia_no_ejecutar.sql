@@ -23,7 +23,7 @@
 --    Record exchange rate snapshot if applicable. No client-supplied price or state accepted.
 -- 9) Copy recipient name/phone, full entrega_direccion, location, lines, unit prices and metadata.
 -- 10) Insert pending order + lines + append-only initial status event; finalize idempotency result.
--- 11) Return immutable order ID; errors abort ALL database writes; sequences may advance.
+-- 11) Return immutable order ID; errors cause transaction rollback of ALL database writes; sequences may advance.
 --
 -- FUNCTION PROPOSAL: ed_pedido_transicionar_privado(admin_identity, order_id, expected_version, new_state, reason)
 -- 1) Authenticate admin JWT in trusted boundary; re-check enabled and role/capability server-side.
