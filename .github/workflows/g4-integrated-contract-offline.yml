@@ -1,0 +1,20 @@
+name: g4-integrated-contract-offline
+on:
+  push:
+    branches: [audit/f6b21-identity-idempotency-20261110]
+    paths:
+      - 'scripts/check_g4_integrated_contract_offline.py'
+      - 'tests/edge_auth_mock_test.ts'
+      - 'supabase/functions/enlace-cliente-auth-staging/index.ts'
+      - '.github/workflows/g4-integrated-contract-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-g4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify static security contract without network packages or staging
+        run: python3 scripts/check_g4_integrated_contract_offline.py
