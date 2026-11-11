@@ -36,3 +36,9 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - Verificación de red: `PASS: auth and mailpit running without default IPv4 gateway`; cliente Python ejecutado dentro de la red Docker `internal: true`, con DNS `auth` y `mailpit`; imágenes descargadas antes de crear la red interna. Servicios y volúmenes desechables eliminados mediante `docker compose down -v`.
 - Alcance del GO: cuatro solicitudes API de GoTrue local y cuatro mensajes capturados únicamente en Mailpit. No se han comprobado redención de enlaces, caducidad/replay, ni auditoría por paquetes de egress. No se probó Supabase alojado ni se enviaron correos externos.
 - Decisión: **GO para G4 básico aislado**; **NO-GO para staging/producción y para declarar cubiertos los controles no ensayados**.
+
+## CI de endurecimiento G4 — resultado verificado (2026-11-11)
+- Ejecución https://github.com/Liuben810921/enlace-digital/actions/runs/43056576645; job `gotrue-local` 130647506247, **SUCCESS**.
+- Logs: allowlist rechaza URLs externas, imitaciones y loopback; GoTrue v2.177.0 responde; confirmación, recuperación, OTP e invitación producen exactamente un mensaje nuevo en Mailpit **dirigido al destinatario sintético esperado**, distinguiendo mensajes repetidos al mismo correo mediante `ID`.
+- Se comprobó que los contenedores auth y Mailpit no tenían gateway IPv4 predeterminado y se ejecutó limpieza `docker compose down -v` con éxito.
+- No se ha probado aún redención/caducidad/replay de tokens ni auditoría de paquetes de salida. La aprobación se limita a los flujos de correo sintéticos y el aislamiento comprobado; no implica aprobación de staging ni producción.
