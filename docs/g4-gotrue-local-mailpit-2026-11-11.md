@@ -42,3 +42,12 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - Logs: allowlist rechaza URLs externas, imitaciones y loopback; GoTrue v2.177.0 responde; confirmación, recuperación, OTP e invitación producen exactamente un mensaje nuevo en Mailpit **dirigido al destinatario sintético esperado**, distinguiendo mensajes repetidos al mismo correo mediante `ID`.
 - Se comprobó que los contenedores auth y Mailpit no tenían gateway IPv4 predeterminado y se ejecutó limpieza `docker compose down -v` con éxito.
 - No se ha probado aún redención/caducidad/replay de tokens ni auditoría de paquetes de salida. La aprobación se limita a los flujos de correo sintéticos y el aislamiento comprobado; no implica aprobación de staging ni producción.
+
+## CI de controles JWT — evidencia final (2026-11-11)
+- [Run 43059700931](https://github.com/Liuben810921/enlace-digital/actions/runs/43059700931), job 130658578615: **SUCCESS**, incluidos ejecución funcional y limpieza.
+- GoTrue v2.177.0, flujos locales de confirmación, recuperación, OTP e invitación: PASS, con cuatro mensajes sintéticos dirigidos a los destinatarios esperados.
+- Control de destinos: PASS para dominios externos, parecidos, loopback y puertos internos inválidos.
+- Autorización de invitación: PASS al rechazar JWT mal formado, firma modificada y JWT de servicio correctamente firmado pero caducado; ninguno produjo correo.
+- Red: contenedores GoTrue/Mailpit y cliente sin gateway IPv4 predeterminado; red Docker `internal: true`. **IPv6 no auditado de forma independiente**.
+- **Importante:** el rechazo de un JWT de servicio caducado no prueba caducidad ni consumo único de tokens de confirmación, recuperación o invitación. Estas pruebas siguen pendientes; no declararlas cubiertas.
+- No se han modificado Supabase alojado, código operativo ni producción.
