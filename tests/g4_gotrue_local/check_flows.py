@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Real isolated GoTrue flows; internal Docker DNS, fake addresses, no hosted project."""
-import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request, urllib.parse
+import base64, hashlib, hmac, html, json, os, re, time, urllib.error, urllib.request, urllib.parse
 AUTH="http://auth:9999"
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -143,4 +143,49 @@ def reject_invalid_verification(label,body):
 reject_invalid_verification("fabricated signup token",{"type":"signup","token_hash":"0"*64})
 reject_invalid_verification("fabricated recovery token",{"type":"recovery","token_hash":"f"*64})
 reject_invalid_verification("fabricated invite token",{"type":"invite","token_hash":"a"*64})
-print("LIMIT: real link redemption, link expiry/replay and external egress packet audit remain unverified")
+# Redeem an authentic signup link captured from the local Mailpit API.
+# Never print the link, token, redirect Location, response body or session.
+def raw_local(url):
+    parsed=urllib.parse.urlsplit(url)
+    assert (parsed.scheme,parsed.hostname,parsed.port)==("http","auth",9999), "non-local redemption target"
+    assert parsed.path=="/verify" and not parsed.username and not parsed.password
+    req=urllib.request.Request(url,method="GET")
+    try:
+        with OPENER.open(req,timeout=8) as response:
+            return response.status,response.headers.get("Location","")
+    except urllib.error.HTTPError as exc:
+        # NoRedirect refuses redirects; urllib exposes them as HTTPError.
+        return exc.code,exc.headers.get("Location","")
+def local_signup_link():
+    status,listing=request(MAIL)
+    assert status==200
+    for item in listing.get("messages",[]):
+        if "confirm@example.invalid" not in json.dumps(item.get("To",[])).lower():
+            continue
+        mid=item["ID"]
+        assert re.fullmatch(r"[A-Za-z0-9_-]+",mid), "unexpected Mailpit message ID"
+        status,detail=request("http://mailpit:8025/api/v1/message/"+mid)
+        assert status==200
+        body=html.unescape(str(detail.get("Text",""))+" "+str(detail.get("HTML","")))
+        # Only accept a URL pointing to the local GoTrue verification endpoint.
+        for candidate in re.findall(r'https?://[^\\s<>"\\']+',body):
+            candidate=candidate.rstrip(".,);")
+            parsed=urllib.parse.urlsplit(candidate)
+            if parsed.path!="/verify" or parsed.hostname not in ("127.0.0.1","localhost"):
+                continue
+            query=urllib.parse.parse_qs(parsed.query)
+            if query.get("type")!=["signup"] or not query.get("token"):
+                continue
+            return AUTH+"/verify?"+parsed.query
+    raise AssertionError("Mailpit signup verification link not found")
+signup_link=local_signup_link()
+first_status,first_location=raw_local(signup_link)
+assert first_status in (200,302,303), f"first signup redemption status={first_status}"
+assert "error=" not in first_location.lower() and "error_code=" not in first_location.lower(), "first signup redemption returned error"
+print("PASS authentic Mailpit signup verification link redeemed locally",flush=True)
+replay_status,replay_location=raw_local(signup_link)
+assert replay_status in (400,401,403,404,422) or (
+    replay_status in (302,303) and ("error=" in replay_location.lower() or "error_code=" in replay_location.lower())
+), f"signup link replay not rejected (status={replay_status})"
+print("PASS redeemed signup verification link rejected on replay",flush=True)
+print("LIMIT: recovery/invite redemption, link expiry and external egress packet audit remain unverified")
