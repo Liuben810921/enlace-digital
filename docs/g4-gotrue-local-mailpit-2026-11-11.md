@@ -21,3 +21,11 @@ Artefactos incorporados a rama `audit/f6b21-identity-idempotency-20261110`. **CI
 GO: ejecutar exclusivamente la suite GitHub Actions efímera autorizada.
 NO-GO: desplegar GoTrue/Edge en staging, modificar Auth alojado, crear usuarios reales, enviar correo externo, cambiar producción.
 Reversión: revertir commits de archivos de pruebas y workflow; los contenedores y volúmenes se eliminan en `always()`.
+
+## CI #5 — resultado verificado (2026-11-11)
+- GitHub Actions run [43051277456](https://github.com/Liuben810921/enlace-digital/actions/runs/43051277456), job `gotrue-local` 130628798634: **FAIL**.
+- PASS: checkout, pull de imágenes, arranque de contenedores, comprobación fail-closed de contenedores y ausencia de ruta IPv4 predeterminada; limpieza `down -v` PASS.
+- FAIL: script `check_flows.py` no logró respuesta de salud porque GoTrue terminó con error fatal de migración: `migrations/20240729123726_add_mfa_phone_config.up.sql` intenta `alter type auth.factor_type add value 'phone'`, pero `auth.factor_type` no existe (SQLSTATE 42704). La creación de esquema `auth` sí corrigió el fallo previo, pero no proporciona un esquema base compatible con la versión GoTrue fijada.
+- **Cero flujos funcionales de correo completados**. No se ha demostrado captura GoTrue real, y no debe atribuirse PASS.
+- Próxima corrección requiere establecer una línea base de migraciones GoTrue/Postgres reproducible y compatible, preferentemente usando un conjunto oficial de migraciones o imagen inicializada y fijada. **No** inventar el tipo `auth.factor_type` ni saltar migraciones: eso ocultaría errores de compatibilidad y invalidaría el test.
+- NO-GO staging y NO-GO para dar por aprobada esta suite. Solo pruebas locales autorizadas.
