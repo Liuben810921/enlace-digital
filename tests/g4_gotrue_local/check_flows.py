@@ -2,6 +2,7 @@
 """Real local GoTrue flows; localhost only, fake addresses, no hosted project."""
 import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request
 AUTH="http://127.0.0.1:9999"
+OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}))
 MAIL="http://127.0.0.1:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
 def request(url,method="GET",data=None,token=None):
@@ -11,7 +12,7 @@ def request(url,method="GET",data=None,token=None):
     body=None if data is None else json.dumps(data).encode()
     req=urllib.request.Request(url,data=body,headers=headers,method=method)
     try:
-        with urllib.request.urlopen(req,timeout=8) as r:
+        with OPENER.open(req,timeout=8) as r:
             return r.status,json.load(r)
     except urllib.error.HTTPError as e:
         return e.code,json.loads(e.read().decode() or "{}")
@@ -25,13 +26,21 @@ def count():
     status,payload=request(MAIL)
     assert status==200,(status,payload)
     return len(payload.get("messages",[]))
-for _ in range(35):
+last_health_error = "no response"
+for attempt in range(35):
     try:
-        s,_=request(AUTH+"/health")
-        if s==200: break
-    except Exception: pass
+        s, health = request(AUTH+"/health")
+        if s == 200 and isinstance(health, dict) and health.get("name") == "GoTrue":
+            print("PASS local GoTrue health:", health.get("version", "unknown"))
+            break
+        last_health_error = f"status={s}, name={health.get('name') if isinstance(health, dict) else 'not-json-object'}"
+    except Exception as exc:
+        last_health_error = f"{type(exc).__name__}: {str(exc)[:180]}"
+    if attempt in (0, 4, 14, 34):
+        print(f"GoTrue health attempt {attempt + 1}: {last_health_error}", flush=True)
     time.sleep(2)
-else: raise AssertionError("local GoTrue did not become healthy")
+else:
+    raise AssertionError("local GoTrue did not become healthy: " + last_health_error)
 assert count()==0, "Mailpit not empty"
 def case(label,endpoint,body,token=None):
     before=count()
