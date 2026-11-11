@@ -19,6 +19,7 @@ jobs:
           docker pull postgres:17-alpine
           docker pull axllent/mailpit:v1.27
           docker pull supabase/gotrue:v2.177.0
+          docker pull python:3.12-alpine
       - name: Start ephemeral services on internal Docker network
         run: docker compose -f tests/g4_gotrue_local/compose.yml up -d --no-build --pull never
       - name: Assert GoTrue running and internal network has no default IPv4 route
@@ -36,8 +37,15 @@ jobs:
             '
           done
           echo "PASS: auth and mailpit running without default IPv4 gateway"
-      - name: Exercise real local GoTrue email APIs
-        run: python3 tests/g4_gotrue_local/check_flows.py
+      - name: Exercise real local GoTrue email APIs from internal network
+        run: |
+          set -euo pipefail
+          docker run --rm --pull never \
+            --network ed-g4-auth-isolated_sandbox \
+            --network-alias g4-test-client \
+            --mount "type=bind,src=$PWD/tests/g4_gotrue_local/check_flows.py,dst=/check_flows.py,readonly" \
+            --security-opt no-new-privileges \
+            python:3.12-alpine python -u /check_flows.py
       - name: Capture diagnostic logs on failure
         if: failure()
         run: |
