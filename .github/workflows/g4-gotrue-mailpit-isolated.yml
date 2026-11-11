@@ -21,15 +21,21 @@ jobs:
           docker pull supabase/gotrue:v2.177.0
       - name: Start ephemeral services on internal Docker network
         run: docker compose -f tests/g4_gotrue_local/compose.yml up -d --no-build --pull never
-      - name: Assert no external default gateway inside GoTrue and Mailpit
+      - name: Assert GoTrue running and internal network has no default IPv4 route
         run: |
-          set -eu
+          set -euo pipefail
           for service in auth mailpit; do
-            if docker compose -f tests/g4_gotrue_local/compose.yml exec -T "$service" sh -c 'cat /proc/net/route | grep -Eq "^eth[0-9]+[[:space:]]+00000000[[:space:]]"' ; then
-              echo "FAIL: external default gateway exists for $service"; exit 1
-            fi
+            cid="$(docker compose -f tests/g4_gotrue_local/compose.yml ps -q "$service")"
+            test -n "$cid" || { echo "FAIL: missing container $service"; exit 1; }
+            state="$(docker inspect -f '{{.State.Running}}' "$cid")"
+            test "$state" = true || { echo "FAIL: container $service not running"; exit 1; }
+            docker compose -f tests/g4_gotrue_local/compose.yml exec -T "$service" sh -ec '
+              if grep -Eq "^eth[0-9]+[[:space:]]+00000000[[:space:]]" /proc/net/route; then
+                echo "FAIL: default IPv4 gateway detected"; exit 1
+              fi
+            '
           done
-          echo "PASS: no default IPv4 gateway in auth and mailpit containers"
+          echo "PASS: auth and mailpit running without default IPv4 gateway"
       - name: Exercise real local GoTrue email APIs
         run: python3 tests/g4_gotrue_local/check_flows.py
       - name: Capture diagnostic logs on failure
