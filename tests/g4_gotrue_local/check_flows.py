@@ -8,6 +8,14 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 MAIL="http://mailpit:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
+# Assert the synthetic API client has no external default route.
+with open("/proc/net/route", encoding="ascii") as route_table:
+    routes=route_table.read().splitlines()[1:]
+assert not any(line.split()[1]=="00000000" for line in routes if len(line.split())>=2), "client has an IPv4 default route"
+with open("/proc/net/ipv6_route", encoding="ascii") as route_table:
+    ipv6_routes=route_table.read().splitlines()
+assert not any(line.split()[0]=="0"*32 and line.split()[1]=="00" for line in ipv6_routes if len(line.split())>=2), "client has an IPv6 default route"
+print("PASS synthetic test client has no default IPv4 or IPv6 route", flush=True)
 def request(url,method="GET",data=None,token=None):
     parsed=urllib.parse.urlsplit(url)
     try:
