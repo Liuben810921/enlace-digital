@@ -106,4 +106,16 @@ case("OTP","/otp",{"email":"otp@example.invalid","create_user":True})
 case("invitation","/invite",{"email":"invite@example.invalid"},jwt())
 assert count()==4
 print("PASS all four real local GoTrue API email flows, internal SMTP capture only")
+
+# Negative authentication controls against real local GoTrue. Invalid tokens
+# must not gain service-role permissions or emit invitation emails.
+def invalid_invite(label,token):
+    before=count()
+    status,response=request(AUTH+"/invite","POST",{"email":"blocked-"+label+"@example.invalid"},token)
+    assert status in (400,401,403), f"{label}: invalid token unexpectedly accepted (status {status})"
+    assert count()==before, f"{label}: invalid token caused an email"
+    print("PASS local GoTrue rejected "+label+" service token without sending email", flush=True)
+invalid_invite("unsigned","not.a.jwt")
+invalid_invite("tampered",jwt()[:-1]+("A" if jwt()[-1]!="A" else "B"))
+
 print("LIMIT: no link redemption, token expiry or external egress packet audit")
