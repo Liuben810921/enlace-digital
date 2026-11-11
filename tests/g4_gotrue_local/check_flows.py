@@ -54,6 +54,18 @@ for prohibited in ("https://example.com", "http://auth:9999.evil.invalid/health"
     else:
         raise AssertionError("external URL guard bypassed: " + prohibited)
 print("PASS outbound URL allowlist rejects external, lookalike and host-loopback targets", flush=True)
+
+# Negative control: a second attempt to use a syntactically invalid destination
+# must be rejected before any network request, even when the host is internal.
+for malformed in ("http://auth:notaport/health", "http://mailpit:65536/api/v1/messages"):
+    try:
+        request(malformed)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("malformed port accepted: " + malformed)
+print("PASS malformed internal destination ports rejected", flush=True)
+
 last_health_error = "no response"
 for attempt in range(35):
     try:
