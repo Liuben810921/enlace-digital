@@ -2,7 +2,10 @@
 """Real isolated GoTrue flows; internal Docker DNS, fake addresses, no hosted project."""
 import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request, urllib.parse
 AUTH="http://auth:9999"
-OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise AssertionError("HTTP redirect prohibited in isolated test client")
+OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 MAIL="http://mailpit:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
 def request(url,method="GET",data=None,token=None):
@@ -17,6 +20,8 @@ def request(url,method="GET",data=None,token=None):
         with OPENER.open(req,timeout=8) as r:
             return r.status,json.load(r)
     except urllib.error.HTTPError as e:
+        if 300 <= e.code < 400:
+            raise AssertionError("HTTP redirect prohibited in isolated test client")
         return e.code,json.loads(e.read().decode() or "{}")
 def jwt():
     enc=lambda b:base64.urlsafe_b64encode(b).rstrip(b"=").decode()
