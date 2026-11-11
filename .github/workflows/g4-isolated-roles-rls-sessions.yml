@@ -1,0 +1,40 @@
+name: g4-isolated-roles-rls-sessions
+on:
+  push:
+    branches: [audit/f6b21-identity-idempotency-20261110]
+    paths:
+      - '.github/workflows/g4-isolated-roles-rls-sessions.yml'
+      - 'sql/pruebas/g4_isolated_roles_rls_sessions.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic_ci_only
+          POSTGRES_DB: synthetic_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d synthetic_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Execute isolated G4 synthetic security assertions
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: synthetic_ci_only
+          PGDATABASE: synthetic_ci
+        run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/g4_isolated_roles_rls_sessions.sql
