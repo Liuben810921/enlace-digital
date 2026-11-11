@@ -26,15 +26,9 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Install PostgreSQL client
+      - name: Execute isolated G4 synthetic security assertions using container psql
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
-      - name: Execute isolated G4 synthetic security assertions
-        env:
-          PGHOST: 127.0.0.1
-          PGPORT: '5432'
-          PGUSER: postgres
-          PGPASSWORD: synthetic_ci_only
-          PGDATABASE: synthetic_ci
-        run: psql -X -v ON_ERROR_STOP=1 -f sql/pruebas/g4_isolated_roles_rls_sessions.sql
+          set -euo pipefail
+          cid="$(docker ps --filter ancestor=postgres:17 --format '{{.ID}}' | head -n 1)"
+          test -n "$cid"
+          docker exec -i "$cid" psql -U postgres -d synthetic_ci -X -v ON_ERROR_STOP=1 < sql/pruebas/g4_isolated_roles_rls_sessions.sql
