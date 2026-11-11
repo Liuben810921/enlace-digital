@@ -69,7 +69,13 @@ def case(label,endpoint,body,token=None):
         if count()>before: break
         time.sleep(.5)
     assert count()==before+1,f"{label}: expected exactly one captured message"
-    print("PASS local GoTrue "+label+" -> one Mailpit message")
+    mail_status, mailbox=request(MAIL)
+    assert mail_status==200, (label,mail_status)
+    messages=mailbox.get("messages",[])
+    expected=body["email"].lower()
+    matched=[m for m in messages if expected in json.dumps(m.get("To",[])).lower()]
+    assert len(matched)==1, f"{label}: expected one message addressed to synthetic recipient {expected}"
+    print("PASS local GoTrue "+label+" -> one Mailpit message addressed to expected synthetic recipient")
 case("confirmation","/signup",{"email":"confirm@example.invalid","password":"G4SyntheticPassword!123"})
 case("recovery","/recover",{"email":"confirm@example.invalid"})
 case("OTP","/otp",{"email":"otp@example.invalid","create_user":True})
