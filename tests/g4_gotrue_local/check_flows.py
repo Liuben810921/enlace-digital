@@ -116,6 +116,19 @@ def invalid_invite(label,token):
     assert count()==before, f"{label}: invalid token caused an email"
     print("PASS local GoTrue rejected "+label+" service token without sending email", flush=True)
 invalid_invite("unsigned","not.a.jwt")
-invalid_invite("tampered",jwt()[:-1]+("A" if jwt()[-1]!="A" else "B"))
+valid_jwt=jwt()
+parts=valid_jwt.split(".")
+assert len(parts)==3
+# Mutate the first signature character, guaranteeing changed decoded signature bytes.
+tampered_signature=("A" if parts[2][0]!="A" else "B")+parts[2][1:]
+invalid_invite("tampered",parts[0]+"."+parts[1]+"."+tampered_signature)
+# Validly signed but expired token must not gain administrative invite rights.
+def signed_jwt_with_exp(expiration):
+    enc=lambda b:base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+    head=enc(b'{"alg":"HS256","typ":"JWT"}')
+    payload=enc(json.dumps({"role":"service_role","iss":"supabase","iat":int(time.time())-3600,"exp":expiration}).encode())
+    signature=enc(hmac.new(KEY.encode(),f"{head}.{payload}".encode(),hashlib.sha256).digest())
+    return f"{head}.{payload}.{signature}"
+invalid_invite("expired",signed_jwt_with_exp(int(time.time())-120))
 
 print("LIMIT: no link redemption, token expiry or external egress packet audit")
