@@ -131,4 +131,16 @@ def signed_jwt_with_exp(expiration):
     return f"{head}.{payload}.{signature}"
 invalid_invite("expired",signed_jwt_with_exp(int(time.time())-120))
 
-print("LIMIT: no link redemption, token expiry or external egress packet audit")
+# Exercise GoTrue's actual verification endpoint with synthetic invalid tokens.
+# These requests cannot consume a real link, issue a session, or send mail.
+def reject_invalid_verification(label,body):
+    before=count()
+    status,response=request(AUTH+"/verify","POST",body)
+    assert status in (400,401,403,404,422), f"{label}: invalid verification accepted (status {status})"
+    assert not (isinstance(response,dict) and response.get("access_token")), f"{label}: session issued for invalid token"
+    assert count()==before, f"{label}: invalid verification sent mail"
+    print("PASS GoTrue rejected "+label+" verification without session or email",flush=True)
+reject_invalid_verification("fabricated signup token",{"type":"signup","token_hash":"0"*64})
+reject_invalid_verification("fabricated recovery token",{"type":"recovery","token_hash":"f"*64})
+reject_invalid_verification("fabricated invite token",{"type":"invite","token_hash":"a"*64})
+print("LIMIT: real link redemption, link expiry/replay and external egress packet audit remain unverified")
