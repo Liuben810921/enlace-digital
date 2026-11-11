@@ -161,11 +161,11 @@ def raw_local(url):
             return response.status,response.headers.get("Location","")
     except urllib.error.HTTPError as exc:
         return exc.code,exc.headers.get("Location","")
-def local_signup_link():
+def local_verification_link(kind,recipient):
     status,listing=request(MAIL)
     assert status==200
     for item in listing.get("messages",[]):
-        if "confirm@example.invalid" not in json.dumps(item.get("To",[])).lower():
+        if recipient.lower() not in json.dumps(item.get("To",[])).lower():
             continue
         mid=item["ID"]
         assert re.fullmatch(r"[A-Za-z0-9_-]+",mid), "unexpected Mailpit message ID"
@@ -179,18 +179,25 @@ def local_signup_link():
             if parsed.path!="/verify" or parsed.hostname not in ("127.0.0.1","localhost"):
                 continue
             query=urllib.parse.parse_qs(parsed.query)
-            if query.get("type")!=["signup"] or not query.get("token"):
+            if query.get("type")!=[kind] or not query.get("token"):
                 continue
             return AUTH+"/verify?"+parsed.query
-    raise AssertionError("Mailpit signup verification link not found")
-signup_link=local_signup_link()
-first_status,first_location=raw_local(signup_link)
-assert first_status in (200,302,303), f"first signup redemption status={first_status}"
-assert "error=" not in first_location.lower() and "error_code=" not in first_location.lower(), "first signup redemption returned error"
-print("PASS authentic Mailpit signup verification link redeemed locally",flush=True)
-replay_status,replay_location=raw_local(signup_link)
-assert replay_status in (400,401,403,404,422) or (
-    replay_status in (302,303) and ("error=" in replay_location.lower() or "error_code=" in replay_location.lower())
-), f"signup link replay not rejected (status={replay_status})"
-print("PASS redeemed signup verification link rejected on replay",flush=True)
-print("LIMIT: recovery/invite redemption, link expiry and external egress packet audit remain unverified")
+    raise AssertionError("Mailpit "+kind+" verification link not found")
+def check_one_time_link(kind,recipient):
+    link=local_verification_link(kind,recipient)
+    before=count()
+    first_status,first_location=raw_local(link)
+    assert first_status in (200,302,303), f"{kind}: first redemption status={first_status}"
+    assert "error=" not in first_location.lower() and "error_code=" not in first_location.lower(), f"{kind}: first redemption returned error"
+    assert count()==before, f"{kind}: redemption unexpectedly sent mail"
+    print("PASS authentic Mailpit "+kind+" verification link redeemed locally",flush=True)
+    replay_status,replay_location=raw_local(link)
+    assert replay_status in (400,401,403,404,422) or (
+        replay_status in (302,303) and ("error=" in replay_location.lower() or "error_code=" in replay_location.lower())
+    ), f"{kind}: link replay not rejected (status={replay_status})"
+    assert count()==before, f"{kind}: replay unexpectedly sent mail"
+    print("PASS redeemed "+kind+" verification link rejected on replay",flush=True)
+check_one_time_link("signup","confirm@example.invalid")
+check_one_time_link("recovery","confirm@example.invalid")
+check_one_time_link("invite","invite@example.invalid")
+print("LIMIT: link expiry and external egress packet audit remain unverified")
