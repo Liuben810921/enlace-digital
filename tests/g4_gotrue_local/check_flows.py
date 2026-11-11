@@ -150,11 +150,16 @@ def raw_local(url):
     assert (parsed.scheme,parsed.hostname,parsed.port)==("http","auth",9999), "non-local redemption target"
     assert parsed.path=="/verify" and not parsed.username and not parsed.password
     req=urllib.request.Request(url,method="GET")
+    # Separate opener: redirects are returned as HTTPError, never followed.
+    # The regular API opener remains strictly fail-closed for redirects.
+    class CaptureRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self,req,fp,code,msg,headers,newurl):
+            return None
+    capture=urllib.request.build_opener(urllib.request.ProxyHandler({}),CaptureRedirect())
     try:
-        with OPENER.open(req,timeout=8) as response:
+        with capture.open(req,timeout=8) as response:
             return response.status,response.headers.get("Location","")
     except urllib.error.HTTPError as exc:
-        # NoRedirect refuses redirects; urllib exposes them as HTTPError.
         return exc.code,exc.headers.get("Location","")
 def local_signup_link():
     status,listing=request(MAIL)
