@@ -34,7 +34,8 @@ jobs:
         run: python3 tests/g4_gotrue_local/check_flows.py
       - name: Capture diagnostic logs on failure
         if: failure()
-        run: docker compose -f tests/g4_gotrue_local/compose.yml logs --tail 80 | sed -E 's/(token|password|secret|authorization)([=: ]+)[^ ,]+/\1\2[REDACTED]/Ig'
+        run: |
+          docker compose -f tests/g4_gotrue_local/compose.yml logs --tail 80 | sed -E 's/(token|password|secret|authorization)([=: ]+)[^ ,]+/\1\2[REDACTED]/Ig'
       - name: Destroy disposable services
         if: always()
         run: docker compose -f tests/g4_gotrue_local/compose.yml down -v --remove-orphans
