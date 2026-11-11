@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Real local GoTrue flows; localhost only, fake addresses, no hosted project."""
 import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request
-AUTH="http://127.0.0.1:9999"
+AUTH="http://auth:9999"
 OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-MAIL="http://127.0.0.1:8025/api/v1/messages"
+MAIL="http://mailpit:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
 def request(url,method="GET",data=None,token=None):
     assert url.startswith((AUTH,MAIL)), "external URL prohibited"
