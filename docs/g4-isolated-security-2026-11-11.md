@@ -19,3 +19,12 @@ Es un modelo sintético, no una prueba de las funciones reales de staging. No ve
 
 ## Estado
 Código y workflow incorporados a rama de auditoría. La consulta de ejecuciones por el commit inicial devolvió lista vacía; **CI aún no verificado**. No autoriza despliegue, fusión ni activación.
+
+## Verificación posterior — 2026-11-11
+- G4 #1 (commit `1c9eafd`) y #2 (commit `5f92662`): fallo en la instalación de `postgresql-client` por DNS temporal de `security.ubuntu.com`; las aserciones SQL no llegaron a ejecutarse. Log de #1 obtenido directamente del job `130586813284` en la ejecución `43039397105`.
+- Corrección exclusivamente del workflow en commit `dfe5f1a`: ejecución de `psql` dentro del contenedor efímero PostgreSQL 17; se elimina `apt-get`.
+- G4 #3 (commit `dfe5f1a`): **SUCCESS**, confirmado mediante captura de GitHub Actions aportada por el propietario, duración 26 segundos. La herramienta conectada no lista este workflow por commit y aún no se recuperó su job/log específico. La marca verde prueba éxito de workflow, no equivalencia con seguridad de staging.
+- `staging-edge-draft-security` #33: SUCCESS verificado por conector para el mismo commit. `f6b13-isolated-postgres-security` #186: en progreso al consultar; no atribuir éxito.
+- No se ejecutaron SQL ni RPC contra Supabase, ni se consultaron clientes ni se desplegaron servicios.
+
+**Estado:** G4 sintético aprobado por GitHub Actions #3; queda pendiente validación integrada independiente y aprobación explícita antes de cualquier cambio de staging.
