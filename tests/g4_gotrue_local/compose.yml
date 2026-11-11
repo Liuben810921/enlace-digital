@@ -1,0 +1,50 @@
+name: ed-g4-auth-isolated
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: synthetic-local-only
+      POSTGRES_DB: auth_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_local"]
+      interval: 2s
+      retries: 30
+    networks: [sandbox]
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_SMTP_BIND_ADDR: "0.0.0.0:1025"
+      MP_UI_BIND_ADDR: "0.0.0.0:8025"
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks: [sandbox]
+  auth:
+    image: supabase/gotrue:v2.177.0
+    depends_on:
+      db: {condition: service_healthy}
+      mailpit: {condition: service_started}
+    environment:
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: "postgres"
+      GOTRUE_DB_DATABASE_URL: "postgres://postgres:synthetic-local-only@db:5432/auth_local?sslmode=disable"
+      GOTRUE_SITE_URL: "http://localhost:9999"
+      GOTRUE_URI_ALLOW_LIST: "http://localhost:9999/*"
+      GOTRUE_JWT_SECRET: "g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "false"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_SMTP_HOST: "mailpit"
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_ADMIN_EMAIL: "no-reply@example.invalid"
+      GOTRUE_SMTP_SENDER_NAME: "G4 Synthetic"
+      GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: "true"
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: "100"
+    ports:
+      - "127.0.0.1:9999:9999"
+    networks: [sandbox]
+networks:
+  sandbox:
+    internal: true
