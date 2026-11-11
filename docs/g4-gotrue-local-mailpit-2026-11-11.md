@@ -58,3 +58,11 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - PASS: los cuatro flujos SMTP locales y controles previos de JWT inválidos/caducados.
 - Límite: esta comprobación negativa **no** equivale a canjear un token auténtico ni demuestra consumo único, replay o caducidad de enlaces; IPv6 y auditoría de egress por paquetes siguen fuera del alcance verificado.
 - Próximo bloque: extraer enlaces exclusivamente de Mailpit local y ensayar canje/replay con redirecciones bloqueadas y sin exponer tokens en logs.
+
+## CI canje real y replay de confirmación — verificado (2026-11-11)
+- [Run 43091023045](https://github.com/Liuben810921/enlace-digital/actions/runs/43091023045), job 130767792601: **SUCCESS**, incluida destrucción de servicios y volúmenes.
+- PASS: extracción del enlace real `signup` desde Mailpit local, primera solicitud de canje aceptada por GoTrue y segundo canje del mismo enlace rechazado.
+- Las respuestas HTTP de redirección se inspeccionaron sin seguirlas. No se imprimieron tokens, enlaces completos, ubicaciones de redirección ni sesiones.
+- PASS: controles previos de cuatro flujos SMTP, JWT inválidos/caducados y tokens falsificados.
+- Limitación: esta prueba no demuestra caducidad temporal de enlaces ni consumo/replay de recuperación e invitación; tampoco verifica por paquetes la ausencia de egress IPv6.
+- Decisión: GO para canje y replay de confirmación **solo en GoTrue local desechable**. NO-GO staging y producción.
