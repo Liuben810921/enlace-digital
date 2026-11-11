@@ -10,7 +10,11 @@ MAIL="http://mailpit:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
 def request(url,method="GET",data=None,token=None):
     parsed=urllib.parse.urlsplit(url)
-    assert (parsed.scheme, parsed.hostname, parsed.port) in {("http","auth",9999),("http","mailpit",8025)}, "external URL prohibited"
+    try:
+        destination=(parsed.scheme, parsed.hostname, parsed.port)
+    except ValueError as exc:
+        raise AssertionError("malformed destination prohibited") from exc
+    assert destination in {("http","auth",9999),("http","mailpit",8025)}, "external URL prohibited"
     assert parsed.username is None and parsed.password is None, "URL credentials prohibited"
     headers={"Content-Type":"application/json"}
     if token: headers["Authorization"]="Bearer "+token
