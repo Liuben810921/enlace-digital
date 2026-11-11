@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Real local GoTrue flows; localhost only, fake addresses, no hosted project."""
-import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request
+"""Real isolated GoTrue flows; internal Docker DNS, fake addresses, no hosted project."""
+import base64, hashlib, hmac, json, os, time, urllib.error, urllib.request, urllib.parse
 AUTH="http://auth:9999"
 OPENER=urllib.request.build_opener(urllib.request.ProxyHandler({}))
 MAIL="http://mailpit:8025/api/v1/messages"
 KEY="g4-local-only-synthetic-jwt-secret-32-bytes-minimum"
 def request(url,method="GET",data=None,token=None):
-    assert url.startswith((AUTH,MAIL)), "external URL prohibited"
+    parsed=urllib.parse.urlsplit(url)
+    assert (parsed.scheme, parsed.hostname, parsed.port) in {("http","auth",9999),("http","mailpit",8025)}, "external URL prohibited"
+    assert parsed.username is None and parsed.password is None, "URL credentials prohibited"
     headers={"Content-Type":"application/json"}
     if token: headers["Authorization"]="Bearer "+token
     body=None if data is None else json.dumps(data).encode()
@@ -26,6 +28,14 @@ def count():
     status,payload=request(MAIL)
     assert status==200,(status,payload)
     return len(payload.get("messages",[]))
+for prohibited in ("https://example.com", "http://auth:9999.evil.invalid/health", "http://mailpit:8025.evil.invalid/api/v1/messages", "http://127.0.0.1:9999/health"):
+    try:
+        request(prohibited)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("external URL guard bypassed: " + prohibited)
+print("PASS outbound URL allowlist rejects external, lookalike and host-loopback targets", flush=True)
 last_health_error = "no response"
 for attempt in range(35):
     try:
