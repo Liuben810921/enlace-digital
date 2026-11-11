@@ -66,3 +66,9 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - PASS: controles previos de cuatro flujos SMTP, JWT inválidos/caducados y tokens falsificados.
 - Limitación: esta prueba no demuestra caducidad temporal de enlaces ni consumo/replay de recuperación e invitación; tampoco verifica por paquetes la ausencia de egress IPv6.
 - Decisión: GO para canje y replay de confirmación **solo en GoTrue local desechable**. NO-GO staging y producción.
+
+## Ampliación G4: recuperación e invitación (pendiente CI)
+- Commit de pruebas `a36f95748818b259fa729349d0d35924c8509434`: generaliza la selección del enlace de Mailpit por destinatario y tipo, y añade canje/replay de `recovery` e `invite` junto a `signup`.
+- Cada canje exige respuesta de éxito sin indicador de error; cada replay debe ser rechazado; ningún intento puede incrementar el correo capturado.
+- Protección: URL de verificación restringida al GoTrue local, sin seguir redirecciones, sin imprimir enlace, token, sesión ni cabecera Location.
+- **No atribuir PASS a estos dos nuevos flujos hasta revisar la siguiente ejecución de GitHub Actions.** Si falla, corregir el test según la evidencia de los logs sin relajar las aserciones de seguridad.
