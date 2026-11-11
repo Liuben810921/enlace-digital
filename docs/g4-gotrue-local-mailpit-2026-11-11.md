@@ -29,3 +29,10 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - **Cero flujos funcionales de correo completados**. No se ha demostrado captura GoTrue real, y no debe atribuirse PASS.
 - Próxima corrección requiere establecer una línea base de migraciones GoTrue/Postgres reproducible y compatible, preferentemente usando un conjunto oficial de migraciones o imagen inicializada y fijada. **No** inventar el tipo `auth.factor_type` ni saltar migraciones: eso ocultaría errores de compatibilidad y invalidaría el test.
 - NO-GO staging y NO-GO para dar por aprobada esta suite. Solo pruebas locales autorizadas.
+
+## CI #11 — GO local verificado (2026-11-11)
+- Ejecución GitHub Actions: https://github.com/Liuben810921/enlace-digital/actions/runs/43053303396; job `gotrue-local` 130635981520, **SUCCESS** (todos los pasos de ejecución y limpieza aprobados).
+- Logs: `PASS local GoTrue health: v2.177.0`; `PASS local GoTrue confirmation -> one Mailpit message`; `PASS local GoTrue recovery -> one Mailpit message`; `PASS local GoTrue OTP -> one Mailpit message`; `PASS local GoTrue invitation -> one Mailpit message`.
+- Verificación de red: `PASS: auth and mailpit running without default IPv4 gateway`; cliente Python ejecutado dentro de la red Docker `internal: true`, con DNS `auth` y `mailpit`; imágenes descargadas antes de crear la red interna. Servicios y volúmenes desechables eliminados mediante `docker compose down -v`.
+- Alcance del GO: cuatro solicitudes API de GoTrue local y cuatro mensajes capturados únicamente en Mailpit. No se han comprobado redención de enlaces, caducidad/replay, ni auditoría por paquetes de egress. No se probó Supabase alojado ni se enviaron correos externos.
+- Decisión: **GO para G4 básico aislado**; **NO-GO para staging/producción y para declarar cubiertos los controles no ensayados**.
