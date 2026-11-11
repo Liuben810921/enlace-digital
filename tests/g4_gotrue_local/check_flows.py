@@ -62,7 +62,10 @@ else:
     raise AssertionError("local GoTrue did not become healthy: " + last_health_error)
 assert count()==0, "Mailpit not empty"
 def case(label,endpoint,body,token=None):
-    before=count()
+    prior_status, prior_mailbox=request(MAIL)
+    assert prior_status==200
+    prior_ids={m["ID"] for m in prior_mailbox.get("messages",[])}
+    before=len(prior_ids)
     status,response=request(AUTH+endpoint,"POST",body,token)
     assert status in (200,201),f"{label} status={status}, response={response}"
     for _ in range(20):
@@ -73,7 +76,7 @@ def case(label,endpoint,body,token=None):
     assert mail_status==200, (label,mail_status)
     messages=mailbox.get("messages",[])
     expected=body["email"].lower()
-    matched=[m for m in messages if expected in json.dumps(m.get("To",[])).lower()]
+    matched=[m for m in messages if m["ID"] not in prior_ids and expected in json.dumps(m.get("To",[])).lower()]
     assert len(matched)==1, f"{label}: expected one message addressed to synthetic recipient {expected}"
     print("PASS local GoTrue "+label+" -> one Mailpit message addressed to expected synthetic recipient")
 case("confirmation","/signup",{"email":"confirm@example.invalid","password":"G4SyntheticPassword!123"})
