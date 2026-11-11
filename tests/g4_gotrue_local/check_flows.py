@@ -168,7 +168,7 @@ def local_signup_link():
         assert status==200
         body=html.unescape(str(detail.get("Text",""))+" "+str(detail.get("HTML","")))
         # Only accept a URL pointing to the local GoTrue verification endpoint.
-        for candidate in re.findall(r"https?://[^\\s<>]+",body):
+        for candidate in re.findall(r"https?://[^\s<>]+",body):
             candidate=candidate.rstrip(chr(34)+chr(39)+".,);")
             parsed=urllib.parse.urlsplit(candidate)
             if parsed.path!="/verify" or parsed.hostname not in ("127.0.0.1","localhost"):
