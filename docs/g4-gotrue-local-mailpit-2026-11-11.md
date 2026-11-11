@@ -51,3 +51,10 @@ Reversión: revertir commits de archivos de pruebas y workflow; los contenedores
 - Red: contenedores GoTrue/Mailpit y cliente sin gateway IPv4 predeterminado; red Docker `internal: true`. **IPv6 no auditado de forma independiente**.
 - **Importante:** el rechazo de un JWT de servicio caducado no prueba caducidad ni consumo único de tokens de confirmación, recuperación o invitación. Estas pruebas siguen pendientes; no declararlas cubiertas.
 - No se han modificado Supabase alojado, código operativo ni producción.
+
+## CI verificación negativa de enlaces — evidencia (2026-11-11)
+- [Run 43063534632](https://github.com/Liuben810921/enlace-digital/actions/runs/43063534632), job 130672245889: **SUCCESS**, limpieza efímera incluida.
+- PASS: tokens `token_hash` sintéticos falsificados para tipos `signup`, `recovery` e `invite` rechazados por GoTrue `POST /verify`; sin `access_token` y sin nuevos mensajes Mailpit.
+- PASS: los cuatro flujos SMTP locales y controles previos de JWT inválidos/caducados.
+- Límite: esta comprobación negativa **no** equivale a canjear un token auténtico ni demuestra consumo único, replay o caducidad de enlaces; IPv6 y auditoría de egress por paquetes siguen fuera del alcance verificado.
+- Próximo bloque: extraer enlaces exclusivamente de Mailpit local y ensayar canje/replay con redirecciones bloqueadas y sin exponer tokens en logs.
