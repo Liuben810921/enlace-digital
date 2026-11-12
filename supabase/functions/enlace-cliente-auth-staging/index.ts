@@ -15,6 +15,20 @@ const headers={"Content-Type":"application/json","Cache-Control":"no-store","Acc
 const corsHeaders=(req:Request):Record<string,string>=>req.headers.get("origin")===allowedOrigin&&allowedOrigin?{"Access-Control-Allow-Origin":allowedOrigin,"Vary":"Origin"}:{};
 const sameKey=(a:string,b:string)=>{if(!a||!b||a.length!==b.length)return false;let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0};
 
+// Reject duplicate object keys (including escaped equivalents) at every nesting level.
+function parseUniqueJson(raw:string):unknown {
+ let i=0; const ws=()=>{while(i<raw.length&&/[\t\n\r ]/.test(raw[i]))i++};
+ const string=():string=>{const start=i++;let escaped=false;for(;i<raw.length;i++){const ch=raw[i];if(!escaped&&ch==='"'){i++;return JSON.parse(raw.slice(start,i))}if(!escaped&&ch==="\\")escaped=true;else escaped=false}throw Error("unterminated string")};
+ const value=(depth:number):void=>{
+  if(depth>16)throw Error("too deep");ws();const ch=raw[i];
+  if(ch==='{'){i++;ws();const keys=new Set<string>();if(raw[i]==='}'){i++;return}while(true){ws();if(raw[i]!=='"')throw Error("object key");const k=string();if(keys.has(k))throw Error("duplicate key");keys.add(k);ws();if(raw[i++]!==':')throw Error("colon");value(depth+1);ws();const sep=raw[i++];if(sep==='}')return;if(sep!==',')throw Error("object separator")}}
+  if(ch==='['){i++;ws();if(raw[i]===']'){i++;return}while(true){value(depth+1);ws();const sep=raw[i++];if(sep===']')return;if(sep!==',')throw Error("array separator")}}
+  if(ch==='"'){string();return}
+  const rest=raw.slice(i),m=/^(?:true|false|null|-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)/.exec(rest);
+  if(!m)throw Error("primitive");i+=m[0].length;
+ };
+ value(0);ws();if(i!==raw.length)throw Error("trailing data");return JSON.parse(raw);
+}
 const textFields=(obj:unknown,keys:string[])=>!!obj&&typeof obj==="object"&&!Array.isArray(obj)&&keys.every(k=>(obj as Record<string,unknown>)[k]===undefined||(obj as Record<string,unknown>)[k]===null||typeof (obj as Record<string,unknown>)[k]==="string");
 const validId=(value:unknown):value is number=>typeof value==="number"&&Number.isSafeInteger(value)&&value>0;
 const sendResponse=(status:number,body:unknown,req?:Request)=>new Response(JSON.stringify(body),{status,headers:{...headers,...(req?corsHeaders(req):{})}});
@@ -37,19 +51,16 @@ Deno.serve(async req=>{
   const chunks:Uint8Array[]=[];let total=0;
   while(true){const {done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>4096){await reader.cancel();return reply(413,{error:"Solicitud demasiado grande"})}chunks.push(value)}
   const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
-  body=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+  body=parseUniqueJson(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
   if(!body||typeof body!=="object"||Array.isArray(body))return reply(400,{error:"Solicitud invalida"});
  }catch{return reply(400,{error:"Solicitud invalida"})}
  const action=String(body?.action||"");
- // Do not trust client-supplied forwarding headers before proxy provenance is verified.
- const ip="unverified-proxy";
- const identity=await sha(ip);
- // All requests share the IP limiter until trusted proxy attribution is configured.
- // Global limit remains an additional fail-closed safeguard.
+ // No trusted proxy identity is available. Never pretend a shared identity is a client IP.
+ // Keep the global emergency budget and per-phone limits; do not impose collective per-IP quotas.
  const limit=async(k:string,max:number,secs:number)=>{const {data,error}=await db.rpc("ed_cliente_limite_privado",{p_clave:k,p_max:max,p_ventana_seg:secs});return !error&&data===true};
  if(!(await limit("staging-auth-global",300,60)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
  if(action==="register"){
-  if(!(await limit("reg-ip:"+identity,3,3600)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
+
   const name=String(body?.name||"").trim(),phone=String(body?.phone||"").trim(),password=String(body?.password||""),email=String(body?.email||"").trim();
   if(name.length>150||name.split(/\s+/).length<2||!/^\+[1-9][0-9]{7,14}$/.test(phone)||password.length<8||password.length>128||new TextEncoder().encode(password).length>72||email.length>254||(email&&!/^[^ @]+@[^ @]+\.[^ @]+$/.test(email)))return reply(400,{error:"Revisa los datos del registro"});
   if(!(await limit("reg-phone:"+await sha(phone),3,86400)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
@@ -67,7 +78,7 @@ Deno.serve(async req=>{
  if(action==="login"){
   const phone=String(body?.phone||"").trim(),password=String(body?.password||"");
   if(!/^\+[1-9][0-9]{7,14}$/.test(phone)||!password||password.length>128)return reply(400,{error:"Datos invalidos"});
-  if(!(await limit("login-ip:"+identity,20,900))||!(await limit("login-phone:"+await sha(phone),10,900)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
+  if(!(await limit("login-phone:"+await sha(phone),10,900)))return reply(429,{error:"Demasiados intentos. Intenta mas tarde."});
   const bytes=crypto.getRandomValues(new Uint8Array(32));const token=Array.from(bytes).map(x=>x.toString(16).padStart(2,"0")).join("");
   const {data,error}=await db.rpc("ed_cliente_login_privado",{p_telefono:phone,p_password:password,p_token_hash:await sha(token)});
   if(error){console.error("Login backend error",error.code);return reply(500,{error:"No se pudo iniciar sesion"})}

@@ -1,0 +1,34 @@
+name: g4-isolated-roles-rls-sessions
+on:
+  push:
+    branches: [audit/f6b21-identity-idempotency-20261110]
+    paths:
+      - '.github/workflows/g4-isolated-roles-rls-sessions.yml'
+      - 'sql/pruebas/g4_isolated_roles_rls_sessions.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic_ci_only
+          POSTGRES_DB: synthetic_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d synthetic_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Execute isolated G4 synthetic security assertions using container psql
+        run: |
+          set -euo pipefail
+          cid="$(docker ps --filter ancestor=postgres:17 --format '{{.ID}}' | head -n 1)"
+          test -n "$cid"
+          docker exec -i "$cid" psql -U postgres -d synthetic_ci -X -v ON_ERROR_STOP=1 < sql/pruebas/g4_isolated_roles_rls_sessions.sql

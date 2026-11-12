@@ -524,3 +524,40 @@ Deno.test("static staging publishable-key contract: default key, fail-closed, no
  assert(source.includes('if(!enabled||!validProject||!key||!allowedOrigin||!publishableKey.startsWith'), "fail-closed gate missing");
  assert(source.includes('u.origin===configuredOrigin&&u.origin==="https://liuben810921.github.io"'), "exact HTTPS origin check missing");
 });
+
+
+Deno.test("duplicate JSON keys rejected before RPC, including escaped and nested",async()=>{
+ for(const raw of [
+  '{"action":"login","action":"register"}',
+  '{"action":"login","act\u0069on":"register"}',
+  '{"action":"login","address":{"street":"A","street":"B"}}',
+  '{"action":"login","items":[{"x":1,"x":2}]}'
+ ]){
+  reset();
+  const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"apikey":"sb_publishable_mock_staging"},body:raw}));
+  assertEquals(r.status,400);assertEquals(calls.length,0);
+ }
+});
+Deno.test("JSON grammar, Unicode escapes, depth and size fail closed",async()=>{
+ for(const raw of ['{"action":"login",}', '{"action":"login"} trailing','{"action":"login","x":01}', '{"action":"login","x":"unterminated}', '['.repeat(18)+'0'+']'.repeat(18)]){
+  reset();const r=await handler(new Request("https://staging-preview.invalid",{method:"POST",headers:{"apikey":"sb_publishable_mock_staging"},body:raw}));
+  assertEquals(r.status,400);assertEquals(calls.length,0);
+ }
+});
+Deno.test("independent phone budgets without shared unverified-IP quotas",async()=>{
+ reset();
+ queueRpc("ed_cliente_login_privado",{data:null,error:null},{data:null,error:null});
+ const reqs=[send("login",{phone:"+15550001001",password:"test"}),send("login",{phone:"+15550001002",password:"test"})];
+ const results=await Promise.all(reqs);
+ assert(results.every(r=>r.status===401));
+ const keys=calls.filter(c=>c.name==="ed_cliente_limite_privado").map(c=>(c.args as any).p_clave);
+ assertEquals(keys.filter(k=>k==="staging-auth-global").length,2);
+ assertEquals(keys.filter(k=>k.startsWith("login-phone:")).length,2);
+ assertEquals(new Set(keys.filter(k=>k.startsWith("login-phone:"))).size,2);
+ assert(!keys.some(k=>k.startsWith("login-ip:")||k.startsWith("reg-ip:")));
+});
+Deno.test("global emergency limiter remains fail closed",async()=>{
+ reset();queueRpc("ed_cliente_limite_privado",{data:false,error:null});
+ assertEquals((await send("login",{phone:"+15550001001",password:"test"})).status,429);
+ assertEquals(calls.filter(c=>c.name==="ed_cliente_login_privado").length,0);
+});

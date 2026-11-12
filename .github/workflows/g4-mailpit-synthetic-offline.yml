@@ -1,0 +1,30 @@
+name: g4-mailpit-synthetic-offline
+on:
+  push:
+    branches: [audit/f6b21-identity-idempotency-20261110]
+    paths:
+      - 'tests/g4_mailpit_synthetic.py'
+      - '.github/workflows/g4-mailpit-synthetic-offline.yml'
+      - 'supabase/functions/enlace-cliente-auth-staging/index.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-mailpit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports:
+          - 127.0.0.1:1025:1025
+          - 127.0.0.1:8025:8025
+        env:
+          MP_SMTP_AUTH_ALLOW_INSECURE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert isolated SMTP capture and forbidden controller routes
+        env:
+          G4_MAILPIT_HOST: 127.0.0.1
+          G4_MAILPIT_PORT: "1025"
+        run: python3 tests/g4_mailpit_synthetic.py
