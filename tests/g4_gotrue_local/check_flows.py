@@ -100,12 +100,6 @@ def case(label,endpoint,body,token=None):
     matched=[m for m in messages if m["ID"] not in prior_ids and expected in json.dumps(m.get("To",[])).lower()]
     assert len(matched)==1, f"{label}: expected one message addressed to synthetic recipient {expected}"
     print("PASS local GoTrue "+label+" -> one Mailpit message addressed to expected synthetic recipient")
-case("confirmation","/signup",{"email":"confirm@example.invalid","password":"G4SyntheticPassword!123"})
-case("recovery","/recover",{"email":"confirm@example.invalid"})
-case("OTP","/otp",{"email":"otp@example.invalid","create_user":True})
-case("invitation","/invite",{"email":"invite@example.invalid"},jwt())
-assert count()==4
-print("PASS all four real local GoTrue API email flows, internal SMTP capture only")
 
 # Negative authentication controls against real local GoTrue. Invalid tokens
 # must not gain service-role permissions or emit invitation emails.
@@ -197,7 +191,14 @@ def check_one_time_link(kind,recipient):
     ), f"{kind}: link replay not rejected (status={replay_status})"
     assert count()==before, f"{kind}: replay unexpectedly sent mail"
     print("PASS redeemed "+kind+" verification link rejected on replay",flush=True)
+# Generate and redeem each link before subsequent account mutations.
+case("confirmation","/signup",{"email":"confirm@example.invalid","password":"G4SyntheticPassword!123"})
 check_one_time_link("signup","confirm@example.invalid")
+case("recovery","/recover",{"email":"confirm@example.invalid"})
 check_one_time_link("recovery","confirm@example.invalid")
+case("OTP","/otp",{"email":"otp@example.invalid","create_user":True})
+case("invitation","/invite",{"email":"invite@example.invalid"},jwt())
 check_one_time_link("invite","invite@example.invalid")
+assert count()==4
+print("PASS all four real local GoTrue API email flows, internal SMTP capture only")
 print("LIMIT: link expiry and external egress packet audit remain unverified")
