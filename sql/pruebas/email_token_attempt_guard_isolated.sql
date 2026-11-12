@@ -33,6 +33,14 @@ BEGIN
  INSERT INTO token_guard.tokens VALUES('tok2',now_at+interval '20 minutes',0,false);
  IF NOT token_guard.verify_and_consume('tok2','correct','correct',now_at) THEN RAISE EXCEPTION 'valid token rejected'; END IF;
  IF token_guard.verify_and_consume('tok2','correct','correct',now_at) THEN RAISE EXCEPTION 'replay accepted'; END IF;
+ INSERT INTO token_guard.tokens VALUES('tok4',now_at+interval '20 minutes',0,false);
+ IF token_guard.verify_and_consume('tok4','wrong','correct',now_at) THEN RAISE EXCEPTION 'wrong candidate accepted'; END IF;
+ IF (SELECT consumed FROM token_guard.tokens WHERE token_hash='tok4') THEN RAISE EXCEPTION 'invalid candidate consumed token'; END IF;
+ IF NOT token_guard.verify_and_consume('tok4','correct','correct',now_at) THEN RAISE EXCEPTION 'valid candidate rejected after one failure'; END IF;
+ IF (SELECT attempts FROM token_guard.tokens WHERE token_hash='tok4')<>1 THEN RAISE EXCEPTION 'attempt history lost'; END IF;
+ INSERT INTO token_guard.tokens VALUES('tok5',now_at+interval '20 minutes',0,false);
+ IF token_guard.verify_and_consume('tok5',NULL,'correct',now_at) THEN RAISE EXCEPTION 'NULL candidate accepted'; END IF;
+ IF (SELECT attempts FROM token_guard.tokens WHERE token_hash='tok5')<>1 THEN RAISE EXCEPTION 'NULL candidate not counted'; END IF;
  INSERT INTO token_guard.tokens VALUES('tok3',now_at,0,false);
  IF token_guard.verify_and_consume('tok3','correct','correct',now_at) THEN RAISE EXCEPTION 'expired token accepted'; END IF;
  IF token_guard.verify_and_consume('missing','correct','correct',now_at) THEN RAISE EXCEPTION 'unknown token accepted'; END IF;
