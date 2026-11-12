@@ -20,3 +20,6 @@ Workflow: `.github/workflows/synthetic-password-recovery-72bytes.yml` (push a es
 1. Confirmar ejecución en GitHub Actions y revisar salida de `psql` (9 aserciones).
 2. Si falla, corregir únicamente el SQL sintético y repetir CI.
 3. Una futura corrección de la función real de staging requiere autorización independiente; no se ha realizado.
+
+## Evidencia visual de GitHub Actions aportada por el propietario
+Captura de 2026-11-12 15:18 (hora mostrada en dispositivo): workflow `synthetic-password-recovery-72bytes` ejecución **#3**, commit `3d6d594`, icono verde de éxito, duración **24 s**. La ejecución #2, commit `6fc959b`, aparece fallida. Se verifica la conclusión global de la ejecución #3 mediante captura; los logs detallados de ese job no se han recuperado por conector. No confundir esta prueba sintética con validación de la función real en staging.
