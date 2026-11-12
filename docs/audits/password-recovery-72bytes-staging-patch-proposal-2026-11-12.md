@@ -26,3 +26,6 @@ El prototipo es una simplificación funcional y no demuestra que el SQL real est
 3. Ejecutar pruebas de regresión en staging con datos ficticios y verificar permisos EXECUTE, search_path, RLS y no exposición pública.
 4. Ante fallo, restaurar definición anterior desde copia auditada y repetir comprobaciones.
 5. Producción requiere autorización independiente y ventana de cambio; nunca incluir datos ni secretos reales en artefactos CI.
+
+## Resultado de CI confirmado visualmente
+Captura del propietario de GitHub Actions: ejecución **#4** de `synthetic-password-recovery-72bytes`, commit `8a73867`, conclusión **success** (indicador verde), duración **25 segundos**. La ejecución #3 también figura verde. La captura confirma el resultado global del job, no incluye sus logs detallados. Esta evidencia cierra las pruebas **sintéticas aisladas**, no la validación de la función real de Supabase.
