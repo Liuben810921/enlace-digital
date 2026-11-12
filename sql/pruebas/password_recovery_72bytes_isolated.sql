@@ -12,8 +12,7 @@ BEGIN
  IF p_password IS NULL OR length(p_password) NOT BETWEEN 8 AND 128 OR octet_length(p_password)>72 THEN RETURN false; END IF;
  SELECT true INTO valid FROM enlace_auth.tokens WHERE token_hash=p_token AND NOT consumido FOR UPDATE;
  IF NOT FOUND THEN RETURN false; END IF;
- PERFORM crypt(p_password,gen_salt('bf',12));
- UPDATE enlace_auth.credentials SET password_hash=crypt(p_password,gen_salt('bf',12)) WHERE id=1;
+ UPDATE enlace_auth.credentials SET password_hash=public.crypt(p_password,public.gen_salt('bf',12)) WHERE id=1;
  UPDATE enlace_auth.tokens SET consumido=true WHERE token_hash=p_token;
  UPDATE enlace_auth.sessions SET revocada=true WHERE NOT revocada;
  RETURN true;
