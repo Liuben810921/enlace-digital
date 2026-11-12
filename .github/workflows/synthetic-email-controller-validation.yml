@@ -1,0 +1,18 @@
+name: synthetic-email-controller-validation
+on:
+  push:
+    branches: [test/password-recovery-72bytes-20261112]
+    paths:
+      - 'tests/email_controller_validation_isolated.test.mjs'
+      - '.github/workflows/synthetic-email-controller-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate UTF-8 password boundaries offline
+        run: node --test tests/email_controller_validation_isolated.test.mjs
