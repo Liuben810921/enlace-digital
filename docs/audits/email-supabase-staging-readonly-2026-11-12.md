@@ -39,3 +39,41 @@ C. Autorización independiente para configurar exclusivamente staging (SMTP, URL
 - https://supabase.com/docs/guides/auth/auth-smtp (consultada 2026-11-12)
 - https://supabase.com/changelog.md (consultada 2026-11-12)
 - GitHub: `tests/g4_gotrue_local/check_flows.py` en `audit/f6b21-identity-idempotency-20261110`
+
+
+## Anexo — Comparación de proveedores y comprobación de staging (2026-11-12)
+
+### Evidencia de lectura
+- `get_project` volvió a confirmar `enlace-digital-staging` con `ACTIVE_HEALTHY` y PostgreSQL `17.11.0.018`.
+- `list_edge_functions` volvió a devolver `{"functions":[]}`.
+- Las herramientas de administración de Supabase disponibles en esta sesión no ofrecen una lectura directa y segura de la configuración hospedada de Auth (Email Provider, SMTP, redirect URLs, rate limits y contraseña mínima). **No se ha afirmado que los valores históricos sigan vigentes**. Se requieren capturas administrativas o una herramienta de lectura específica, sin revelar credenciales.
+- No se ha consultado ninguna tabla de clientes, usuario real, sesión, secreto o correo.
+
+### Comparativa verificada de planes publicados
+| Proveedor | Gratis | SMTP | Condiciones relevantes |
+|---|---|---|---|
+| Brevo | 300 envíos/día, $0, sin tarjeta requerida para Free | Sí, `smtp-relay.brevo.com` | El envío transaccional puede requerir activación de soporte; sin dominio propio autenticado, Brevo puede reemplazar el remitente Gmail por un dominio suyo |
+| Resend | 3.000/mes y 100/día, $0 | Sí, `smtp.resend.com` | Hasta 3 dominios verificados; recomendable dominio propio para autenticación |
+| MailerSend | 500/mes y 100/día, $0 | Sí | Exige aprobación y datos de tarjeta para el plan Free; 100 solicitudes/día; 1 dominio |
+
+### Recomendación y bloqueos
+**Primera opción provisional: Brevo**, por cuota gratuita y compatibilidad SMTP. No autorizar registro ni activación hasta:
+1. Confirmar elegibilidad de ENLACE DIGITAL como empresa operando en Cuba y condiciones de envío a buzones cubanos y extranjeros; no hay evidencia suficiente para garantizarlo. Evaluar condiciones de servicio/sanciones y obtener respuesta expresa del proveedor.
+2. Decidir si se adquiere un dominio propio y verificar SPF/DKIM/DMARC. El Gmail `enlacedigital.tecnologias@gmail.com` se mantiene como buzón oficial, no es dominio autenticable de envío de terceros.
+3. Confirmar por lectura los ajustes hospedados de Auth en staging: SMTP personalizado, Email Provider, Auth Hooks, Site URL, redirect allowlist, mínimo de contraseña, rate limits y CAPTCHA.
+4. Autorizar por separado cualquier creación de cuenta de proveedor, verificación de dominio, modificación de staging, pruebas reales de entrega o gasto.
+5. Mantener GoTrue/Mailpit como pruebas sintéticas sin tráfico de correo real. La entrega real a Cuba solo puede validarse tras autorización y pruebas de recepción en direcciones controladas.
+
+### Fuentes oficiales consultadas
+- Supabase SMTP: https://supabase.com/docs/guides/auth/auth-smtp
+- Supabase changelog: https://supabase.com/changelog.md (CLI v3 cambio incompatible, 2026-11-04; no actualizar CI implícitamente)
+- Brevo Free: https://help.brevo.com/hc/en-us/articles/208580669-FAQs-What-are-the-limits-of-the-Free-plan
+- Brevo pricing: https://help.brevo.com/hc/en-us/articles/208589409-About-Brevo-s-pricing-plans
+- Brevo SMTP: https://help.brevo.com/hc/es/articles/7924908994450-Enviar-emails-transaccionales-con-Brevo-SMTP
+- Brevo activation: https://help.brevo.com/hc/es/articles/115000188150-Soluci%C3%B3n-de-problemas-relacionados-con-Brevo-SMTP
+- Brevo domain and free Gmail restriction: https://help.brevo.com/hc/es/articles/12163873383186-Autenticar-el-dominio-con-Brevo-c%C3%B3digo-Brevo-DKIM-DMARC
+- Brevo sender rewriting: https://help.brevo.com/hc/es/articles/14925263522578-Cumplir-los-requisitos-de-Gmail-Yahoo-y-Microsoft-para-remitentes-de-email
+- Resend pricing: https://resend.com/pricing
+- Resend SMTP: https://resend.com/changelog/smtp-service
+- MailerSend free plan: https://www.mailersend.com/help/plans-features-and-limits
+- MailerSend pricing/card requirement: https://www.mailersend.com/pricing
