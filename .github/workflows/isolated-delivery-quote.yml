@@ -45,6 +45,8 @@ on:
       - 'tests/postgres-delivery-quote-lab.sh'
       - 'tests/postgres-delivery-resilience-lab.py'
       - 'tests/postgres-delivery-recovery-lab.py'
+      - 'tests/delivery-backend-spec-offline.test.cjs'
+      - 'docs/audits/delivery-manager-backend-contract-spec-2026-11-13.md'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -90,6 +92,7 @@ jobs:
       - run: node tests/delivery-manager-policy-route-audit-isolated.test.cjs
       - run: node tests/delivery-manager-integrated-boundary-isolated.test.cjs
       - run: node tests/delivery-manager-concurrency-idempotency-isolated.test.cjs
+      - run: node tests/delivery-backend-spec-offline.test.cjs
       - name: PostgreSQL disposable concurrency and idempotency lab
         run: |
           sudo apt-get update -qq
