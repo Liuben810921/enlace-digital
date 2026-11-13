@@ -170,6 +170,12 @@ for blank_reason in ("\t\t\t","\n\n\n"," \t "):
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==rate_before
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==audit_rate_before
 
+# Idempotency keys containing embedded control bytes are unsafe opaque identifiers.
+control_key_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+for control_key in ("order\nforged","order\rforged","order\tforged"):
+    assert_error(a,q,errors.InvalidParameterValue,(control_key,"cart-a","customer-a",1))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(control_key_before,)]
+
 # Whitespace-only idempotency keys must fail closed without persisting quotes.
 blank_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
 for blank_key in (" ","   ","\t","\n","\r\n","\v","\f"," \t "):
