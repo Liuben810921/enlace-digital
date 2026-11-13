@@ -28,6 +28,8 @@ assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.audit
 
 assert run(a,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-a",)]
 assert run(b,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-b",)]
+assert_error(a,"SET ROLE ed_lab_rpc_owner",errors.InsufficientPrivilege)
+assert_error(b,"SET ROLE ed_lab_gestor_a",errors.InsufficientPrivilege)
 assert_error(a,"INSERT INTO ed_rpc_lab.carts VALUES ('evil','ed_lab_gestor_a','x',1,1)",errors.InsufficientPrivilege)
 assert_error(a,"SELECT * FROM ed_rpc_lab.routes",errors.InsufficientPrivilege)
 assert_error(a,"SELECT * FROM ed_rpc_lab.audit",errors.InsufficientPrivilege)
