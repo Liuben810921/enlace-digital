@@ -276,6 +276,18 @@ for tiny_distance in (__import__('decimal').Decimal('0.001'),__import__('decimal
 assert run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[(route_precision_v,)]
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(route_precision_audit,)]
 
+# Boundary audit: invalid non-finite/out-of-range distances must not mutate routes.
+# The smallest positive value representable at two decimals (0.005 -> 0.01)
+# is deliberately tested separately from the rejected positive-to-zero values.
+route_bounds_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+route_bounds_audit=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")[0][0]
+for invalid_distance in (__import__('decimal').Decimal('NaN'),__import__('decimal').Decimal('Infinity'),
+                         __import__('decimal').Decimal('-Infinity'),__import__('decimal').Decimal('-0.001'),
+                         __import__('decimal').Decimal('10000.001')):
+    assert_error(admin,mutate,errors.InvalidParameterValue,("route","cart-a",route_bounds_v,invalid_distance))
+assert run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[(route_bounds_v,)]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(route_bounds_audit,)]
+
 # Restore route coherence for the subsequent context-race test suite, which
 # shares this disposable database and starts by quoting the existing cart.
 route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
