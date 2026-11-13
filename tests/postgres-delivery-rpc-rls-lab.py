@@ -198,6 +198,12 @@ for control_key in ("order\nforged","order\rforged","order\tforged"):
     assert_error(a,q,errors.InvalidParameterValue,(control_key,"cart-a","customer-a",1))
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(control_key_before,)]
 
+# Unicode whitespace-only idempotency keys must not create persistent operations.
+unicode_key_blank_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+for unicode_blank_key in ("\u00a0"*3,"\u202f"*3,"\u3000"*3):
+    assert_error(a,q,errors.InvalidParameterValue,(unicode_blank_key,"cart-a","customer-a",1))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(unicode_key_blank_before,)]
+
 # Whitespace-only idempotency keys must fail closed without persisting quotes.
 blank_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
 for blank_key in (" ","   ","\t","\n","\r\n","\v","\f"," \t "):
