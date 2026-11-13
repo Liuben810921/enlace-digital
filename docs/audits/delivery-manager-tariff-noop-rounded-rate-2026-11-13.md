@@ -13,4 +13,12 @@ HEAD inicial verificado idéntico al commit autorizado `c5eb409a071da46396bd5309
 - Ajuste de precisión Decimal: `2b759ad0d8e60415ed14a1f8488915659fab8f5b`.
 - Corrección SQL: `5f2ad4ea8a2ac18d209a0faf866886294b614b20`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Exclusivamente rama aislada de GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Exclusivamente rama aislada de GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Verificada [GitHub Actions #43522272422](https://github.com/Liuben810921/enlace-digital/actions/runs/43522272422): estado `completed`, conclusión `success`, commit probado `5f2ad4ea8a2ac18d209a0faf866886294b614b20`. El trabajo `test` (ID `132219256725`) terminó `completed/success`.
+
+La batería aprobada comprueba que los cambios de tarifa sin efecto, tanto el valor idéntico como variaciones que redondean al mismo `numeric(12,2)`, se rechazan sin incrementar versión ni registrar auditorías espurias.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre exclusivamente documental; sin cambios SQL, fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
