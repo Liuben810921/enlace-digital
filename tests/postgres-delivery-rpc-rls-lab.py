@@ -186,6 +186,14 @@ for injected_reason in ("valid\nforged event","valid\rforged event","valid\tforg
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==embedded_before
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==embedded_audit_before
 
+# Tiny positive rates can round to zero in numeric(12,2); reject before CHECK.
+subcent_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+subcent_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for tiny_rate in (__import__('decimal').Decimal('0.001'),__import__('decimal').Decimal('0.004')):
+    assert_error(admin,u,errors.InvalidParameterValue,(subcent_before[0][0],tiny_rate,"Tarifa inferior al centavo"))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==subcent_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==subcent_audit_before
+
 # A tariff update that rounds to the stored rate must not bump version or create a misleading audit.
 noop_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
 noop_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")[0][0]
