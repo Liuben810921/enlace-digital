@@ -192,7 +192,7 @@ BEGIN
  IF session_user<>'ed_lab_admin' THEN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
  END IF;
- IF p_kind NOT IN ('cart','destination','warehouse','route') OR p_expected IS NULL
+ IF p_kind IS NULL OR p_kind NOT IN ('cart','destination','warehouse','route') OR p_expected IS NULL
     OR p_expected<1 THEN
   RAISE EXCEPTION 'invalid_mutation' USING ERRCODE='22023';
  END IF;
