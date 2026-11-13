@@ -181,7 +181,7 @@ assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==embedded_audit_before
 # A tariff update that rounds to the stored rate must not bump version or create a misleading audit.
 noop_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
 noop_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")[0][0]
-for noop_rate in (noop_before[1],noop_before[1]+0.004):
+for noop_rate in (noop_before[1],noop_before[1]+__import__('decimal').Decimal('0.004')):
     assert_error(admin,u,errors.InvalidParameterValue,(noop_before[0],noop_rate,"Tarifa sin cambio efectivo"))
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==[noop_before]
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==[(noop_audit_before,)]
