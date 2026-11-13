@@ -161,5 +161,10 @@ assert run(admin,mutate,("warehouse","cart-b",warehouse_v,None))==[(warehouse_v+
 assert run(None,"SELECT change_kind,cart_id,previous_version,next_version FROM ed_rpc_lab.context_audit ORDER BY event_id DESC LIMIT 1")==[("warehouse",None,warehouse_v,warehouse_v+1)]
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(audit_before+1,)]
 assert run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")==[(warehouse_v+1,)]
+# Restore route coherence for the subsequent context-race test suite, which
+# shares this disposable database and starts by quoting the existing cart.
+route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+assert run(admin,mutate,("route","cart-a",route_v,5))==[(route_v+1,)]
+
 
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
