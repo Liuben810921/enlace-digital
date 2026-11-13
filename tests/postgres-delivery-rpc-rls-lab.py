@@ -146,6 +146,14 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
+# Embedded control characters can forge multi-line tariff audit narratives.
+embedded_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+embedded_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for injected_reason in ("valid\nforged event","valid\rforged event","valid\tforged event"):
+    assert_error(admin,u,errors.InvalidParameterValue,(embedded_before[0][0],275,injected_reason))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==embedded_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==embedded_audit_before
+
 # A long padded reason must not bypass the 160-character stored audit limit.
 padded_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 padded_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
