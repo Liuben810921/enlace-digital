@@ -12,4 +12,12 @@ HEAD inicial verificado idéntico al commit autorizado `5af53243c29596a1fd3d996d
 - Pruebas: `12181acb526e76b30647f168b503d0d3c0c382e8`.
 - Corrección: `78b1097ea121e7f6f46db2dfc762e16716433f57`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Verificada [GitHub Actions #43521910751](https://github.com/Liuben810921/enlace-digital/actions/runs/43521910751): estado `completed`, conclusión `success`, commit probado `78b1097ea121e7f6f46db2dfc762e16716433f57`. El trabajo `test` (ID `132218018656`) también terminó `completed/success`.
+
+La ejecución aprobó las pruebas reproducibles de rechazo de claves de idempotencia formadas exclusivamente por caracteres invisibles U+200B, U+2060 y U+FEFF, sin persistir cotizaciones ante solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre exclusivamente documental; sin modificaciones SQL, fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
