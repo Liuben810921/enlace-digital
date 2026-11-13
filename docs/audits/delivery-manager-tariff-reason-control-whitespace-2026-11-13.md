@@ -24,3 +24,11 @@ En `tests/postgres-delivery-rpc-rls-lab.sql` se sustituyó el recorte predetermi
 Se corrigió únicamente la representación de los casos de prueba para que Python envíe tabulaciones y saltos de línea reales mediante escapes de cadena normales. Commit: `01d7ab63bd6ccd29bbc468ef4f4b3fb17ce8a72f`.
 
 **Estado:** pendiente de nueva ejecución CI con el fixture corregido; no cerrar hasta `completed/success`.
+
+## Cierre definitivo — CI aprobada
+
+Se verificó la ejecución [GitHub Actions #43515759697](https://github.com/Liuben810921/enlace-digital/actions/runs/43515759697): estado `completed`, conclusión `success`. El trabajo `test` (ID `132197183737`) también terminó `completed/success`.
+
+Commit probado: `01d7ab63bd6ccd29bbc468ef4f4b3fb17ce8a72f`. Este commit incluye la validación SQL de motivos de tarifa compuestos únicamente por caracteres de control y la corrección del fixture de regresión. La incidencia de CI anterior (#43515287691) se atribuyó a secuencias escapadas incorrectamente en el fixture, no a la lógica SQL; la nueva batería ha pasado.
+
+**Dictamen:** auditoría de motivos de tarifa con espacios de control **cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Este cierre es exclusivamente documental y no constituye despliegue, fusión o validación de entornos reales. No se accedió ni modificó Supabase, staging, producción, clientes reales o pedidos.
