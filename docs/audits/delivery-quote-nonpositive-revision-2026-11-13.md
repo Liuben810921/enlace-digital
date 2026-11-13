@@ -14,4 +14,12 @@ Se verificó que la rama aislada `audit/delivery-map-readonly-20261113` coincid�
 2. Si CI demuestra el fallo esperado, corregir únicamente la validación de `p_revision`.
 3. Volver a ejecutar CI y cerrar el informe solo tras `completed/success`.
 
-**Estado: pendiente de evidencia CI.** Solo GitHub y PostgreSQL desechable. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: defecto confirmado en CI, corrección mínima aplicada; pendiente de CI posterior.** Solo GitHub y PostgreSQL desechable. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia y corrección
+
+GitHub Actions [#43525804231](https://github.com/Liuben810921/enlace-digital/actions/runs/43525804231) terminó `completed/failure` en el commit de regresión `41573e60a38b4bbf656a5c826494eb449d14c147`. El trabajo `test` (ID `132231123950`) falló en la línea 68 de `tests/postgres-delivery-rpc-rls-lab.py` porque `quote_preview` emitió `psycopg.errors.SerializationFailure: stale_cart` (`40001`) en vez de `InvalidParameterValue` (`22023`).
+
+Se aplicó exclusivamente la condición `OR p_revision<1` al bloque de validación inicial de `quote_preview`, sin modificar su cálculo, permisos, RLS ni lógica de concurrencia. Commit SQL: `d24f4b3170ffc689bbb6e06d96cdac485997c9d4`.
+
+**Pendiente:** verificar nueva ejecución GitHub Actions sobre el commit de corrección antes de declarar cierre definitivo.
