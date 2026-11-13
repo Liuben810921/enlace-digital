@@ -14,4 +14,12 @@ La validación de `ed_rpc_lab.quote_preview` rechaza controles POSIX, separadore
 - Commit de regresión: `843187376157ad51e865bb26bf02106c0d1aaf67`.
 - Commit de corrección: `f0016f474b68d31c41e558ad7f957739e5aac4fa`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Solo rama aislada y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Solo rama aislada y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Verificada [GitHub Actions #43522494661](https://github.com/Liuben810921/enlace-digital/actions/runs/43522494661): estado `completed`, conclusión `success`, commit probado `f0016f474b68d31c41e558ad7f957739e5aac4fa`. El trabajo `test` (ID `132219989851`) también terminó `completed/success`.
+
+La batería aprobada verifica el rechazo de controles bidireccionales Unicode en claves de idempotencia, con error de validación y sin persistencia de cotizaciones para las solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre exclusivamente documental; sin modificaciones SQL, fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
