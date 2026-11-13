@@ -1485,19 +1485,49 @@ function edDeliveryOriginsWrite(items){
  try{localStorage.setItem(ED_DELIVERY_ORIGINS_KEY,JSON.stringify(items));return true}
  catch(e){alert('No se pudieron guardar los puntos de salida en este navegador.');return false}
 }
+
+const ED_DELIVERY_SUPPLIERS_KEY='ed_delivery_suppliers_demo_v1';
+function edDeliverySuppliersRead(){try{const v=JSON.parse(localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)||'[]');return Array.isArray(v)?v.filter(p=>p&&typeof p.id==='string'&&typeof p.name==='string'):[]}catch(e){return []}}
+function edDeliverySupplierAdd(){
+ const name=document.getElementById('edSupplierName').value.trim();
+ if(!name){alert('Introduce el nombre del proveedor.');return}
+ const list=edDeliverySuppliersRead();
+ if(list.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return}
+ list.push({id:'supplier-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name});
+ try{localStorage.setItem(ED_DELIVERY_SUPPLIERS_KEY,JSON.stringify(list));adminTab('delivery')}catch(e){alert('No se pudo guardar el proveedor en este navegador.')}
+}
+function edDeliverySupplierOptions(selected){
+ return '<option value="">Selecciona proveedor</option>'+edDeliverySuppliersRead().map(p=>'<option value="'+esc(p.id)+'" '+(selected===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('');
+}
+function edDeliveryOriginTypeChange(){
+ const supplier=document.getElementById('edOriginType').value==='proveedor';
+ const field=document.getElementById('edOriginSupplierField');if(field)field.style.display=supplier?'':'none';
+}
+function edProductOriginSupplierChange(mode,productId){
+ const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
+ const selector=target?.querySelector('.ed-product-supplier');
+ if(!selector)return;
+ const supplierId=selector.value;
+ const items=edDeliveryOriginsRead().filter(p=>p.active!==false&&p.type==='proveedor'&&p.supplierId===supplierId);
+ const checked=new Set([...target.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value));
+ if(!checked.size&&items.length===1)checked.add(items[0].id);
+ const list=target.querySelector('.ed-product-origin-list');
+ list.innerHTML=items.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(checked.has(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">No hay almacenes registrados para este proveedor.</p>';
+}
+
 function edDeliveryOriginsPanel(){
  const items=edDeliveryOriginsRead();
  const rows=items.map(p=>'<div class="panel" style="padding:12px;margin:10px 0"><strong>'+esc(p.name)+'</strong> · '+(p.type==='proveedor'?'Proveedor':'Almacén propio')+
  '<p class="note">'+esc([p.address,p.municipality,'La Habana'].filter(Boolean).join(', '))+'</p>'+
- '<p class="note">Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+'</p>'+
+ '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+'</p>'+
  '<button type="button" class="secondary" onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div>').join('');
- return '<div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
+ return '<div class="panel"><h3>Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<p>'+esc(p.name)+'</p>').join('')+'<div class="field"><label>Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
  (rows||'<p class="note">Todavía no hay puntos de salida registrados.</p>')+
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><input type="hidden" id="edOriginId">'+
  '<div class="field"><label>Nombre del punto</label><input id="edOriginName" maxlength="120" placeholder="Ej.: Almacén principal"></div>'+
- '<div class="field"><label>Tipo</label><select id="edOriginType"><option value="propio">Almacén propio</option><option value="proveedor">Proveedor</option></select></div>'+
- '<div class="field"><label>Municipio (La Habana)</label><select id="edOriginMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select></div>'+
+ '<div class="field"><label>Tipo</label><select id="edOriginType" onchange="edDeliveryOriginTypeChange()"><option value="propio">Almacén propio</option><option value="proveedor">Proveedor</option></select></div>'+
+ '<div class="field" id="edOriginSupplierField" style="display:none"><label>Proveedor del almacén</label><select id="edOriginSupplier">'+edDeliverySupplierOptions('')+'</select></div>'+ '<div class="field"><label>Municipio (La Habana)</label><select id="edOriginMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select></div>'+
  '<div class="field"><label>Dirección de salida</label><textarea id="edOriginAddress" maxlength="300" rows="2" placeholder="Calle, número y referencias"></textarea></div>'+
  '<p class="note">Ubicación de referencia para el futuro mapa. Las coordenadas son opcionales y deben verificarse; no se calculan automáticamente.</p>'+
  '<div class="grid2"><div class="field"><label>Latitud</label><input id="edOriginLat" type="number" min="-90" max="90" step="any" placeholder="Ej.: 23.13"></div>'+
@@ -1508,7 +1538,7 @@ function edDeliveryOriginsPanel(){
 function edDeliveryOriginReset(){
  for(const id of ['edOriginId','edOriginName','edOriginAddress','edOriginLat','edOriginLng'])document.getElementById(id).value='';
  document.getElementById('edOriginType').value='propio';
- document.getElementById('edOriginMunicipality').value='';
+ document.getElementById('edOriginMunicipality').value='';edDeliveryOriginTypeChange();
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
 }
 function edDeliveryOriginEdit(id){
@@ -1517,6 +1547,7 @@ function edDeliveryOriginEdit(id){
  document.getElementById('edOriginName').value=p.name;
  document.getElementById('edOriginType').value=p.type;
  document.getElementById('edOriginMunicipality').value=p.municipality;
+ edDeliveryOriginTypeChange();document.getElementById('edOriginSupplier').value=p.supplierId||'';
  document.getElementById('edOriginAddress').value=p.address;
  document.getElementById('edOriginLat').value=p.lat??'';
  document.getElementById('edOriginLng').value=p.lng??'';
@@ -1526,6 +1557,8 @@ function edDeliveryOriginEdit(id){
 function edDeliveryOriginSave(){
  const val=id=>document.getElementById(id).value.trim();
  const id=val('edOriginId'),name=val('edOriginName'),type=val('edOriginType'),municipality=val('edOriginMunicipality'),address=val('edOriginAddress');
+ const supplierId=type==='proveedor'?val('edOriginSupplier'):null;
+ if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId)){alert('Selecciona un proveedor registrado.');return}
  const latRaw=val('edOriginLat'),lngRaw=val('edOriginLng');
  if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){alert('Completa nombre, tipo, municipio y dirección.');return}
  if(Boolean(latRaw)!==Boolean(lngRaw)){alert('Indica ambas coordenadas o deja las dos vacías.');return}
@@ -1534,7 +1567,7 @@ function edDeliveryOriginSave(){
  const items=edDeliveryOriginsRead();
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
- const point={id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false};
+ const point={supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false};
  if(existing)items.splice(items.indexOf(existing),1,point);else items.push(point);
  if(edDeliveryOriginsWrite(items))adminTab('delivery');
 }
@@ -1556,11 +1589,14 @@ function edProductOriginsSave(productId,ids){
 function edProductOriginsPanel(mode,productId){
  const type=mode==='edit'?(document.getElementById('editOrigin')?.value||'propio'):(document.getElementById('porigin')?.value||'propio');
  const saved=productId==null?[]:(edProductOriginsRead()[String(productId)]||[]);
- const list=edDeliveryOriginsRead().filter(x=>x.active!==false&&x.type===type);
+ const supplierIds=[...new Set(edDeliveryOriginsRead().filter(p=>saved.includes(p.id)&&p.supplierId).map(p=>p.supplierId))];
+ const supplierId=supplierIds[0]||'';
+ const list=edDeliveryOriginsRead().filter(x=>x.active!==false&&x.type===type&&(type==='propio'||x.supplierId===supplierId));
  const selected=saved.filter(id=>list.some(p=>p.id===id));
  if(!selected.length&&list.length===1)selected.push(list[0].id);
- return '<div class="panel" style="padding:12px;margin:12px 0"><h4>Puntos de salida del producto</h4><p class="note">Marca uno o varios almacenes. Las asociaciones se guardan solo en este navegador de pruebas.</p>'+
- (list.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(selected.includes(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">Todavía no hay puntos de salida de este tipo.</p>')+
+ return '<div class="panel" style="padding:12px;margin:12px 0"><h4>Puntos de salida del producto</h4><p class="note">Selecciona los almacenes disponibles. Datos de prueba guardados solo en este navegador.</p>'+
+ (type==='proveedor'?'<div class="field"><label>Proveedor registrado</label><select class="ed-product-supplier" onchange="edProductOriginSupplierChange('+JSON.stringify(mode)+','+JSON.stringify(productId)+')">'+edDeliverySupplierOptions(supplierId)+'</select></div>':'')+
+ '<div class="ed-product-origin-list">'+(list.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(selected.includes(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">Todavía no hay almacenes disponibles de este tipo.</p>')+'</div>'+
  '<button type="button" class="secondary" onclick="edProductOriginQuickForm('+JSON.stringify(mode).replace(/"/g,'&quot;')+')">+ Registrar otro almacén</button>'+
  '<div id="edProductOriginQuick" style="display:none"></div></div>';
 }
@@ -1581,14 +1617,17 @@ function edProductOriginQuickSave(mode){
  const name=document.getElementById('edQuickOriginName').value.trim(),municipality=document.getElementById('edQuickOriginMunicipality').value,address=document.getElementById('edQuickOriginAddress').value.trim();
  if(!name||!municipality||!address){alert('Completa nombre, municipio y dirección.');return}
  const type=document.getElementById(mode==='edit'?'editOrigin':'porigin').value;
+ const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
+ const supplierId=type==='proveedor'?target.querySelector('.ed-product-supplier')?.value:null;
+ if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId)){alert('Selecciona primero un proveedor registrado en Administración de entregas.');return}
  const items=edDeliveryOriginsRead();
  const id='origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);
- items.push({id,name,type,municipality,address,lat:null,lng:null,active:true});
+ items.push({id,name,type,supplierId,municipality,address,lat:null,lng:null,active:true});
  if(!edDeliveryOriginsWrite(items))return;
- const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
  const checked=[...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value);
  const productId=mode==='edit'?document.getElementById('edEditProductOrigins').dataset.productId:null;
  edProductOriginsRender(mode,productId);
+ if(type==='proveedor'){target.querySelector('.ed-product-supplier').value=supplierId;edProductOriginSupplierChange(mode,productId)}
  for(const input of target.querySelectorAll('.ed-product-origin'))input.checked=checked.includes(input.value)||input.value===id;
 }
 function edProductOriginsCollect(mode){
