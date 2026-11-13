@@ -170,6 +170,10 @@ BEGIN
  PERFORM pg_catalog.pg_advisory_xact_lock(917321);
  SELECT rate_cup_per_km INTO old_rate FROM ed_rpc_lab.settings WHERE singleton=true AND version=p_expected FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'version_conflict' USING ERRCODE='40001'; END IF;
+ -- The column stores two decimal places; avoid phantom tariff versions/audit entries.
+ IF p_new::numeric(12,2)=old_rate THEN
+  RAISE EXCEPTION 'unchanged_rate' USING ERRCODE='22023';
+ END IF;
  UPDATE ed_rpc_lab.settings SET version=version+1,rate_cup_per_km=p_new
  WHERE singleton=true RETURNING version INTO new_version;
  INSERT INTO ed_rpc_lab.audit(version,actor_role,reason,previous_rate,next_rate)
