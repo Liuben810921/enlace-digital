@@ -20,7 +20,6 @@ u="SELECT ed_rpc_lab.update_rate(%s,%s,%s)"
 a="ed_lab_gestor_a";b="ed_lab_gestor_b";admin="ed_lab_admin";sup="ed_lab_supervisor"
 assert run(a,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-a",)]
 assert run(b,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-b",)]
-assert run(a,"SELECT count(*) FROM ed_rpc_lab.audit")==[(0,)] if False else True
 assert_error(a,"INSERT INTO ed_rpc_lab.carts VALUES ('evil','ed_lab_gestor_a','x',1,1)",errors.InsufficientPrivilege)
 assert_error(a,"SELECT * FROM ed_rpc_lab.routes",errors.InsufficientPrivilege)
 assert_error(a,"SELECT * FROM ed_rpc_lab.audit",errors.InsufficientPrivilege)
@@ -34,7 +33,6 @@ assert run(a,q,("idempotent","cart-a","customer-a",1))==[("replayed",1000,1000,0
 assert run(b,q,("free","cart-b","customer-b",1))==[("committed",1600,0,1600)]
 assert run(a,"SELECT operation_key FROM ed_rpc_lab.quotes")==[("idempotent",)]
 assert run(b,"SELECT operation_key FROM ed_rpc_lab.quotes")==[("free",)]
-assert_error(a,q,errors.UniqueViolation,("idempotent","cart-b","customer-b",1)) if False else None
 assert run(admin,q,("admin-preview","cart-a","customer-a",1))==[("committed",1000,1000,0)]
 assert run(admin,u,(1,250,"synthetic tariff update"))==[(2,)]
 assert run(admin,"SELECT version,actor_role,previous_rate,next_rate FROM ed_rpc_lab.audit")==[(2,"ed_lab_admin",200,250)]
