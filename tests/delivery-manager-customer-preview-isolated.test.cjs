@@ -7,7 +7,12 @@ const lines=[{productId:'laptop',type:'propio',allowedOriginIds:['own'],dispatch
 const quoteArgs={province:'La Habana',lines,origins,roadDistancesKm:{own:2,supplier:3.4},orderSubtotalUsd:150,freeShippingThresholdUsd:200,roundToCup:100};
 const returning={kind:'habitual',savedAddressId:'dest-1',savedAddress:'Centro Habana, punto de referencia',lastDeliveryQuoteCup:600};
 const newer={kind:'nuevo',proposedAddress:'Plaza de la Revolución, referencia'};
-const q=(customer,extra={})=>previewCustomerDelivery({actorRole:'gestor',customer,quoteArgs,...extra});
+const q=(customer,extra={})=>{
+ const selected=extra.alternativeAddress??(customer.kind==='habitual'?customer.savedAddress:customer.proposedAddress);
+ const args=extra.quoteArgs??quoteArgs;
+ return previewCustomerDelivery({actorRole:'gestor',customer,quoteArgs:{...args,verifiedDestinationLabel:selected},...extra,
+  ...(extra.quoteArgs?{quoteArgs:{...args,verifiedDestinationLabel:extra.quoteArgs.verifiedDestinationLabel??selected}}:{quoteArgs:{...quoteArgs,verifiedDestinationLabel:selected}})});
+};
 let r=q(returning);
 assert.equal(r.available,true);
 assert.equal(r.customerFeeCup,700);
@@ -47,6 +52,7 @@ assert.equal(r.customerFeeCup,1300);
 assert.equal(r.calculatedDeliveryValueCup,1300);
 assert.equal(q(returning,{quoteArgs:{...quoteArgs,roadDistancesKm:{own:2}}}).reason,'missing_verified_road_distance');
 assert.equal(q(returning,{quoteArgs:{...quoteArgs,feeCup:600}}).reason,'forbidden_quote_override');
+assert.equal(q(returning,{quoteArgs:{...quoteArgs,verifiedDestinationLabel:'otra direccion'}}).reason,'distance_destination_mismatch');
 assert.equal(q(returning,{actorRole:'cliente'}).reason,'forbidden_role');
 assert.equal(q({kind:'habitual',savedAddress:'x'}).reason,'missing_saved_address');
 assert.equal(q({kind:'nuevo',proposedAddress:''}).reason,'missing_destination_address');
