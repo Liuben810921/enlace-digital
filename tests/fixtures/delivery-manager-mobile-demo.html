@@ -18,19 +18,22 @@
 <label for="special">Tarifa especial (CUP; 0 = ninguna)</label><input id="special" type="number" min="0" step="1" value="0">
 <label for="productFree"><input id="productFree" type="checkbox">Algún producto tiene mensajería gratis</label>
 <p class="hint">Configuración de ejemplo fijada por administrador general: entrega gratis desde 200 USD; 200 CUP/km; mínimo 600 CUP; redondeo hacia arriba de 100 CUP. El gestor no puede modificarla.</p>
-<div class="actions"><button id="calculate" type="button">Recalcular tarifa vigente</button><button id="reset" class="secondary" type="button">Restablecer demostración</button></div>
+<div class="actions"><button id="verifyRoute" class="secondary" type="button">Verificar ruta simulada</button><button id="calculate" type="button">Recalcular tarifa vigente</button><button id="reset" class="secondary" type="button">Restablecer demostración</button></div>
 <output id="feedback" role="status" aria-live="polite"></output>
 <div id="results" hidden><div class="metric"><span>Valor calculado de mensajería</span><strong id="gross"></strong></div><div class="metric"><span>Paga el cliente</span><strong id="customerFee"></strong></div><div class="metric"><span>Bonificación de ENLACE DIGITAL</span><strong id="covered"></strong></div><p class="hint" id="quoteReason"></p></div>
 </section><p class="hint">El último importe nunca se utiliza como tarifa actual. El gasto real del mensajero se registrará aparte. Las distancias aquí son simuladas, no consultadas a un servicio de rutas.</p></main>
+<script src="./delivery-quote-shared-core.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const defaults={customerType:'nuevo',addressMode:'principal',newAddress:'Plaza de la Revolución, referencia',alternativeAddress:'Habana Vieja, otra referencia',subtotal:'150',distance:'3.4',special:'0',productFree:false};
 const fmt=n=>n.toLocaleString('es-ES',{maximumFractionDigits:0})+' CUP';
+let verifiedRoute=null;
+function invalidateRoute(){verifiedRoute=null;$('results').hidden=true;}
 function refresh(){
  const habitual=$('customerType').value==='habitual',alternative=$('addressMode').value==='alternativa';
  $('savedArea').hidden=!habitual;$('newArea').hidden=habitual||alternative;$('alternativeArea').hidden=!alternative;
- $('results').hidden=true;$('feedback').textContent='Selecciona «Recalcular tarifa vigente» para obtener una nueva cotización.';
+ invalidateRoute();$('feedback').textContent='Selecciona «Recalcular tarifa vigente» para obtener una nueva cotización.';
 }
 function calculate(){
  $('results').hidden=true;
@@ -39,16 +42,18 @@ function calculate(){
  if(!address.trim()||address.length>200||[$('subtotal'),$('distance'),$('special')].some(el=>el.value.trim()==='')||![subtotal,distance,special].every(n=>Number.isFinite(n)&&n>=0)||!Number.isSafeInteger(special)){
   $('feedback').textContent='Indica una dirección válida y valores numéricos correctos.';return;
  }
- const gross=Math.ceil(Math.max(600,Math.ceil(Math.max(3,distance)*200),special)/100)*100;
- if(!Number.isSafeInteger(gross)){$('feedback').textContent='Cotización fuera del rango permitido.';return;}
- const free=$('productFree').checked||subtotal>=200,customerFee=free?0:gross;
- $('gross').textContent=fmt(gross);$('customerFee').textContent=fmt(customerFee);$('covered').textContent=fmt(gross-customerFee);
- $('quoteReason').textContent=(free?'Promoción de entrega gratis aplicada al pedido. ':'Tarifa vigente calculada. ')+
+ if(!verifiedRoute||verifiedRoute.destination!==address.trim()||verifiedRoute.distanceKm!==distance){$('feedback').textContent='Debes verificar de nuevo la ruta simulada para este destino.';return;}
+ const result=EDDeliveryQuoteCore.quote({distanceKm:distance,specialFeeCup:special,subtotalUsd:subtotal,productFree:$('productFree').checked});
+ if(!result.available){$('feedback').textContent='Cotización inválida.';return;}
+ $('gross').textContent=fmt(result.calculatedDeliveryValueCup);$('customerFee').textContent=fmt(result.customerFeeCup);$('covered').textContent=fmt(result.promotionCoveredCup);
+ $('quoteReason').textContent=(result.freeReason?'Promoción de entrega gratis aplicada al pedido. ':'Tarifa vigente calculada. ')+
   'Destino: '+address.trim()+'. La dirección no se ha guardado.';
  $('results').hidden=false;$('feedback').textContent='Vista previa calculada con valores ficticios. No se creó ningún pedido.';
 }
 $('customerType').addEventListener('change',refresh);$('addressMode').addEventListener('change',refresh);
+$('verifyRoute').addEventListener('click',()=>{const address=$('addressMode').value==='alternativa'?$('alternativeAddress').value:$('customerType').value==='habitual'?$('savedAddress').value:$('newAddress').value;const distance=Number($('distance').value);if(!address.trim()||$('distance').value.trim()===''||!Number.isFinite(distance)||distance<0){invalidateRoute();$('feedback').textContent='Falta dirección o distancia válida.';return;}verifiedRoute={destination:address.trim(),distanceKm:distance};$('results').hidden=true;$('feedback').textContent='Ruta ficticia asociada al destino. Ahora puedes recalcular.';});
 $('calculate').addEventListener('click',calculate);
+for(const id of ['newAddress','alternativeAddress','distance'])$(id).addEventListener('input',invalidateRoute);
 $('reset').addEventListener('click',()=>{for(const [id,value] of Object.entries(defaults))$(id)[$(id).type==='checkbox'?'checked':'value']=value;refresh();});
 refresh();
 </script></body></html>
