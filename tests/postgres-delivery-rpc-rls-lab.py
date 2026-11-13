@@ -382,4 +382,19 @@ finally:
     run(None,"UPDATE ed_rpc_lab.settings SET min_km=%s,min_fee_cup=%s WHERE singleton=true RETURNING min_km",(rounding_settings[0],rounding_settings[1]))
     run(admin,mutate,("route","cart-a",rounding_route_v+1,5))
 
+# Regression: no hard-coded fee floor when route and both configured minima are zero.
+prior_floors=run(None,"SELECT min_km,min_fee_cup FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+prior_route=run(None,"SELECT route_version,distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0]
+try:
+    assert run(admin,mutate,("route","cart-a",prior_route[0],Decimal("0")))==[(prior_route[0]+1,)]
+    run(None,"UPDATE ed_rpc_lab.settings SET min_km=0,min_fee_cup=0 WHERE singleton=true RETURNING min_km")
+    rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+    quote=run(a,q,("zero-no-floors","cart-a","customer-a",rev))
+    assert quote==[("committed",0,0,0)],quote
+    assert run(a,q,("zero-no-floors","cart-a","customer-a",rev))==[("replayed",0,0,0)]
+finally:
+    run(None,"UPDATE ed_rpc_lab.settings SET min_km=%s,min_fee_cup=%s WHERE singleton=true RETURNING min_km",prior_floors)
+    latest_route=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+    run(admin,mutate,("route","cart-a",latest_route,prior_route[1]))
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
