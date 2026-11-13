@@ -46,10 +46,10 @@ assert.equal(store.quote(input).reason,'idempotency_key_expired');
 store=make();
 store.advanceClock(now+899001);
 assert.equal(store.quote(input).reason,'stale_route'); // route was verified 1000 ms before initial now
-store=make();
+store=createSyntheticQuoteStore({snapshot,nowMs:now,ttlMs:1000000});
 const firstBeforeExpiry=store.quote(input);
 assert.equal(firstBeforeExpiry.available,true);
-store.advanceClock(now+300000);
+store.advanceClock(now+899001);
 assert.equal(store.quote(input).reason,'quote_expired');
 store=make();
 const a=store.quote({...input,key:'a'});
