@@ -164,7 +164,7 @@ BEGIN
  actor=session_user::name;
  IF actor<>'ed_lab_admin' THEN RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501'; END IF;
  IF p_expected IS NULL OR p_new IS NULL OR p_new<=0 OR p_new>100000
-    OR p_reason IS NULL OR length(btrim(p_reason, ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13))) NOT BETWEEN 3 AND 160 THEN
+    OR p_reason IS NULL OR length(p_reason)>160 OR length(btrim(p_reason, ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13))) NOT BETWEEN 3 AND 160 THEN
   RAISE EXCEPTION 'invalid_change' USING ERRCODE='22023';
  END IF;
  PERFORM pg_catalog.pg_advisory_xact_lock(917321);
