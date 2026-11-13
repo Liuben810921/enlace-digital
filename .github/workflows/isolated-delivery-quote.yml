@@ -37,6 +37,8 @@ on:
       - 'tests/delivery-manager-server-adversarial-isolated.test.cjs'
       - 'tests/delivery-manager-policy-route-audit-isolated.cjs'
       - 'tests/delivery-manager-policy-route-audit-isolated.test.cjs'
+      - 'tests/delivery-manager-integrated-boundary-isolated.cjs'
+      - 'tests/delivery-manager-integrated-boundary-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -67,3 +69,4 @@ jobs:
       - run: node tests/delivery-manager-server-contract-isolated.test.cjs
       - run: node tests/delivery-manager-server-adversarial-isolated.test.cjs
       - run: node tests/delivery-manager-policy-route-audit-isolated.test.cjs
+      - run: node tests/delivery-manager-integrated-boundary-isolated.test.cjs
