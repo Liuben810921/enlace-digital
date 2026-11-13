@@ -66,7 +66,7 @@ INSERT INTO quote_lab.routing_context(singleton,address_version,warehouse_versio
 CREATE OR REPLACE FUNCTION quote_lab.quote_bound(
  p_actor text,p_key text,p_hash text,p_amount bigint,p_settings bigint,p_address bigint,p_warehouse bigint
 ) RETURNS TABLE(outcome text,amount bigint,version bigint)
-LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,quote_lab AS $
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,quote_lab AS $body$
 DECLARE a bigint; w bigint;
 BEGIN
  -- Shared lock serializes context mutations with quote commit.
@@ -77,7 +77,7 @@ BEGIN
  END IF;
  RETURN QUERY SELECT q.outcome,q.amount,q.version
  FROM quote_lab.quote(p_actor,p_key,p_hash,p_amount,p_settings) AS q;
-END $;
+END $body$;
 CREATE TABLE quote_lab.deadlock_a(id int PRIMARY KEY, value int NOT NULL);
 CREATE TABLE quote_lab.deadlock_b(id int PRIMARY KEY, value int NOT NULL);
 INSERT INTO quote_lab.deadlock_a VALUES(1,0);
