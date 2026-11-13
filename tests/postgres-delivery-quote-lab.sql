@@ -55,4 +55,31 @@ BEGIN
  INSERT INTO quote_lab.audit(version,actor,threshold_usd) VALUES(v,p_actor,p_threshold);
  RETURN v;
 END $$;
+
+-- Versions for synthetic address and warehouse assignment; no actual personal addresses.
+CREATE TABLE quote_lab.routing_context(
+ singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
+ address_version bigint NOT NULL DEFAULT 1,
+ warehouse_version bigint NOT NULL DEFAULT 1
+);
+INSERT INTO quote_lab.routing_context(singleton,address_version,warehouse_version) VALUES(true,1,1);
+CREATE OR REPLACE FUNCTION quote_lab.quote_bound(
+ p_actor text,p_key text,p_hash text,p_amount bigint,p_settings bigint,p_address bigint,p_warehouse bigint
+) RETURNS TABLE(outcome text,amount bigint,version bigint)
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,quote_lab AS $
+DECLARE a bigint; w bigint;
+BEGIN
+ -- Shared lock serializes context mutations with quote commit.
+ SELECT r.address_version,r.warehouse_version INTO a,w
+ FROM quote_lab.routing_context AS r WHERE r.singleton=true FOR SHARE;
+ IF a<>p_address OR w<>p_warehouse THEN
+  RAISE EXCEPTION 'stale_route_context' USING ERRCODE='40001';
+ END IF;
+ RETURN QUERY SELECT q.outcome,q.amount,q.version
+ FROM quote_lab.quote(p_actor,p_key,p_hash,p_amount,p_settings) AS q;
+END $;
+CREATE TABLE quote_lab.deadlock_a(id int PRIMARY KEY, value int NOT NULL);
+CREATE TABLE quote_lab.deadlock_b(id int PRIMARY KEY, value int NOT NULL);
+INSERT INTO quote_lab.deadlock_a VALUES(1,0);
+INSERT INTO quote_lab.deadlock_b VALUES(1,0);
 COMMIT;
