@@ -55,7 +55,7 @@ assert.equal(q({...request,addressId:'unknown'}).reason,'address_not_accessible'
 assert.equal(q(request,{...context,routes:[{...route,verified:false}]}).reason,'missing_fresh_verified_route');
 assert.equal(q(request,{...context,routes:[{...route,verifiedAtMs:nowMs-16*60*1000}]}).reason,'missing_fresh_verified_route');
 assert.equal(q(request,{...context,routes:[{...route,settingsVersion:'old'}]}).reason,'missing_fresh_verified_route');
-assert.equal(q(request,{...context,routes:[{...route,roadDistancesKm:{}}]}).reason,'missing_verified_road_distance');
+assert.equal(q(request,{...context,routes:[{...route,roadDistancesKm:{}}]}).reason,'invalid_route');
 assert.equal(q({...newReq,customerId:'customer-1'}).reason,'invalid_new_customer');
 assert.equal(q({...request,proposedAddress:'x'}).reason,'unexpected_new_address');
 console.log('PASS manager server contract: roles, ownership, saved/new/alternative addresses, route freshness, free ledger, reject client overrides');
