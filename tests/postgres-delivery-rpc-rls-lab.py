@@ -18,6 +18,14 @@ def assert_error(role,sql,exc,params=()):
 q="SELECT * FROM ed_rpc_lab.quote_preview(%s,%s,%s,%s)"
 u="SELECT ed_rpc_lab.update_rate(%s,%s,%s)"
 a="ed_lab_gestor_a";b="ed_lab_gestor_b";admin="ed_lab_admin";sup="ed_lab_supervisor"
+
+# Catalog evidence: function owner cannot bypass RLS and is not a superuser.
+assert run(None,"SELECT rolsuper,rolbypassrls,rolcanlogin FROM pg_roles WHERE rolname='ed_lab_rpc_owner'")==[(False,False,False)]
+assert run(None,"SELECT DISTINCT pg_get_userbyid(p.proowner) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='ed_rpc_lab'")==[("ed_lab_rpc_owner",)]
+assert run(None,"SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='ed_rpc_lab' AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity")==[(5,)]
+assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.carts','UPDATE')")==[(False,)]
+assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.audit','DELETE')")==[(False,)]
+
 assert run(a,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-a",)]
 assert run(b,"SELECT cart_id FROM ed_rpc_lab.carts")==[("cart-b",)]
 assert_error(a,"INSERT INTO ed_rpc_lab.carts VALUES ('evil','ed_lab_gestor_a','x',1,1)",errors.InsufficientPrivilege)
