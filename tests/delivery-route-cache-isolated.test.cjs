@@ -40,4 +40,16 @@ assert.equal(buildOfflineRouteQuote({...args,lines:[{...lines[0],dispatchOriginI
 assert.equal(buildOfflineRouteQuote({...args,lines:[{...lines[1],dispatchOriginId:'supplier2'}]}).reason,'dispatch_selection_required');
 assert.equal(buildOfflineRouteQuote({...args,destination:{lat:999,lng:0}}).reason,'invalid_coordinates');
 assert.equal(buildOfflineRouteQuote({...args,routeResponses:{own1:{code:'NoRoute',routes:[]}}}).reason,'route_unavailable');
+
+const feeCache=makeRouteCache();
+const feeArgs={...args,cache:feeCache};
+assert.equal(buildOfflineRouteQuote({...feeArgs,settings:{specialFeeCup:2100}}).feeCup,2100);
+assert.equal(buildOfflineRouteQuote({...feeArgs,routeResponses:{},settings:{freeShipping:true}}).feeCup,0);
+assert.equal(buildOfflineRouteQuote({...feeArgs,routeResponses:{},settings:{specialFeeCup:2100,freeShipping:true}}).mode,'free');
+assert.equal(buildOfflineRouteQuote({...feeArgs,routeResponses:{},settings:{specialFeeCup:-2}}).reason,'invalid_special_fee');
+const emptyCache=makeRouteCache();
+assert.equal(buildOfflineRouteQuote({...args,cache:emptyCache,routeResponses:{own1:{code:'Ok',routes:[{distance:2000}]},supplier1:{code:'NoRoute',routes:[]}}}).reason,'route_unavailable');
+assert.equal(buildOfflineRouteQuote({...args,cache:makeRouteCache(),routeResponses:{own1:{code:'Ok',routes:[{distance:2000}]}}}).reason,'route_unavailable');
+assert.equal(buildOfflineRouteQuote({...args,cache:makeRouteCache(),routeResponses:{own1:{code:'Ok',routes:[{distance:2000}]},supplier1:{code:'Ok',routes:[{distance:-1}]}}}).reason,'invalid_route_distance');
+
 console.log('PASS offline routing: cache TTL, direction, effective origins, Havana, fail-closed, tariff');
