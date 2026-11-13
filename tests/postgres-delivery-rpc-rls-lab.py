@@ -58,4 +58,20 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
     rows=list(pool.map(parallel_quote,range(8)))
 assert all(x[1:]==(1250,1250,0) for x in rows),rows
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes WHERE operation_key='parallel'")==[(1,)]
+
+# Regression: delimiter-joined tuples were ambiguous (a:b,c vs a,b:c).
+# A structured PostgreSQL JSONB tuple is unambiguous for these distinct identities.
+assert run(None, """SELECT
+ md5(jsonb_build_array('a:b','c',1)::text) <>
+ md5(jsonb_build_array('a','b:c',1)::text)""")==[(True,)]
+# No login role may mutate protected versioned state or audit directly.
+for role in (a,b,admin,sup):
+    for table in ("carts","routes","warehouses","settings","quotes","audit","context_audit"):
+        assert run(None,"SELECT has_table_privilege(%s,%s,'DELETE')",(role,"ed_rpc_lab."+table))==[(False,)]
+for role in (a,b,sup):
+    for table in ("carts","routes","warehouses","settings","quotes"):
+        assert run(None,"SELECT has_table_privilege(%s,%s,'UPDATE')",(role,"ed_rpc_lab."+table))==[(False,)]
+assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.carts','DELETE')")==[(False,)]
+assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.routes','INSERT')")==[(False,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
