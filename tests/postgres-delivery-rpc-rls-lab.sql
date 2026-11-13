@@ -141,6 +141,14 @@ BEGIN
  ON CONFLICT (actor_role,operation_key) DO NOTHING;
  SELECT * INTO existing FROM ed_rpc_lab.quotes WHERE actor_role=actor AND operation_key=p_key FOR UPDATE;
  IF existing.payload_hash<>digest THEN RAISE EXCEPTION 'idempotency_conflict' USING ERRCODE='23505'; END IF;
+ -- A concurrent session may have won the same operation key on a different cart.
+ -- Never return its fee without checking the full context snapshot.
+ IF existing.cart_id<>p_cart OR existing.cart_revision<>c.revision
+    OR existing.settings_version<>s.version OR existing.route_version<>r.route_version
+    OR existing.destination_version<>c.destination_version
+    OR existing.warehouse_version<>w.version THEN
+   RAISE EXCEPTION 'stale_quote' USING ERRCODE='40001';
+ END IF;
  RETURN QUERY SELECT 'committed'::text,existing.gross_cup,existing.customer_cup,existing.covered_cup;
 END $func$;
 
