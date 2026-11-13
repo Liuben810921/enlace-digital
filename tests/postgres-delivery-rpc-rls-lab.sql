@@ -46,6 +46,20 @@ INSERT INTO ed_rpc_lab.routes VALUES
  ('cart-b',1,8,1,'server_fixture',clock_timestamp()+interval '1 hour');
 INSERT INTO ed_rpc_lab.settings VALUES(true,1,200,3,600,200);
 
+
+ALTER TABLE ed_rpc_lab.carts ADD COLUMN destination_version bigint NOT NULL DEFAULT 1 CHECK(destination_version>0);
+ALTER TABLE ed_rpc_lab.routes ADD COLUMN destination_version bigint NOT NULL DEFAULT 1 CHECK(destination_version>0);
+ALTER TABLE ed_rpc_lab.routes ADD COLUMN warehouse_version bigint NOT NULL DEFAULT 1 CHECK(warehouse_version>0);
+ALTER TABLE ed_rpc_lab.quotes ADD COLUMN destination_version bigint NOT NULL DEFAULT 1 CHECK(destination_version>0);
+ALTER TABLE ed_rpc_lab.quotes ADD COLUMN warehouse_version bigint NOT NULL DEFAULT 1 CHECK(warehouse_version>0);
+CREATE TABLE ed_rpc_lab.warehouses(singleton boolean PRIMARY KEY CHECK(singleton),version bigint NOT NULL CHECK(version>0));
+INSERT INTO ed_rpc_lab.warehouses VALUES(true,1);
+CREATE TABLE ed_rpc_lab.context_audit(
+ event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ actor_role name NOT NULL, change_kind text NOT NULL, cart_id text,
+ previous_version bigint NOT NULL, next_version bigint NOT NULL,
+ at_time timestamptz NOT NULL DEFAULT clock_timestamp()
+);
 -- RLS is actually enforced on direct read operations by non-owner roles.
 ALTER TABLE ed_rpc_lab.carts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ed_rpc_lab.carts FORCE ROW LEVEL SECURITY;
@@ -69,7 +83,7 @@ CREATE FUNCTION ed_rpc_lab.quote_preview(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_rpc_lab AS $func$
 DECLARE actor name; c ed_rpc_lab.carts%ROWTYPE; r ed_rpc_lab.routes%ROWTYPE;
  s ed_rpc_lab.settings%ROWTYPE; existing ed_rpc_lab.quotes%ROWTYPE;
- digest text; gross_value bigint; fee_value bigint;
+ digest text; gross_value bigint; fee_value bigint; w ed_rpc_lab.warehouses%ROWTYPE;
 BEGIN
  actor=session_user::name;
  IF actor NOT IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin') THEN
@@ -83,6 +97,8 @@ BEGIN
  -- Cart/route SELECT is read-only: FOR SHARE would require UPDATE privileges.
  -- Cart/route concurrent mutation still needs a versioned transactional contract.
  PERFORM pg_catalog.pg_advisory_xact_lock_shared(917321);
+ PERFORM pg_catalog.pg_advisory_xact_lock_shared(917322);
+ PERFORM pg_catalog.pg_advisory_xact_lock_shared(917323,pg_catalog.hashtext(p_cart));
  SELECT * INTO s FROM ed_rpc_lab.settings WHERE singleton=true;
  SELECT * INTO c FROM ed_rpc_lab.carts WHERE cart_id=p_cart;
  IF NOT FOUND OR (actor<>'ed_lab_admin' AND c.manager_role<>actor)
@@ -90,8 +106,11 @@ BEGIN
   RAISE EXCEPTION 'not_accessible' USING ERRCODE='42501';
  END IF;
  IF c.revision<>p_revision THEN RAISE EXCEPTION 'stale_cart' USING ERRCODE='40001'; END IF;
+ SELECT * INTO w FROM ed_rpc_lab.warehouses WHERE singleton=true;
+ IF NOT FOUND THEN RAISE EXCEPTION 'missing_warehouse' USING ERRCODE='40001'; END IF;
  SELECT * INTO r FROM ed_rpc_lab.routes WHERE cart_id=p_cart;
- IF NOT FOUND OR r.cart_revision<>c.revision OR r.source<>'server_fixture'
+ IF NOT FOUND OR r.cart_revision<>c.revision OR r.destination_version<>c.destination_version
+    OR r.warehouse_version<>w.version OR r.source<>'server_fixture'
     OR r.expires_at<=clock_timestamp() THEN
   RAISE EXCEPTION 'stale_route' USING ERRCODE='40001';
  END IF;
@@ -100,7 +119,9 @@ BEGIN
  IF FOUND THEN
   IF existing.payload_hash<>digest THEN RAISE EXCEPTION 'idempotency_conflict' USING ERRCODE='23505'; END IF;
   IF existing.settings_version<>s.version OR existing.route_version<>r.route_version
-     OR existing.cart_revision<>c.revision THEN
+     OR existing.cart_revision<>c.revision
+     OR existing.destination_version<>c.destination_version
+     OR existing.warehouse_version<>w.version THEN
    RAISE EXCEPTION 'stale_quote' USING ERRCODE='40001';
   END IF;
   RETURN QUERY SELECT 'replayed'::text,existing.gross_cup,existing.customer_cup,existing.covered_cup;
@@ -110,9 +131,10 @@ BEGIN
  gross_value=GREATEST(gross_value,s.min_fee_cup);
  fee_value=CASE WHEN c.subtotal_usd>=s.free_threshold_usd THEN 0 ELSE gross_value END;
  INSERT INTO ed_rpc_lab.quotes(actor_role,operation_key,payload_hash,cart_id,cart_revision,
- settings_version,route_version,gross_cup,customer_cup,covered_cup)
+ settings_version,route_version,gross_cup,customer_cup,covered_cup,
+ destination_version,warehouse_version)
  VALUES(actor,p_key,digest,p_cart,c.revision,s.version,r.route_version,
- gross_value,fee_value,gross_value-fee_value)
+ gross_value,fee_value,gross_value-fee_value,c.destination_version,w.version)
  ON CONFLICT (actor_role,operation_key) DO NOTHING;
  SELECT * INTO existing FROM ed_rpc_lab.quotes WHERE actor_role=actor AND operation_key=p_key FOR UPDATE;
  IF existing.payload_hash<>digest THEN RAISE EXCEPTION 'idempotency_conflict' USING ERRCODE='23505'; END IF;
@@ -137,6 +159,70 @@ BEGIN
  INSERT INTO ed_rpc_lab.audit(version,actor_role,reason,previous_rate,next_rate)
  VALUES(new_version,actor,p_reason,old_rate,p_new);
  RETURN new_version;
+END $func$;
+
+
+-- Synthetic admin-only context mutation. Lock order tariff -> warehouse -> cart.
+CREATE FUNCTION ed_rpc_lab.mutate_context(
+ p_kind text,p_cart text,p_expected bigint,p_distance numeric DEFAULT NULL
+) RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,ed_rpc_lab AS $func$
+DECLARE next_v bigint; old_v bigint; c ed_rpc_lab.carts%ROWTYPE;
+ w ed_rpc_lab.warehouses%ROWTYPE;
+BEGIN
+ IF session_user<>'ed_lab_admin' THEN
+  RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
+ END IF;
+ IF p_kind NOT IN ('cart','destination','warehouse','route') OR p_expected IS NULL
+    OR p_expected<1 THEN
+  RAISE EXCEPTION 'invalid_mutation' USING ERRCODE='22023';
+ END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock_shared(917321);
+ IF p_kind='warehouse' THEN
+  PERFORM pg_catalog.pg_advisory_xact_lock(917322);
+  SELECT * INTO w FROM ed_rpc_lab.warehouses WHERE singleton=true FOR UPDATE;
+  IF NOT FOUND OR w.version<>p_expected THEN
+   RAISE EXCEPTION 'stale_warehouse' USING ERRCODE='40001';
+  END IF;
+  UPDATE ed_rpc_lab.warehouses SET version=version+1 WHERE singleton=true
+   RETURNING version INTO next_v;
+ ELSE
+  IF p_cart IS NULL OR p_cart='' THEN
+   RAISE EXCEPTION 'missing_cart' USING ERRCODE='22023';
+  END IF;
+  PERFORM pg_catalog.pg_advisory_xact_lock_shared(917322);
+  PERFORM pg_catalog.pg_advisory_xact_lock(917323,pg_catalog.hashtext(p_cart));
+  SELECT * INTO c FROM ed_rpc_lab.carts WHERE cart_id=p_cart FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'missing_cart' USING ERRCODE='42501'; END IF;
+  IF p_kind='cart' THEN
+   old_v=c.revision;
+   IF old_v<>p_expected THEN RAISE EXCEPTION 'stale_cart' USING ERRCODE='40001'; END IF;
+   UPDATE ed_rpc_lab.carts SET revision=revision+1 WHERE cart_id=p_cart
+    RETURNING revision INTO next_v;
+  ELSIF p_kind='destination' THEN
+   old_v=c.destination_version;
+   IF old_v<>p_expected THEN RAISE EXCEPTION 'stale_destination' USING ERRCODE='40001'; END IF;
+   UPDATE ed_rpc_lab.carts SET destination_version=destination_version+1 WHERE cart_id=p_cart
+    RETURNING destination_version INTO next_v;
+  ELSE
+   IF p_distance IS NULL OR p_distance<0 OR p_distance>10000 THEN
+    RAISE EXCEPTION 'invalid_distance' USING ERRCODE='22023';
+   END IF;
+   SELECT * INTO w FROM ed_rpc_lab.warehouses WHERE singleton=true;
+   SELECT route_version INTO old_v FROM ed_rpc_lab.routes WHERE cart_id=p_cart FOR UPDATE;
+   IF old_v IS NULL OR old_v<>p_expected THEN
+    RAISE EXCEPTION 'stale_route' USING ERRCODE='40001';
+   END IF;
+   UPDATE ed_rpc_lab.routes SET route_version=route_version+1,
+     cart_revision=c.revision,destination_version=c.destination_version,
+     warehouse_version=w.version,distance_km=p_distance,
+     expires_at=clock_timestamp()+interval '1 hour'
+   WHERE cart_id=p_cart RETURNING route_version INTO next_v;
+  END IF;
+ END IF;
+ INSERT INTO ed_rpc_lab.context_audit(actor_role,change_kind,cart_id,previous_version,next_version)
+ VALUES(session_user::name,p_kind,p_cart,p_expected,next_v);
+ RETURN next_v;
 END $func$;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA ed_rpc_lab FROM PUBLIC;
@@ -171,6 +257,30 @@ GRANT INSERT ON ed_rpc_lab.quotes,ed_rpc_lab.audit TO ed_lab_rpc_owner;
 GRANT UPDATE ON ed_rpc_lab.settings,ed_rpc_lab.quotes TO ed_lab_rpc_owner;
 ALTER FUNCTION ed_rpc_lab.quote_preview(text,text,text,bigint) OWNER TO ed_lab_rpc_owner;
 ALTER FUNCTION ed_rpc_lab.update_rate(bigint,numeric,text) OWNER TO ed_lab_rpc_owner;
+
+
+ALTER TABLE ed_rpc_lab.warehouses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.warehouses FORCE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.context_audit ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.context_audit FORCE ROW LEVEL SECURITY;
+CREATE POLICY warehouses_read ON ed_rpc_lab.warehouses FOR SELECT TO ed_lab_rpc_owner
+ USING(session_user IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
+CREATE POLICY warehouses_write ON ed_rpc_lab.warehouses FOR UPDATE TO ed_lab_rpc_owner
+ USING(session_user='ed_lab_admin') WITH CHECK(session_user='ed_lab_admin');
+CREATE POLICY carts_admin_update ON ed_rpc_lab.carts FOR UPDATE TO ed_lab_rpc_owner
+ USING(session_user='ed_lab_admin') WITH CHECK(session_user='ed_lab_admin');
+CREATE POLICY routes_admin_update ON ed_rpc_lab.routes FOR UPDATE TO ed_lab_rpc_owner
+ USING(session_user='ed_lab_admin') WITH CHECK(session_user='ed_lab_admin');
+CREATE POLICY context_audit_write ON ed_rpc_lab.context_audit FOR INSERT TO ed_lab_rpc_owner
+ WITH CHECK(session_user='ed_lab_admin' AND actor_role='ed_lab_admin');
+CREATE POLICY context_audit_read ON ed_rpc_lab.context_audit FOR SELECT
+ USING(session_user='ed_lab_admin');
+GRANT SELECT ON ed_rpc_lab.warehouses TO ed_lab_rpc_owner;
+GRANT SELECT ON ed_rpc_lab.context_audit TO ed_lab_admin;
+GRANT UPDATE ON ed_rpc_lab.carts,ed_rpc_lab.routes,ed_rpc_lab.warehouses TO ed_lab_rpc_owner;
+GRANT INSERT ON ed_rpc_lab.context_audit TO ed_lab_rpc_owner;
+ALTER FUNCTION ed_rpc_lab.mutate_context(text,text,bigint,numeric) OWNER TO ed_lab_rpc_owner;
+GRANT EXECUTE ON FUNCTION ed_rpc_lab.mutate_context(text,text,bigint,numeric) TO ed_lab_admin;
 
 GRANT USAGE ON SCHEMA ed_rpc_lab TO ed_lab_gestor_a,ed_lab_gestor_b,ed_lab_admin,ed_lab_supervisor;
 GRANT SELECT ON ed_rpc_lab.carts,ed_rpc_lab.quotes TO ed_lab_gestor_a,ed_lab_gestor_b,ed_lab_admin;
