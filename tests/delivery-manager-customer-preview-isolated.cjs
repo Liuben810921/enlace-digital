@@ -15,12 +15,16 @@ function previewCustomerDelivery({actorRole,customer,alternativeAddress=null,quo
  if(alternativeAddress!==null&&!hasText(alternativeAddress))return {available:false,reason:'invalid_alternative_address'};
  const address=alternativeAddress??(returning?customer.savedAddress:customer.proposedAddress);
  if(!hasText(address))return {available:false,reason:'missing_destination_address'};
+ // Verified route data must be explicitly associated with the selected destination.
+ if(!hasText(quoteArgs.verifiedDestinationLabel)||quoteArgs.verifiedDestinationLabel!==address)
+  return {available:false,reason:'distance_destination_mismatch'};
  const last=returning?customer.lastDeliveryQuoteCup:null;
  if(last!==null&&last!==undefined&&!validMoney(last))return {available:false,reason:'invalid_last_reference'};
  // Reject callers attempting to inject a stale cached price as an authoritative current quote.
  if('feeCup' in quoteArgs||'customerFeeCup' in quoteArgs||'calculatedDeliveryValueCup' in quoteArgs)
   return {available:false,reason:'forbidden_quote_override'};
- const result=previewForManager({...quoteArgs,actorRole});
+ const {verifiedDestinationLabel,...pricingArgs}=quoteArgs;
+ const result=previewForManager({...pricingArgs,actorRole});
  if(!result.available)return {...result,destinationMode:alternativeAddress!==null?'alternativa':returning?'guardada':'nueva'};
  return {...result,destinationMode:alternativeAddress!==null?'alternativa':returning?'guardada':'nueva',
   destinationLabel:address,previousDeliveryQuoteCup:last??null,
