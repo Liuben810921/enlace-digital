@@ -228,7 +228,8 @@ BEGIN
    UPDATE ed_rpc_lab.carts SET destination_version=destination_version+1 WHERE cart_id=p_cart
     RETURNING destination_version INTO next_v;
   ELSE
-   IF p_distance IS NULL OR p_distance<0 OR p_distance>10000 THEN
+   IF p_distance IS NULL OR p_distance<0 OR p_distance>10000
+      OR (p_distance>0 AND p_distance::numeric(10,2)=0) THEN
     RAISE EXCEPTION 'invalid_distance' USING ERRCODE='22023';
    END IF;
    SELECT * INTO w FROM ed_rpc_lab.warehouses WHERE singleton=true;
