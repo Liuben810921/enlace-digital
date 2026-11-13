@@ -19,3 +19,11 @@ La condición de entrada usa `btrim(p_key, ' ' || chr(9) || chr(10) || chr(11) |
 **Estado:** pendiente de CI sobre la regresión completa y la corrección. No implica validación ni despliegue en entornos reales.
 
 **Restricciones:** solo GitHub y PostgreSQL desechable; sin acceso ni modificación de Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo verificado — 13 noviembre 2026
+
+La ejecución [GitHub Actions #43515122615](https://github.com/Liuben810921/enlace-digital/actions/runs/43515122615), correspondiente al commit `196f085fe0063cff54bfa24112b7037232750902`, finalizó **`completed/success`**. Su trabajo `test` (ID `132195027638`) también finalizó **`completed/success`**.
+
+El commit validado incorpora tanto la corrección SQL para rechazar claves de operación compuestas exclusivamente por espacios ASCII y caracteres de control en blanco como las pruebas reproducibles de rechazo y ausencia de persistencia. No se requieren cambios adicionales para este hallazgo.
+
+**Dictamen: auditoría cerrada satisfactoriamente para el laboratorio PostgreSQL desechable.** Este cierre documental no constituye fusión, despliegue ni validación en staging o producción. Se mantuvo el alcance exclusivo de GitHub, sin acceso ni modificación de Supabase, staging, producción, clientes reales o pedidos.
