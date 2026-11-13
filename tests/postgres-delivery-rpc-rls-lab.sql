@@ -92,7 +92,7 @@ BEGIN
  IF actor NOT IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin') THEN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
  END IF;
- IF p_key IS NULL OR length(p_key) NOT BETWEEN 1 AND 80 OR p_key ~ '[[:cntrl:]]' OR position(chr(8232) in p_key)>0 OR position(chr(8233) in p_key)>0 OR btrim(translate(p_key, chr(160) || chr(8239) || chr(12288), '   '), ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13))='' OR
+ IF p_key IS NULL OR length(p_key) NOT BETWEEN 1 AND 80 OR p_key ~ '[[:cntrl:]]' OR position(chr(8232) in p_key)>0 OR position(chr(8233) in p_key)>0 OR btrim(translate(p_key, chr(160) || chr(8239) || chr(12288) || chr(8203) || chr(8288) || chr(65279), '      '), ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13))='' OR
     p_cart IS NULL OR p_customer IS NULL OR p_revision IS NULL THEN
   RAISE EXCEPTION 'invalid_request' USING ERRCODE='22023';
  END IF;
