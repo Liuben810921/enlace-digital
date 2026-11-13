@@ -28,3 +28,16 @@ Se incorporaron aserciones adicionales en `tests/postgres-delivery-rpc-rls-lab.p
 - **Evidencia histórica:** ejecución GitHub Actions `43507242475`, job `132167978986`, estado `completed/success`, verificado por la API de GitHub. Esa ejecución **precede** a estos commits y no acredita las nuevas regresiones.
 - **Evidencia nueva:** commits `06481087634e49b76aae67c4ac83643ed853c52c` y `ace322a1b08a7d8b76c5f3ba0d95510ccd54c892`. La ejecución PostgreSQL posterior sigue **pendiente de confirmación**. No se declara PASS.
 - **Restricción:** ninguna modificación fuera de la rama aislada; ninguna conexión a Supabase/staging/producción, clientes o pedidos.
+
+## Cierre de verificación de GitHub Actions (13 noviembre 2026)
+
+Consultas directas a la API de GitHub para ambas ejecuciones y sus trabajos:
+
+| Run | Commit | Estado | Job |
+| --- | --- | --- | --- |
+| [43509356085](https://github.com/Liuben810921/enlace-digital/actions/runs/43509356085) | `06481087634e49b76aae67c4ac83643ed853c52c` | `completed/success` | `test` — `completed/success` (132175249033) |
+| [43509382335](https://github.com/Liuben810921/enlace-digital/actions/runs/43509382335) | `ace322a1b08a7d8b76c5f3ba0d95510ccd54c892` | `completed/success` | `test` — `completed/success` (132175341607) |
+
+**Resultado:** las regresiones del rechazo de aislamiento y la denegación de escrituras directas se validaron por CI en el segundo commit. No se observaron fallos que requirieran modificación correctiva. El commit de esta actualización documental no altera el código ni las pruebas.
+
+**Límite de conclusión:** éxito del laboratorio PostgreSQL desechable, no certificación para conexiones externas, escritores privilegiados, Supabase, staging o producción. No se realizó despliegue ni fusión.
