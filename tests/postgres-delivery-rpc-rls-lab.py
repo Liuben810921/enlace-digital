@@ -61,6 +61,13 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
 assert all(x[1:]==(1250,1250,0) for x in rows),rows
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes WHERE operation_key='parallel'")==[(1,)]
 
+# A nonpositive cart revision is an invalid API argument, not a stale snapshot.
+# Fail before acquiring locks or persisting an idempotency operation.
+invalid_revision_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+for invalid_revision in (0,-1,-9223372036854775808):
+    assert_error(a,q,errors.InvalidParameterValue,("invalid-revision-"+str(invalid_revision),"cart-a","customer-a",invalid_revision))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(invalid_revision_before,)]
+
 # Regression: delimiter-joined tuples were ambiguous (a:b,c vs a,b:c).
 # A structured PostgreSQL JSONB tuple is unambiguous for these distinct identities.
 assert run(None, """SELECT
