@@ -23,7 +23,7 @@ BEGIN
   RAISE EXCEPTION 'invalid_quote_request' USING ERRCODE='22023';
  END IF;
  -- Serialize same key and settings changes via a row lock. No external effects.
- SELECT version INTO s_version FROM quote_lab.settings WHERE singleton=true FOR SHARE;
+ SELECT s.version INTO s_version FROM quote_lab.settings AS s WHERE s.singleton=true FOR SHARE;
  SELECT * INTO existing FROM quote_lab.operations WHERE actor=p_actor AND operation_key=p_key FOR UPDATE;
  IF FOUND THEN
   IF existing.payload_hash<>p_hash THEN RAISE EXCEPTION 'idempotency_conflict' USING ERRCODE='23505'; END IF;
