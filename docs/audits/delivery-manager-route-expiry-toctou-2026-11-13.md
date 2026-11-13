@@ -28,3 +28,11 @@ Verificación directa de GitHub Actions:
 No se detectó un fallo comprobado que justifique corrección. La prueba concurrente nueva todavía no está validada por una ejecución concluida. Mantener la fase abierta hasta conocer el resultado final; no atribuir `success` a un run en curso. Esta actualización es solo documental y no afecta el código ni dispara el workflow filtrado por rutas.
 
 No se accedió a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Diagnóstico y corrección de la regresión fallida
+
+La ejecución [#43510924260](https://github.com/Liuben810921/enlace-digital/actions/runs/43510924260) concluyó `completed/failure` (job `132180652992`). Se inspeccionó el log completo del job. Falló la preparación de la carrera en `tests/postgres-delivery-rpc-rls-lab.py:130`: `psycopg.errors.InsufficientPrivilege: permission denied for table quotes`. La prueba utilizaba `db(admin)` para `SELECT ... FOR UPDATE` de una fila protegida, privilegio que **deliberadamente no tiene** el administrador. No fue un fallo de la función `quote_preview`.
+
+Se corrigió el **fixture sintético**, cambiando exclusivamente el bloqueador a `db(None)`, superusuario del PostgreSQL desechable usado para inyectar la espera adversarial. No se concedieron privilegios nuevos ni se modificaron RLS o RPC. Commit `94838b71b41ab474258d9958cf17e2407ba922b7`.
+
+La nueva ejecución [#43511074705](https://github.com/Liuben810921/enlace-digital/actions/runs/43511074705) fue creada automáticamente; estaba `queued` en la primera consulta. Su resultado debe comprobarse antes de declarar cerrada la fase.
