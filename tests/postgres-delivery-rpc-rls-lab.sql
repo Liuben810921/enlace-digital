@@ -1,10 +1,10 @@
 -- Disposable PostgreSQL 16 ONLY. No Supabase, no real customer/order objects.
 -- Laboratory identities are PostgreSQL roles, never client-supplied actor IDs.
 BEGIN;
-CREATE ROLE ed_lab_gestor_a NOLOGIN;
-CREATE ROLE ed_lab_gestor_b NOLOGIN;
-CREATE ROLE ed_lab_admin NOLOGIN;
-CREATE ROLE ed_lab_supervisor NOLOGIN;
+CREATE ROLE ed_lab_gestor_a LOGIN PASSWORD 'disposable-lab-only';
+CREATE ROLE ed_lab_gestor_b LOGIN PASSWORD 'disposable-lab-only';
+CREATE ROLE ed_lab_admin LOGIN PASSWORD 'disposable-lab-only';
+CREATE ROLE ed_lab_supervisor LOGIN PASSWORD 'disposable-lab-only';
 CREATE ROLE ed_lab_rpc_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE SCHEMA ed_rpc_lab;
 REVOKE ALL ON SCHEMA ed_rpc_lab FROM PUBLIC;
@@ -54,14 +54,15 @@ ALTER TABLE ed_rpc_lab.quotes FORCE ROW LEVEL SECURITY;
 ALTER TABLE ed_rpc_lab.audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ed_rpc_lab.audit FORCE ROW LEVEL SECURITY;
 CREATE POLICY carts_own ON ed_rpc_lab.carts FOR SELECT
- USING(manager_role=current_setting('role')::name OR current_setting('role')='ed_lab_admin');
+ USING(manager_role=session_user::name OR session_user='ed_lab_admin');
 CREATE POLICY quotes_own ON ed_rpc_lab.quotes FOR SELECT
- USING(actor_role=current_setting('role')::name);
+ USING(actor_role=session_user::name);
 CREATE POLICY audit_admin ON ed_rpc_lab.audit FOR SELECT
- USING(current_setting('role')='ed_lab_admin');
+ USING(session_user='ed_lab_admin');
 
 -- Dedicated SECURITY DEFINER owner without BYPASSRLS; all tables FORCE RLS.
--- PostgreSQL-managed SET ROLE is the lab's invoker identity, not a custom GUC.
+-- session_user is the authenticated login role, preserved across SECURITY DEFINER.
+-- All passwords here are disposable fixtures, never production credentials.
 CREATE FUNCTION ed_rpc_lab.quote_preview(
  p_key text,p_cart text,p_customer text,p_revision bigint
 ) RETURNS TABLE(result text,gross bigint,customer_fee bigint,promo_coverage bigint)
@@ -70,7 +71,7 @@ DECLARE actor name; c ed_rpc_lab.carts%ROWTYPE; r ed_rpc_lab.routes%ROWTYPE;
  s ed_rpc_lab.settings%ROWTYPE; existing ed_rpc_lab.quotes%ROWTYPE;
  digest text; gross_value bigint; fee_value bigint;
 BEGIN
- actor=current_setting('role')::name;
+ actor=session_user::name;
  IF actor NOT IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin') THEN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
  END IF;
@@ -121,7 +122,7 @@ CREATE FUNCTION ed_rpc_lab.update_rate(p_expected bigint,p_new numeric,p_reason 
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_rpc_lab AS $func$
 DECLARE actor name; old_rate numeric; new_version bigint;
 BEGIN
- actor=current_setting('role')::name;
+ actor=session_user::name;
  IF actor<>'ed_lab_admin' THEN RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501'; END IF;
  IF p_expected IS NULL OR p_new IS NULL OR p_new<=0 OR p_new>100000
     OR p_reason IS NULL OR length(trim(p_reason)) NOT BETWEEN 3 AND 160 THEN
@@ -147,20 +148,20 @@ ALTER TABLE ed_rpc_lab.settings FORCE ROW LEVEL SECURITY;
 CREATE POLICY routes_rpc_read ON ed_rpc_lab.routes FOR SELECT TO ed_lab_rpc_owner
  USING(EXISTS (SELECT 1 FROM ed_rpc_lab.carts c
                WHERE c.cart_id=routes.cart_id
-                 AND (c.manager_role=current_setting('role')::name OR current_setting('role')='ed_lab_admin')));
+                 AND (c.manager_role=session_user::name OR session_user='ed_lab_admin')));
 CREATE POLICY settings_rpc_read ON ed_rpc_lab.settings FOR SELECT TO ed_lab_rpc_owner
- USING(current_setting('role') IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
+ USING(session_user IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
 CREATE POLICY settings_rpc_update ON ed_rpc_lab.settings FOR UPDATE TO ed_lab_rpc_owner
- USING(current_setting('role')='ed_lab_admin')
- WITH CHECK(current_setting('role')='ed_lab_admin');
+ USING(session_user='ed_lab_admin')
+ WITH CHECK(session_user='ed_lab_admin');
 CREATE POLICY quotes_rpc_insert ON ed_rpc_lab.quotes FOR INSERT TO ed_lab_rpc_owner
- WITH CHECK(actor_role=current_setting('role')::name
-            AND current_setting('role') IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
+ WITH CHECK(actor_role=session_user::name
+            AND session_user IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
 CREATE POLICY quotes_rpc_update ON ed_rpc_lab.quotes FOR UPDATE TO ed_lab_rpc_owner
- USING(actor_role=current_setting('role')::name)
- WITH CHECK(actor_role=current_setting('role')::name);
+ USING(actor_role=session_user::name)
+ WITH CHECK(actor_role=session_user::name);
 CREATE POLICY audit_rpc_insert ON ed_rpc_lab.audit FOR INSERT TO ed_lab_rpc_owner
- WITH CHECK(current_setting('role')='ed_lab_admin' AND actor_role='ed_lab_admin');
+ WITH CHECK(session_user='ed_lab_admin' AND actor_role='ed_lab_admin');
 GRANT USAGE ON SCHEMA ed_rpc_lab TO ed_lab_rpc_owner;
 GRANT SELECT ON ed_rpc_lab.carts,ed_rpc_lab.routes,ed_rpc_lab.settings,ed_rpc_lab.quotes
  TO ed_lab_rpc_owner;
