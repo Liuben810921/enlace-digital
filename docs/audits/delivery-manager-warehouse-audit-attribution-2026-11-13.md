@@ -29,3 +29,13 @@ La inserción de `context_audit` utiliza `CASE WHEN p_kind='warehouse' THEN NULL
 - **Nueva CI:** [#43513419881](https://github.com/Liuben810921/enlace-digital/actions/runs/43513419881), en cola en la consulta inicial. **Cierre pendiente de `completed/success`.**
 
 El alcance sigue limitado a GitHub y PostgreSQL desechable, sin Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo verificado — 13 noviembre 2026
+
+La ejecución de recuperación [GitHub Actions #43513419881](https://github.com/Liuben810921/enlace-digital/actions/runs/43513419881) sobre el commit `ba0030c318350877ca4ab2689f6f2db44c06ea58` finalizó `completed/success`. El trabajo `test` (ID `132189148497`) también finalizó `completed/success`.
+
+La ejecución aprobada incluye la prueba de atribución global de almacenes (`cart_id IS NULL`), su verificación de versiones y auditoría, y el restablecimiento controlado de la coherencia de ruta sintética antes de la batería de carreras. El fallo previo `stale_route` de la ejecución #43512094716 queda resuelto. La corrección SQL inicial había superado por separado la ejecución #43512075820 (`completed/success`).
+
+**Dictamen:** auditoría de atribución de almacenes cerrada satisfactoriamente para el laboratorio PostgreSQL desechable. Este commit de cierre es exclusivamente documental y no requiere ejecutar de nuevo las pruebas. No implica despliegue, fusión ni validación de staging o producción.
+
+**Restricciones cumplidas:** solo rama aislada GitHub; sin acceso ni modificación de Supabase, staging, producción, clientes reales ni pedidos.
