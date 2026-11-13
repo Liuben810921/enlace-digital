@@ -44,6 +44,7 @@ on:
       - 'tests/postgres-delivery-quote-lab.sql'
       - 'tests/postgres-delivery-quote-lab.sh'
       - 'tests/postgres-delivery-resilience-lab.py'
+      - 'tests/postgres-delivery-recovery-lab.py'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -98,3 +99,5 @@ jobs:
         run: |
           python3 -m pip install --quiet --break-system-packages 'psycopg[binary]>=3.2,<4'
           python3 tests/postgres-delivery-resilience-lab.py
+      - name: PostgreSQL recovery - cancellation, timeouts and deadlock retries
+        run: python3 tests/postgres-delivery-recovery-lab.py
