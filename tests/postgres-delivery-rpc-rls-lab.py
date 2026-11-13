@@ -154,6 +154,14 @@ for unicode_blank in ("\u00a0"*3,"\u202f"*3,"\u3000"*3):
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==unicode_blank_before
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==unicode_blank_audit_before
 
+# Invisible format characters must not satisfy the minimum tariff reason length.
+invisible_reason_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+invisible_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for invisible_reason in ("\u200b"*3,"\u2060"*3,"\ufeff"*3):
+    assert_error(admin,u,errors.InvalidParameterValue,(invisible_reason_before[0][0],275,invisible_reason))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==invisible_reason_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==invisible_audit_before
+
 # Unicode separators can split audit narratives despite POSIX control filtering.
 unicode_reason_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 unicode_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
