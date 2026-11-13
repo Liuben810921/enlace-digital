@@ -5,6 +5,7 @@ CREATE ROLE ed_lab_gestor_a NOLOGIN;
 CREATE ROLE ed_lab_gestor_b NOLOGIN;
 CREATE ROLE ed_lab_admin NOLOGIN;
 CREATE ROLE ed_lab_supervisor NOLOGIN;
+CREATE ROLE ed_lab_rpc_owner NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE SCHEMA ed_rpc_lab;
 REVOKE ALL ON SCHEMA ed_rpc_lab FROM PUBLIC;
 CREATE TABLE ed_rpc_lab.carts(
@@ -53,14 +54,14 @@ ALTER TABLE ed_rpc_lab.quotes FORCE ROW LEVEL SECURITY;
 ALTER TABLE ed_rpc_lab.audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ed_rpc_lab.audit FORCE ROW LEVEL SECURITY;
 CREATE POLICY carts_own ON ed_rpc_lab.carts FOR SELECT
- USING(manager_role=current_user);
+ USING(manager_role=current_setting('role')::name OR current_setting('role')='ed_lab_admin');
 CREATE POLICY quotes_own ON ed_rpc_lab.quotes FOR SELECT
- USING(actor_role=current_user);
+ USING(actor_role=current_setting('role')::name);
 CREATE POLICY audit_admin ON ed_rpc_lab.audit FOR SELECT
- USING(current_user='ed_lab_admin');
+ USING(current_setting('role')='ed_lab_admin');
 
--- SECURITY DEFINER is a controlled *lab* boundary. Owner postgres bypasses RLS:
--- real deployment must use dedicated non-BYPASSRLS owner and reviewed policies.
+-- Dedicated SECURITY DEFINER owner without BYPASSRLS; all tables FORCE RLS.
+-- PostgreSQL-managed SET ROLE is the lab's invoker identity, not a custom GUC.
 CREATE FUNCTION ed_rpc_lab.quote_preview(
  p_key text,p_cart text,p_customer text,p_revision bigint
 ) RETURNS TABLE(result text,gross bigint,customer_fee bigint,promo_coverage bigint)
@@ -135,6 +136,37 @@ END $func$;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA ed_rpc_lab FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ed_rpc_lab FROM PUBLIC;
+
+-- FORCE RLS on every table touched by the RPC, including internal settings.
+ALTER TABLE ed_rpc_lab.routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.routes FORCE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ed_rpc_lab.settings FORCE ROW LEVEL SECURITY;
+CREATE POLICY routes_rpc_read ON ed_rpc_lab.routes FOR SELECT TO ed_lab_rpc_owner
+ USING(EXISTS (SELECT 1 FROM ed_rpc_lab.carts c
+               WHERE c.cart_id=routes.cart_id
+                 AND (c.manager_role=current_setting('role')::name OR current_setting('role')='ed_lab_admin')));
+CREATE POLICY settings_rpc_read ON ed_rpc_lab.settings FOR SELECT TO ed_lab_rpc_owner
+ USING(current_setting('role') IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
+CREATE POLICY settings_rpc_update ON ed_rpc_lab.settings FOR UPDATE TO ed_lab_rpc_owner
+ USING(current_setting('role')='ed_lab_admin')
+ WITH CHECK(current_setting('role')='ed_lab_admin');
+CREATE POLICY quotes_rpc_insert ON ed_rpc_lab.quotes FOR INSERT TO ed_lab_rpc_owner
+ WITH CHECK(actor_role=current_setting('role')::name
+            AND current_setting('role') IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin'));
+CREATE POLICY quotes_rpc_update ON ed_rpc_lab.quotes FOR UPDATE TO ed_lab_rpc_owner
+ USING(actor_role=current_setting('role')::name)
+ WITH CHECK(actor_role=current_setting('role')::name);
+CREATE POLICY audit_rpc_insert ON ed_rpc_lab.audit FOR INSERT TO ed_lab_rpc_owner
+ WITH CHECK(current_setting('role')='ed_lab_admin' AND actor_role='ed_lab_admin');
+GRANT USAGE ON SCHEMA ed_rpc_lab TO ed_lab_rpc_owner;
+GRANT SELECT ON ed_rpc_lab.carts,ed_rpc_lab.routes,ed_rpc_lab.settings,ed_rpc_lab.quotes
+ TO ed_lab_rpc_owner;
+GRANT INSERT ON ed_rpc_lab.quotes,ed_rpc_lab.audit TO ed_lab_rpc_owner;
+GRANT UPDATE ON ed_rpc_lab.settings,ed_rpc_lab.quotes TO ed_lab_rpc_owner;
+ALTER FUNCTION ed_rpc_lab.quote_preview(text,text,text,bigint) OWNER TO ed_lab_rpc_owner;
+ALTER FUNCTION ed_rpc_lab.update_rate(bigint,numeric,text) OWNER TO ed_lab_rpc_owner;
+
 GRANT USAGE ON SCHEMA ed_rpc_lab TO ed_lab_gestor_a,ed_lab_gestor_b,ed_lab_admin,ed_lab_supervisor;
 GRANT SELECT ON ed_rpc_lab.carts,ed_rpc_lab.quotes TO ed_lab_gestor_a,ed_lab_gestor_b,ed_lab_admin;
 GRANT SELECT ON ed_rpc_lab.audit TO ed_lab_admin;
