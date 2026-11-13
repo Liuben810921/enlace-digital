@@ -12,6 +12,12 @@ Se incorporó a `tests/postgres-delivery-rpc-rls-lab.py` una prueba que actualiz
 Commit de regresión: `13bce75b70feeb29fa96be6eaee4940947113710`.
 
 ## Decisión
-No se ha demostrado un fallo SQL: se mantiene el código actual y se somete el comportamiento de frontera a GitHub Actions. Cualquier corrección posterior requerirá evidencia de fallo en CI.
+GitHub Actions confirmó el comportamiento de frontera: no se ha demostrado un fallo SQL y se mantiene el código actual sin cambios.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Exclusivamente rama aislada y PostgreSQL desechable; sin acceso ni modificación a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Exclusivamente rama aislada y PostgreSQL desechable; sin acceso ni modificación a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — CI aprobada
+
+Se verificó [GitHub Actions #43525328426](https://github.com/Liuben810921/enlace-digital/actions/runs/43525328426): workflow `completed/success` sobre `13bce75b70feeb29fa96be6eaee4940947113710`. El trabajo `test` (ID `132229537269`) finalizó igualmente `completed/success`.
+
+**Dictamen: auditoría cerrada satisfactoriamente, sin defecto reproducido ni corrección SQL necesaria.** El cierre modifica exclusivamente el informe. No se fusiona ni despliega, y no se accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
