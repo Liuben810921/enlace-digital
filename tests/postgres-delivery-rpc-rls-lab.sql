@@ -127,6 +127,7 @@ BEGIN
      OR existing.warehouse_version<>w.version THEN
    RAISE EXCEPTION 'stale_quote' USING ERRCODE='40001';
   END IF;
+  IF r.expires_at<=clock_timestamp() THEN RAISE EXCEPTION 'expired_route' USING ERRCODE='40001'; END IF;
   RETURN QUERY SELECT 'replayed'::text,existing.gross_cup,existing.customer_cup,existing.covered_cup;
   RETURN;
  END IF;
@@ -149,6 +150,7 @@ BEGIN
     OR existing.warehouse_version<>w.version THEN
    RAISE EXCEPTION 'stale_quote' USING ERRCODE='40001';
  END IF;
+ IF r.expires_at<=clock_timestamp() THEN RAISE EXCEPTION 'expired_route' USING ERRCODE='40001'; END IF;
  RETURN QUERY SELECT 'committed'::text,existing.gross_cup,existing.customer_cup,existing.covered_cup;
 END $func$;
 
