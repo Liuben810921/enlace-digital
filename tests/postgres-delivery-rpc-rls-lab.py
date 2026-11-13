@@ -74,4 +74,31 @@ for role in (a,b,sup):
 assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.carts','DELETE')")==[(False,)]
 assert run(None,"SELECT has_table_privilege('ed_lab_rpc_owner','ed_rpc_lab.routes','INSERT')")==[(False,)]
 
+
+# Snapshot isolation is intentionally unsupported: an old MVCC snapshot could
+# survive an advisory lock wait and accept stale versions.
+for isolation in ("REPEATABLE READ","SERIALIZABLE"):
+    for role,sql,params in (
+        (a,q,("snapshot-"+isolation,"cart-a","customer-a",1)),
+        (admin,u,(2,275,"snapshot guard")),
+        (admin,"SELECT ed_rpc_lab.mutate_context(%s,%s,%s,%s)",("cart","cart-a",1,None)),
+    ):
+        with db(role) as c:
+            c.execute("BEGIN ISOLATION LEVEL "+isolation)
+            try:
+                c.execute(sql,params)
+            except errors.FeatureNotSupported:
+                c.rollback()
+            else:
+                c.rollback()
+                raise AssertionError(f"{role}: {isolation} accepted on guarded RPC")
+# An administrator login cannot bypass version locks with direct table writes.
+for table,statement in (
+    ("carts","UPDATE ed_rpc_lab.carts SET revision=revision+1 WHERE cart_id='cart-a'"),
+    ("routes","UPDATE ed_rpc_lab.routes SET route_version=route_version+1 WHERE cart_id='cart-a'"),
+    ("warehouses","UPDATE ed_rpc_lab.warehouses SET version=version+1 WHERE singleton=true"),
+    ("settings","UPDATE ed_rpc_lab.settings SET version=version+1 WHERE singleton=true"),
+):
+    assert_error(admin,statement,errors.InsufficientPrivilege)
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
