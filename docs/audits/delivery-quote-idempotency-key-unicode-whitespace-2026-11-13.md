@@ -13,4 +13,12 @@
 - Regresión `75d852c046894cea7dd652e6c8c8de2248c7ddda`.
 - Corrección `7f865fddae560083186098b9cfe3445db3e3494a`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Exclusivamente rama aislada y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Exclusivamente rama aislada y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Verificada [GitHub Actions #43520099328](https://github.com/Liuben810921/enlace-digital/actions/runs/43520099328): estado `completed`, conclusión `success`, commit probado `7f865fddae560083186098b9cfe3445db3e3494a`. El trabajo `test` (ID `132211909696`) también terminó `completed/success`.
+
+La ejecución aprobó las pruebas reproducibles de rechazo de claves de idempotencia formadas exclusivamente por espacios Unicode U+00A0, U+202F y U+3000, sin crear cotizaciones persistentes ante solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** en el laboratorio PostgreSQL desechable. Actualización exclusivamente documental; sin cambios en SQL ni pruebas durante el cierre, sin fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
