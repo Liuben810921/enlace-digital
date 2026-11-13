@@ -36,3 +36,13 @@ La ejecución [#43510924260](https://github.com/Liuben810921/enlace-digital/acti
 Se corrigió el **fixture sintético**, cambiando exclusivamente el bloqueador a `db(None)`, superusuario del PostgreSQL desechable usado para inyectar la espera adversarial. No se concedieron privilegios nuevos ni se modificaron RLS o RPC. Commit `94838b71b41ab474258d9958cf17e2407ba922b7`.
 
 La nueva ejecución [#43511074705](https://github.com/Liuben810921/enlace-digital/actions/runs/43511074705) fue creada automáticamente; estaba `queued` en la primera consulta. Su resultado debe comprobarse antes de declarar cerrada la fase.
+
+## Cierre definitivo de la fase TOCTOU — 13 noviembre 2026
+
+**Verificación directa en GitHub Actions:** [ejecución #43511074705](https://github.com/Liuben810921/enlace-digital/actions/runs/43511074705), commit `94838b71b41ab474258d9958cf17e2407ba922b7`, estado `completed`, conclusión `success`. Trabajo `test` ID `132181171677`: `completed/success`.
+
+La ejecución incluye la corrección del fixture adversarial: el bloqueo `FOR UPDATE` lo realiza exclusivamente el superusuario del PostgreSQL desechable, mientras los roles de aplicación mantienen privilegios mínimos. La prueba concurrente de expiración TOCTOU está aprobada en CI.
+
+**Dictamen:** fase TOCTOU cerrada satisfactoriamente dentro del laboratorio sintético. No implica validación de staging o producción, ni autorización para despliegue o fusión. El commit de cierre es exclusivamente documental, por lo que no altera el código validado.
+
+**Alcance respetado:** solo rama aislada de GitHub; sin acceso ni modificación de Supabase, staging, producción, clientes reales ni pedidos.
