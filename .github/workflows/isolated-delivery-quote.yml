@@ -41,6 +41,8 @@ on:
       - 'tests/delivery-manager-integrated-boundary-isolated.test.cjs'
       - 'tests/delivery-manager-concurrency-idempotency-isolated.cjs'
       - 'tests/delivery-manager-concurrency-idempotency-isolated.test.cjs'
+      - 'tests/postgres-delivery-quote-lab.sql'
+      - 'tests/postgres-delivery-quote-lab.sh'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -49,7 +51,20 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - run: node tests/delivery-quote-isolated.test.cjs
@@ -73,3 +88,8 @@ jobs:
       - run: node tests/delivery-manager-policy-route-audit-isolated.test.cjs
       - run: node tests/delivery-manager-integrated-boundary-isolated.test.cjs
       - run: node tests/delivery-manager-concurrency-idempotency-isolated.test.cjs
+      - name: PostgreSQL disposable concurrency and idempotency lab
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          bash tests/postgres-delivery-quote-lab.sh
