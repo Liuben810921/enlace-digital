@@ -85,6 +85,9 @@ DECLARE actor name; c ed_rpc_lab.carts%ROWTYPE; r ed_rpc_lab.routes%ROWTYPE;
  s ed_rpc_lab.settings%ROWTYPE; existing ed_rpc_lab.quotes%ROWTYPE;
  digest text; gross_value bigint; fee_value bigint; w ed_rpc_lab.warehouses%ROWTYPE;
 BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'unsupported_isolation' USING ERRCODE='0A000';
+ END IF;
  actor=session_user::name;
  IF actor NOT IN ('ed_lab_gestor_a','ed_lab_gestor_b','ed_lab_admin') THEN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
@@ -145,6 +148,9 @@ CREATE FUNCTION ed_rpc_lab.update_rate(p_expected bigint,p_new numeric,p_reason 
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_rpc_lab AS $func$
 DECLARE actor name; old_rate numeric; new_version bigint;
 BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'unsupported_isolation' USING ERRCODE='0A000';
+ END IF;
  actor=session_user::name;
  IF actor<>'ed_lab_admin' THEN RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501'; END IF;
  IF p_expected IS NULL OR p_new IS NULL OR p_new<=0 OR p_new>100000
@@ -170,6 +176,9 @@ SET search_path=pg_catalog,ed_rpc_lab AS $func$
 DECLARE next_v bigint; old_v bigint; c ed_rpc_lab.carts%ROWTYPE;
  w ed_rpc_lab.warehouses%ROWTYPE;
 BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'unsupported_isolation' USING ERRCODE='0A000';
+ END IF;
  IF session_user<>'ed_lab_admin' THEN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
  END IF;
