@@ -12,4 +12,10 @@ En PostgreSQL desechable, el administrador del laboratorio ajusta temporalmente 
 ## Criterio de cierre
 Si CI pasa, cerrar sin modificar SQL: no se ha demostrado defecto. Si CI falla, inspeccionar logs y corregir únicamente el fallo reproducido antes de repetir las pruebas.
 
-**Estado: pendiente de GitHub Actions.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: primera ejecución fallida por precondición de la prueba; prueba corregida, pendiente de nueva CI.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Diagnóstico del primer fallo
+
+[GitHub Actions #43528287009](https://github.com/Liuben810921/enlace-digital/actions/runs/43528287009), commit `6d3594494d5b2e2f60383706a0832da879449c70`, trabajo `test` ID `132239353866`, informó `psycopg.errors.SerializationFailure: stale_route` en la línea 352. Una mutación sintética previa del almacén invalidó la ruta de `cart-b`; el ensayo del umbral no llegó a evaluar los importes. Es un defecto de preparación de la prueba, no evidencia de error SQL.
+
+La prueba se corrigió para refrescar la ruta de `cart-b` mediante la RPC versionada, conservando la distancia previa, antes de las cotizaciones del umbral. Commit `0a1f5e4ffce4afe0caf33c6fca42b57dde5d7064`. **No se modificó SQL.** Pendiente de CI posterior.
