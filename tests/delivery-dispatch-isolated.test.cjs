@@ -32,4 +32,15 @@ assert.equal(run([own('own1')],{roadDistancesKm:{own1:NaN}}).reason,'missing_ver
 assert.equal(run([own('own1')],{rateCupPerKm:250}).feeCup,750);
 assert.equal(run([own('own1'),own('own1')]).distinctOriginIds.length,1);
 assert.equal(run([own('own1')],{minFeeCup:900}).feeCup,900);
+
+assert.equal(run([own('own1'),sup('sup1')],{specialFeeCup:2500}).feeCup,2500);
+assert.equal(run([own('own1'),sup('sup1')],{specialFeeCup:2500}).mode,'special');
+assert.equal(run([own('own1'),sup('sup1')],{freeShipping:true}).feeCup,0);
+assert.equal(run([own('own1'),sup('sup1')],{freeShipping:true,specialFeeCup:2500}).mode,'free');
+assert.equal(run([own('own1')],{specialFeeCup:-1}).reason,'invalid_special_fee');
+assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2}}).reason,'missing_verified_road_distance');
+assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2,sup1:0}}).feeCup,600);
+assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2.99,sup1:3.01}}).feeCup,602);
+assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2,sup1:5,own2:99,other:100}}).farthestKm,5);
+
 console.log('PASS synthetic dispatch: own/supplier compatibility, explicit origin, farthest USED, missing road distance, Havana, minimum');
