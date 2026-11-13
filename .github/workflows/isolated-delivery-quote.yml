@@ -20,6 +20,8 @@ on:
       - 'tests/delivery-mixed-fees-isolated.test.cjs'
       - 'tests/delivery-promotion-config-isolated.cjs'
       - 'tests/delivery-promotion-config-isolated.test.cjs'
+      - 'tests/delivery-promotion-admin-preview-isolated.cjs'
+      - 'tests/delivery-promotion-admin-preview-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -41,3 +43,4 @@ jobs:
       - run: node tests/delivery-integration-contracts.test.cjs
       - run: node tests/delivery-mixed-fees-isolated.test.cjs
       - run: node tests/delivery-promotion-config-isolated.test.cjs
+      - run: node tests/delivery-promotion-admin-preview-isolated.test.cjs
