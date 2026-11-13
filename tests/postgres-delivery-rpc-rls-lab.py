@@ -149,7 +149,7 @@ with db(None) as root_conn:
 # Audit reasons containing only control whitespace must be rejected without changing tariff or audit.
 rate_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 audit_rate_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
-for blank_reason in ("\\t\\t\\t","\\n\\n\\n"," \\t "):
+for blank_reason in ("\t\t\t","\n\n\n"," \t "):
     assert_error(admin,u,errors.InvalidParameterValue,(rate_before[0][0],275,blank_reason))
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==rate_before
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==audit_rate_before
