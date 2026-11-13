@@ -342,4 +342,20 @@ assert zero_quote==[("committed",zero_expected,zero_expected,0)],zero_quote
 assert run(a,q,("zero-distance-minimum","cart-a","customer-a",zero_revision))==[("replayed",zero_expected,zero_expected,0)]
 assert run(admin,mutate,("route","cart-a",zero_route_v+1,5))==[(zero_route_v+2,)]
 
+# Free-delivery threshold is inclusive: equality must be free, one cent below paid.
+# Fixture-only changes are made by the disposable database superuser and restored.
+threshold=run(None,"SELECT free_threshold_usd FROM ed_rpc_lab.settings WHERE singleton=true")[0][0]
+original_subtotal=run(None,"SELECT subtotal_usd FROM ed_rpc_lab.carts WHERE cart_id='cart-b'")[0][0]
+threshold_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-b'")[0][0]
+try:
+    run(None,"UPDATE ed_rpc_lab.carts SET subtotal_usd=%s WHERE cart_id='cart-b' RETURNING subtotal_usd",(threshold,))
+    at_threshold=run(b,q,("threshold-exact","cart-b","customer-b",threshold_rev))
+    assert at_threshold[0][0]=="committed" and at_threshold[0][1]>0 and at_threshold[0][2:]==(0,at_threshold[0][1]),at_threshold
+    assert run(b,q,("threshold-exact","cart-b","customer-b",threshold_rev))==[("replayed",at_threshold[0][1],0,at_threshold[0][1])]
+    run(None,"UPDATE ed_rpc_lab.carts SET subtotal_usd=%s WHERE cart_id='cart-b' RETURNING subtotal_usd",(threshold-Decimal("0.01"),))
+    below_threshold=run(b,q,("threshold-below","cart-b","customer-b",threshold_rev))
+    assert below_threshold==[("committed",at_threshold[0][1],at_threshold[0][1],0)],below_threshold
+finally:
+    run(None,"UPDATE ed_rpc_lab.carts SET subtotal_usd=%s WHERE cart_id='cart-b' RETURNING subtotal_usd",(original_subtotal,))
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
