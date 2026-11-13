@@ -1649,26 +1649,35 @@ function edOsmAndMatrixPanel(){
  const stats=edOsmAndMatrixStats(rows);
  const fmt=n=>n===null?'Sin datos':n.toFixed(2);
  const summary='<p class="note">Total: '+stats.total+' · Disponibles: '+stats.available+' · Sin ruta: '+stats.unavailable+' · Dentro de tolerancia: '+stats.withinTolerance+' · Revisión: '+stats.requiresReview+'</p><p class="note">Disponibilidad: '+fmt(stats.availabilityPercent)+' % · Aprobación de rutas disponibles: '+fmt(stats.withinTolerancePercent)+' % · Error absoluto medio: '+fmt(stats.meanAbsoluteErrorKm)+' km · Error relativo medio: '+fmt(stats.meanRelativeErrorPercent)+' % · Error máximo: '+fmt(stats.maxAbsoluteErrorKm)+' km</p>';
- const table=rows.map(r=>{const a=edOsmAndMatrixAssess(r);return '<tr><td>'+esc(r.id)+'</td><td>'+esc(r.label)+'</td><td>'+r.osmandKm+'</td><td>'+r.engineKm+'</td><td>'+esc(a.reason)+'</td></tr>'}).join('');
+ const table=rows.map(r=>{const a=edOsmAndMatrixAssess(r);return '<tr><th scope="row">'+esc(r.id)+'</th><td>'+esc(r.label)+'</td><td>'+r.osmandKm+'</td><td>'+r.engineKm+'</td><td>'+esc(a.reason)+'</td></tr>'}).join('');
  return '<div class="panel"><h3>Laboratorio de rutas OsmAnd (solo pruebas)</h3><p class="note">Matriz local de referencias sintéticas. No conecta servicios externos ni calcula tarifas reales. Umbral provisional: 0,5 km O 10 % de diferencia. No introducir datos de clientes.</p>'+
- '<div class="grid2"><div class="field"><label>ID de prueba</label><input id="edMatrixId" maxlength="32" placeholder="H01"></div><div class="field"><label>Ruta de referencia (sin domicilios)</label><input id="edMatrixLabel" maxlength="120" placeholder="Almacén de prueba → Playa"></div></div>'+
- '<div class="grid2"><div class="field"><label>Distancia OsmAnd (km)</label><input id="edMatrixOsmAnd" type="number" min="0.001" max="300" step="any"></div><div class="field"><label>Distancia simulada del motor (km)</label><input id="edMatrixEngine" type="number" min="0" max="300" step="any"></div></div>'+
- '<div class="field"><label>Disponibilidad simulada</label><select id="edMatrixStatus"><option value="ok">Ruta disponible</option><option value="unavailable">Sin ruta / servicio no disponible</option></select></div>'+
+ '<div class="grid2"><div class="field"><label for="edMatrixId">ID de prueba</label><input id="edMatrixId" maxlength="32" autocomplete="off" placeholder="H01"></div><div class="field"><label for="edMatrixLabel">Ruta de referencia (sin domicilios)</label><input id="edMatrixLabel" maxlength="120" autocomplete="off" placeholder="Almacén de prueba → Playa"></div></div>'+
+ '<div class="grid2"><div class="field"><label for="edMatrixOsmAnd">Distancia OsmAnd (km)</label><input id="edMatrixOsmAnd" type="number" inputmode="decimal" min="0.001" max="300" step="any"></div><div class="field"><label for="edMatrixEngine">Distancia simulada del motor (km)</label><input id="edMatrixEngine" type="number" inputmode="decimal" min="0" max="300" step="any"></div></div>'+
+ '<div class="field"><label for="edMatrixStatus">Disponibilidad simulada</label><select id="edMatrixStatus"><option value="ok">Ruta disponible</option><option value="unavailable">Sin ruta / servicio no disponible</option></select></div>'+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixAdd()">Guardar ruta de prueba</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixLoadFixtures()">Cargar 12 rutas ficticias</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixExport()">Exportar matriz JSON</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixExportReport()">Exportar reporte JSON</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixImport()">Importar JSON</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixClear()">Vaciar matriz de pruebas</button>'+
- '<div class="field"><label>Importación / exportación JSON (solo datos sintéticos)</label><textarea id="edMatrixJson" rows="5" placeholder="Pega aquí un arreglo JSON de rutas de prueba"></textarea></div>'+
- summary+'<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Ruta</th><th>OsmAnd km</th><th>Motor km</th><th>Resultado</th></tr></thead><tbody>'+table+'</tbody></table></div><p class="note">'+rows.length+' rutas de prueba registradas en este navegador.</p></div>';
+ '<div class="field"><label for="edMatrixJson">Importación / exportación JSON (solo datos sintéticos)</label><textarea id="edMatrixJson" rows="5" spellcheck="false" aria-describedby="edMatrixHelp" placeholder="Pega aquí un arreglo JSON de rutas de prueba"></textarea><p class="note" id="edMatrixHelp">Máximo 100 rutas y 50 000 caracteres. Nunca incluyas datos de clientes.</p></div>'+
+ '<p id="edMatrixFeedback" role="status" aria-live="polite" class="note"></p>'+summary+'<div style="overflow-x:auto;max-width:100%" role="region" aria-label="Resultados de rutas OsmAnd" tabindex="0"><table><caption>Comparación sintética de rutas</caption><thead><tr><th scope="col">ID</th><th scope="col">Ruta</th><th scope="col">OsmAnd km</th><th scope="col">Motor km</th><th scope="col">Resultado</th></tr></thead><tbody>'+table+'</tbody></table></div><p class="note">'+rows.length+' rutas de prueba registradas en este navegador.</p></div>';
+}
+function edOsmAndMatrixFeedback(message){
+ const el=document.getElementById('edMatrixFeedback');
+ if(el)el.textContent=message;
+}
+function edOsmAndMatrixError(message,id){
+ edOsmAndMatrixFeedback(message);alert(message);
+ const el=id&&document.getElementById(id);if(el&&typeof el.focus==='function')el.focus();
+ return false;
 }
 function edOsmAndMatrixAdd(){
  const value=id=>document.getElementById(id)?.value;
  const row={id:value('edMatrixId'),label:value('edMatrixLabel'),osmandKm:value('edMatrixOsmAnd')===''?NaN:Number(value('edMatrixOsmAnd')),engineKm:value('edMatrixEngine')===''?NaN:Number(value('edMatrixEngine')),status:value('edMatrixStatus')};
  const rows=edOsmAndMatrixRead().filter(x=>x.id!==row.id);
  const valid=edOsmAndMatrixValidate([...rows,row]);
- if(!valid){alert('Datos de prueba inválidos. Comprueba ID, nombre y kilómetros.');return false}
+ if(!valid)return edOsmAndMatrixError('Datos de prueba inválidos. Comprueba identificador, ruta, kilómetros y disponibilidad.','edMatrixId');
  if(!edOsmAndMatrixPersist(valid))return false;
  adminTab('delivery');return true;
 }
@@ -1679,12 +1688,13 @@ function edOsmAndMatrixExport(){
 }
 function edOsmAndMatrixImport(){
  const raw=document.getElementById('edMatrixJson')?.value||'';
- if(raw.length>50000){alert('Matriz demasiado grande');return false}
- let parsed;try{parsed=JSON.parse(raw)}catch{alert('JSON inválido');return false}
- if(!Array.isArray(parsed)){alert('Importa únicamente una matriz JSON, no un reporte.');return false}
+ if(raw.length>50000)return edOsmAndMatrixError('La matriz supera el límite de 50 000 caracteres.','edMatrixJson');
+ let parsed;try{parsed=JSON.parse(raw)}catch{return edOsmAndMatrixError('El texto no es un JSON válido.','edMatrixJson')}
+ if(!Array.isArray(parsed))return edOsmAndMatrixError('Importa únicamente una matriz JSON, no un reporte.','edMatrixJson');
  const valid=edOsmAndMatrixValidate(parsed);
- if(!valid){alert('Matriz inválida. No se han modificado los datos.');return false}
- localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(valid));adminTab('delivery');return true;
+ if(!valid)return edOsmAndMatrixError('Matriz inválida: comprueba campos, distancias y máximo de 100 rutas. No se modificaron los datos.','edMatrixJson');
+ if(!edOsmAndMatrixPersist(valid))return false;
+ adminTab('delivery');return true;
 }
 function edOsmAndMatrixClear(){
  if(!confirm('¿Vaciar la matriz local de pruebas?'))return false;
