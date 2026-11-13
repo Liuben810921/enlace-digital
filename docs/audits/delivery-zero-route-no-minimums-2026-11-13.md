@@ -12,4 +12,8 @@ En el laboratorio PostgreSQL desechable, la prueba versiona la ruta de `cart-a` 
 ## Criterio de cierre
 Si GitHub Actions aprueba la prueba, cerrar sin modificar SQL. Si falla, revisar logs y corregir únicamente defectos reproducidos, distinguiendo errores del fixture de errores del cotizador.
 
-**Estado: pendiente de CI.** No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; pruebas aprobadas y sin modificaciones SQL.** No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre verificado
+
+[GitHub Actions #43529780031](https://github.com/Liuben810921/enlace-digital/actions/runs/43529780031) finalizó `completed/success` en el commit `a4f50ee3c103b019e6d004e68905ffaf922f6536`. El trabajo `test` (ID `132244313100`) finalizó `completed/success`. La prueba reproducible validó `committed,0,0,0` y `replayed,0,0,0` en PostgreSQL desechable. No se demostró defecto SQL y no se modificó SQL. Cierre exclusivamente documental, sin merge ni despliegue. La rama no presentaba cambios concurrentes antes del cierre.
