@@ -8,7 +8,7 @@ const start=source.indexOf("const ED_DELIVERY_ORIGINS_KEY=");
 const end=source.indexOf("function deliveryBarrios(){",start);
 assert(start>=0&&end>start);
 const store=new Map(),elements={};
-const el=id=>elements[id]||(elements[id]={value:'',textContent:'',scrollIntoView(){}});
+const el=id=>elements[id]||(elements[id]={value:'',textContent:'',style:{},scrollIntoView(){}});
 const ctx={localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},document:{getElementById:el},municipios:['Playa','Plaza de la Revolución'],esc:s=>String(s).replaceAll('<','&lt;'),alert:s=>{ctx.alertMessage=s},adminTab:t=>{ctx.lastTab=t},Date,Math,Number,JSON};
 vm.createContext(ctx);vm.runInContext(source.slice(start,end),ctx);
 const call=expression=>vm.runInContext(expression,ctx);
