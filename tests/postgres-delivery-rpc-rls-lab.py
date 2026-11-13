@@ -146,6 +146,14 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
+# Unicode separators can split audit narratives despite POSIX control filtering.
+unicode_reason_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+unicode_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for unicode_reason in ("valid\u2028forged event","valid\u2029forged event"):
+    assert_error(admin,u,errors.InvalidParameterValue,(unicode_reason_before[0][0],275,unicode_reason))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==unicode_reason_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==unicode_audit_before
+
 # Embedded control characters can forge multi-line tariff audit narratives.
 embedded_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 embedded_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
