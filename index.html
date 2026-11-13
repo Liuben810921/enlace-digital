@@ -1562,8 +1562,9 @@ function edOsmAndMatrixValidate(data){
  for(const row of data){
   if(!row||typeof row!=='object'||Array.isArray(row))return null;
   const id=typeof row.id==='string'?row.id.trim():'',label=typeof row.label==='string'?row.label.trim():'';
-  if(!Object.keys(row).every(k=>['id','label','osmandKm','engineKm','status'].includes(k)))return null;
-  if(/[<>\x00-\x1f]/.test(label))return null;
+  if(Object.keys(row).some(k=>!['id','label','osmandKm','engineKm','status'].includes(k)))return null;
+  if(/[<>\x00-\x1f\x7f]/.test(label))return null;
+  if(/(?:\+?53[\s-]?)?[5-9]\d{7}\b/.test(label)||/\b(?:calle|avenida|ave\.?|apartamento|apto\.?|casa|edificio|n[uú]mero)\s+\d+/i.test(label))return null;
   if(!/^[a-zA-Z0-9_-]{1,32}$/.test(id)||ids.has(id)||!label||label.length>120)return null;
   if(typeof row.osmandKm!=='number'||typeof row.engineKm!=='number')return null;
   const osmandKm=row.osmandKm,engineKm=row.engineKm;
@@ -1575,7 +1576,12 @@ function edOsmAndMatrixValidate(data){
  return clean;
 }
 function edOsmAndMatrixRead(){
- try{return edOsmAndMatrixValidate(JSON.parse(localStorage.getItem(ED_OSMAND_MATRIX_KEY)||'[]'))||[]}catch{return []}
+ try{const raw=localStorage.getItem(ED_OSMAND_MATRIX_KEY);if(!raw)return [];if(raw.length>50000)return [];return edOsmAndMatrixValidate(JSON.parse(raw))||[]}catch{return []}
+}
+function edOsmAndMatrixPersist(rows){
+ const valid=edOsmAndMatrixValidate(rows);
+ if(!valid)return false;
+ try{localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(valid));return true}catch{alert('No se pudo guardar la matriz local. Comprueba el almacenamiento del navegador.');return false}
 }
 function edOsmAndMatrixAssess(row){
  if(row.status!=='ok')return {approved:false,reason:'Servicio no disponible'};
@@ -1602,7 +1608,7 @@ function edOsmAndMatrixFixtures(){
 }
 function edOsmAndMatrixLoadFixtures(){
  if(edOsmAndMatrixRead().length&&!confirm('¿Reemplazar la matriz local con 12 rutas completamente ficticias?'))return false;
- localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(edOsmAndMatrixFixtures()));
+ if(!edOsmAndMatrixPersist(edOsmAndMatrixFixtures()))return false;
  adminTab('delivery');return true;
 }
 function edOsmAndMatrixStats(rows){
@@ -1663,7 +1669,8 @@ function edOsmAndMatrixAdd(){
  const rows=edOsmAndMatrixRead().filter(x=>x.id!==row.id);
  const valid=edOsmAndMatrixValidate([...rows,row]);
  if(!valid){alert('Datos de prueba inválidos. Comprueba ID, nombre y kilómetros.');return false}
- localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(valid));adminTab('delivery');return true;
+ if(!edOsmAndMatrixPersist(valid))return false;
+ adminTab('delivery');return true;
 }
 function edOsmAndMatrixExport(){
  const el=document.getElementById('edMatrixJson');
@@ -1674,13 +1681,15 @@ function edOsmAndMatrixImport(){
  const raw=document.getElementById('edMatrixJson')?.value||'';
  if(raw.length>50000){alert('Matriz demasiado grande');return false}
  let parsed;try{parsed=JSON.parse(raw)}catch{alert('JSON inválido');return false}
+ if(!Array.isArray(parsed)){alert('Importa únicamente una matriz JSON, no un reporte.');return false}
  const valid=edOsmAndMatrixValidate(parsed);
  if(!valid){alert('Matriz inválida. No se han modificado los datos.');return false}
  localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(valid));adminTab('delivery');return true;
 }
 function edOsmAndMatrixClear(){
  if(!confirm('¿Vaciar la matriz local de pruebas?'))return false;
- localStorage.setItem(ED_OSMAND_MATRIX_KEY,'[]');adminTab('delivery');return true;
+ if(!edOsmAndMatrixPersist([]))return false;
+ adminTab('delivery');return true;
 }
 
 function edDeliveryLocationPreview(){
