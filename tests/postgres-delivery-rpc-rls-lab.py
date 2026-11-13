@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Disposable PostgreSQL RPC and RLS acceptance checks, synthetic roles only."""
 import concurrent.futures
+import threading
+import time
 import psycopg
 from psycopg import errors
 DSN="host=127.0.0.1 port=5432 dbname=postgres user=postgres password=postgres connect_timeout=5"
@@ -115,5 +117,31 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
 assert outcomes.count("conflict")==1, outcomes
 assert sum(isinstance(x,tuple) and x[0]=="committed" for x in outcomes)==1, outcomes
 assert run(admin,"SELECT count(*) FROM ed_rpc_lab.quotes WHERE operation_key='cross-cart-key'")==[(1,)]
+
+
+# A route can expire while replay waits on a locked idempotency row.
+assert run(a,q,("expiry-wait","cart-a","customer-a",1))[0][0]=="committed"
+with db(None) as root_conn:
+    root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 second' WHERE cart_id='cart-a'")
+started=threading.Event()
+with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+    with db(admin) as blocker:
+        blocker.execute("BEGIN")
+        blocker.execute("SELECT * FROM ed_rpc_lab.quotes WHERE actor_role=%s AND operation_key=%s FOR UPDATE",(a,"expiry-wait"))
+        def delayed_replay():
+            with db(a) as c:
+                started.set()
+                try:
+                    c.execute(q,("expiry-wait","cart-a","customer-a",1))
+                except errors.SerializationFailure:
+                    return "expired"
+                return "accepted"
+        future=pool.submit(delayed_replay)
+        assert started.wait(5)
+        time.sleep(1.3)
+        blocker.execute("COMMIT")
+        assert future.result(timeout=5)=="expired"
+with db(None) as root_conn:
+    root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
