@@ -163,7 +163,7 @@ BEGIN
  END IF;
  actor=session_user::name;
  IF actor<>'ed_lab_admin' THEN RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501'; END IF;
- IF p_expected IS NULL OR p_new IS NULL OR p_new<=0 OR p_new>100000 OR p_new::numeric(12,2)<=0
+ IF p_expected IS NULL OR p_expected<1 OR p_new IS NULL OR p_new<=0 OR p_new>100000 OR p_new::numeric(12,2)<=0
     OR p_reason IS NULL OR p_reason ~ '[[:cntrl:]]' OR position(chr(8232) in p_reason)>0 OR position(chr(8233) in p_reason)>0 OR p_reason ~ ('[' || chr(8234) || chr(8235) || chr(8236) || chr(8237) || chr(8238) || chr(8294) || chr(8295) || chr(8296) || chr(8297) || ']') OR length(p_reason)>160 OR length(btrim(translate(p_reason, chr(160) || chr(8239) || chr(12288) || chr(8203) || chr(8288) || chr(65279), '      '), ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13))) NOT BETWEEN 3 AND 160 THEN
   RAISE EXCEPTION 'invalid_change' USING ERRCODE='22023';
  END IF;
