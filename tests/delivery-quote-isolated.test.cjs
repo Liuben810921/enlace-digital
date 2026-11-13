@@ -1,0 +1,18 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {quoteDelivery}=require('./delivery-quote-isolated.cjs');
+const q=(distancesKm,rest={})=>quoteDelivery({province:'La Habana',distancesKm,...rest});
+assert.deepEqual([q([0]).feeCup,q([2.9]).feeCup,q([3]).feeCup,q([4]).feeCup],[600,600,600,800]);
+assert.equal(q([2,8,5]).farthestKm,8);
+assert.equal(q([2,8,5]).feeCup,1600);
+assert.equal(q([3.001]).feeCup,601);
+assert.equal(q([10],{freeShipping:true}).feeCup,0);
+assert.equal(q([10],{specialFeeCup:2500}).feeCup,2500);
+assert.equal(q([10],{specialFeeCup:2500,freeShipping:true}).feeCup,0);
+assert.equal(q([3],{rateCupPerKm:250}).feeCup,750);
+assert.equal(q([3],{minFeeCup:900}).feeCup,900);
+assert.equal(q([3],{province:'Matanzas'}).reason,'outside_coverage');
+for(const x of [[],[-1],[NaN],[Infinity],['5']])assert.equal(q(x).reason,'missing_verified_distance');
+assert.equal(q([3],{rateCupPerKm:-1}).reason,'invalid_settings');
+assert.equal(q([3],{specialFeeCup:-1}).reason,'invalid_special_fee');
+console.log('PASS isolated delivery quote: minimum, farthest warehouse, special, free, validation');
