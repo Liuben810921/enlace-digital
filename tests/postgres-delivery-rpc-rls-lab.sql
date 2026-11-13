@@ -114,7 +114,7 @@ BEGIN
     OR r.expires_at<=clock_timestamp() THEN
   RAISE EXCEPTION 'stale_route' USING ERRCODE='40001';
  END IF;
- digest=md5(p_cart||':'||p_customer||':'||p_revision::text);
+ digest=md5(jsonb_build_array(p_cart,p_customer,p_revision)::text);
  SELECT * INTO existing FROM ed_rpc_lab.quotes WHERE actor_role=actor AND operation_key=p_key FOR UPDATE;
  IF FOUND THEN
   IF existing.payload_hash<>digest THEN RAISE EXCEPTION 'idempotency_conflict' USING ERRCODE='23505'; END IF;
