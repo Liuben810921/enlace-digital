@@ -146,4 +146,12 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
+# NULL mutation kind must fail closed, preserving route state and audit history.
+mutate="SELECT ed_rpc_lab.mutate_context(%s,%s,%s,%s)"
+before_route=run(None,"SELECT route_version,distance_km,expires_at FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")
+before_audit=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")
+assert_error(admin,mutate,errors.InvalidParameterValue,(None,"cart-a",before_route[0][0],5))
+assert run(None,"SELECT route_version,distance_km,expires_at FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==before_route
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==before_audit
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
