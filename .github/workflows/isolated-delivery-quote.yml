@@ -43,6 +43,7 @@ on:
       - 'tests/delivery-manager-concurrency-idempotency-isolated.test.cjs'
       - 'tests/postgres-delivery-quote-lab.sql'
       - 'tests/postgres-delivery-quote-lab.sh'
+      - 'tests/postgres-delivery-resilience-lab.py'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -93,3 +94,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
           bash tests/postgres-delivery-quote-lab.sh
+      - name: PostgreSQL resilience - deadlocks, backoff, routing races and disconnects
+        run: |
+          python3 -m pip install --quiet --break-system-packages 'psycopg[binary]>=3.2,<4'
+          python3 tests/postgres-delivery-resilience-lab.py
