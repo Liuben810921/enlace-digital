@@ -146,6 +146,14 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
+# Unicode-only whitespace must not count as an explanatory tariff audit reason.
+unicode_blank_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+unicode_blank_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for unicode_blank in ("\u00a0"*3,"\u202f"*3,"\u3000"*3):
+    assert_error(admin,u,errors.InvalidParameterValue,(unicode_blank_before[0][0],275,unicode_blank))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==unicode_blank_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==unicode_blank_audit_before
+
 # Unicode separators can split audit narratives despite POSIX control filtering.
 unicode_reason_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 unicode_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
