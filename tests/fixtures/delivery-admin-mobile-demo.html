@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ENLACE DIGITAL · Laboratorio de entregas</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#eaf5ff;background:#0c1c32}*{box-sizing:border-box}body{margin:0;padding:16px}main{max-width:680px;margin:auto}h1{font-size:1.4rem}h2{font-size:1.1rem}.panel{background:#172b46;border:1px solid #3c5573;border-radius:14px;padding:16px;margin:14px 0}label{display:block;margin:12px 0 6px;font-weight:600}input,button{font:inherit}input[type=number]{width:100%;padding:12px;border-radius:8px;border:1px solid #9eb7ce;background:#fff;color:#15233a}input[type=checkbox]{width:22px;height:22px;vertical-align:middle;margin-right:8px}button{padding:12px 16px;border-radius:9px;border:0;background:#25c9cf;color:#08243c;font-weight:700;min-height:44px}button.secondary{background:#d5e5f3}button:focus-visible,input:focus-visible{outline:3px solid #ffce66;outline-offset:3px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.metric{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #3c5573}.hint{color:#c1d3e3;font-size:.9rem}.warning{color:#ffe2a0}output{display:block;margin-top:12px;min-height:1.5em}@media(max-width:360px){body{padding:8px}.panel{padding:12px}.metric{display:block}}
+</style></head><body><main>
+<h1>ENLACE DIGITAL · Administración de entregas</h1>
+<p class="warning">DEMOSTRACIÓN AISLADA · Datos ficticios · Sin pedidos ni cambios reales</p>
+<section class="panel" aria-labelledby="settings-title"><h2 id="settings-title">Configuración · Administrador general</h2>
+<label for="threshold">Importe mínimo para entrega gratis (USD)</label><input id="threshold" type="number" min="0.01" max="1000000" step="0.01" inputmode="decimal" value="200">
+<label for="rounding">Redondear hacia arriba en múltiplos de (CUP)</label><input id="rounding" type="number" min="1" max="10000" step="1" inputmode="numeric" value="100">
+<label for="promotion"><input id="promotion" type="checkbox" checked>Activar gratuidad por importe</label>
+<p class="hint">Solo el administrador general podrá modificar estos parámetros en la futura versión operativa. Esta pantalla no autentica usuarios.</p></section>
+<section class="panel" aria-labelledby="preview-title"><h2 id="preview-title">Vista previa del pedido ficticio</h2>
+<label for="subtotal">Subtotal de productos (USD)</label><input id="subtotal" type="number" min="0" step="0.01" value="200" inputmode="decimal">
+<label for="distance">Distancia vial simulada del almacén efectivo más lejano (km)</label><input id="distance" type="number" min="0" step="0.01" value="3.4" inputmode="decimal">
+<label for="special">Tarifa especial simulada (CUP; 0 = ninguna)</label><input id="special" type="number" min="0" step="1" value="0" inputmode="numeric">
+<label for="productFree"><input id="productFree" type="checkbox">Algún producto tiene entrega gratis</label>
+<div class="actions"><button id="calculate" type="button">Calcular vista previa</button><button id="revert" class="secondary" type="button">Restablecer demostración</button></div>
+<output id="feedback" role="status" aria-live="polite"></output>
+<div id="results" hidden aria-label="Resultados simulados"><div class="metric"><span>Valor comercial calculado</span><strong id="gross"></strong></div><div class="metric"><span>Paga el cliente</span><strong id="customer"></strong></div><div class="metric"><span>Mensajería bonificada</span><strong id="covered"></strong></div><p id="reason" class="hint"></p></div>
+</section><p class="hint">El costo real pagado al mensajero se registrará por separado. No se consulta un motor de rutas ni se almacena información.</p></main>
+<script>
+'use strict';
+const defaults={threshold:'200',rounding:'100',promotion:true,subtotal:'200',distance:'3.4',special:'0',productFree:false};
+const $=id=>document.getElementById(id);
+const money=n=>Number.isFinite(n)?n.toLocaleString('es-ES',{maximumFractionDigits:0})+' CUP':'—';
+function calculate(){
+ $('results').hidden=true;
+ const threshold=Number($('threshold').value),rounding=Number($('rounding').value),subtotal=Number($('subtotal').value),distance=Number($('distance').value),special=Number($('special').value);
+ const valid=(id,n,min)=>$(id).value.trim()!==''&&Number.isFinite(n)&&n>=min;
+ if(!valid('rounding',rounding,1)||!Number.isSafeInteger(rounding)||rounding>10000||!valid('subtotal',subtotal,0)||!valid('distance',distance,0)||!valid('special',special,0)||!Number.isSafeInteger(special)||($('promotion').checked&&(!valid('threshold',threshold,0.01)||Math.round(threshold*100)!==threshold*100))){
+  $('feedback').textContent='Revisa los importes y la distancia de demostración.';return;
+ }
+ const base=Math.max(600,Math.ceil(Math.max(3,distance)*200));
+ const gross=Math.ceil(Math.max(base,special)/rounding)*rounding;
+ if(!Number.isSafeInteger(gross)){$('feedback').textContent='Importe fuera del rango permitido.';return;}
+ const free=$('productFree').checked||($('promotion').checked&&subtotal>=threshold);
+ const customer=free?0:gross;
+ $('gross').textContent=money(gross);$('customer').textContent=money(customer);$('covered').textContent=money(gross-customer);
+ $('reason').textContent=free?'Promoción aplicada a todo el pedido':'Mensajería a cargo del cliente';
+ $('results').hidden=false;$('feedback').textContent='Cálculo sintético completado. No se ha creado ningún pedido.';
+}
+$('calculate').addEventListener('click',calculate);
+$('revert').addEventListener('click',()=>{for(const [id,value] of Object.entries(defaults)){$(id)[$(id).type==='checkbox'?'checked':'value']=value;}$('results').hidden=true;$('feedback').textContent='Valores de demostración restablecidos.';});
+</script></body></html>
