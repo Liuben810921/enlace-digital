@@ -14,4 +14,12 @@ El prototipo `ed_rpc_lab.quote_preview` ya rechaza caracteres POSIX de control e
 - Prueba: `0f0812b69d1b32c5fca14f98947be2b757632092`.
 - Corrección SQL: `962b31c06f32a83851f78a29194091f1b88395b9`.
 
-**Estado: abierto, pendiente de GitHub Actions `completed/success`.** Laboratorio PostgreSQL desechable exclusivamente; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Laboratorio PostgreSQL desechable exclusivamente; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Se verificó [GitHub Actions #43518697217](https://github.com/Liuben810921/enlace-digital/actions/runs/43518697217): `completed/success` para el commit `962b31c06f32a83851f78a29194091f1b88395b9`. El trabajo `test` (ID `132207167085`) también terminó `completed/success`.
+
+La ejecución aprobó la batería reproducible que exige rechazar separadores Unicode U+2028 y U+2029 en claves de idempotencia sin crear nuevas cotizaciones ante solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre exclusivamente documental; sin fusiones, despliegues ni acceso o modificaciones a Supabase, staging, producción, clientes reales o pedidos.
