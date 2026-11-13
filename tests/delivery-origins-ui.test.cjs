@@ -47,4 +47,8 @@ assert.match(html,/edProductOriginsRender\("edit",id\)/);
 assert.match(html,/edProductOriginsRender\('new',null\)/);
 assert.match(source,/function edProductOriginQuickSave\(mode\)/);
 assert.match(source,/const ED_PRODUCT_ORIGINS_KEY=/);
+assert.match(source,/const ED_DELIVERY_SUPPLIERS_KEY=/);
+assert.match(source,/function edDeliverySupplierAdd\(/);
+assert.match(source,/function edProductOriginSupplierChange\(/);
+assert.match(source,/x.supplierId===supplierId/);
 console.log('PASS: syntax, own/supplier multi-origin UI, quick registration, local-only persistence, existing rates');
