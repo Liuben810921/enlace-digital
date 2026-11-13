@@ -15,3 +15,11 @@ En el laboratorio aislado, `ed_rpc_lab.update_rate` validaba la longitud de `btr
 - Corrección SQL: `0a12d5c438fb95e2bc1274f0f8f87a1a68862cd1`.
 
 **Estado: pendiente de GitHub Actions `completed/success` para cerrar.** Alcance exclusivamente laboratorio PostgreSQL desechable en GitHub, sin Supabase, staging, producción, clientes reales o pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Se comprobó la ejecución [GitHub Actions #43517335219](https://github.com/Liuben810921/enlace-digital/actions/runs/43517335219): `completed/success`, correspondiente al commit `0a12d5c438fb95e2bc1274f0f8f87a1a68862cd1`. El trabajo `test` (ID `132202514909`) también finalizó `completed/success`.
+
+La ejecución validó el conjunto que contiene las pruebas de rechazo de motivos sobredimensionados y la corrección SQL que limita a 160 caracteres el valor original persistido en la auditoría.
+
+**Dictamen: auditoría cerrada satisfactoriamente** en el laboratorio PostgreSQL desechable. Cierre documental únicamente: no se realizaron despliegues ni fusiones, ni se accedió o modificó Supabase, staging, producción, clientes reales o pedidos.
