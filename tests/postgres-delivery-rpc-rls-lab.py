@@ -329,4 +329,17 @@ route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='car
 assert run(admin,mutate,("route","cart-a",route_v,5))==[(route_v+1,)]
 
 
+# Zero-distance route must still honor the configured minimum distance and fee.
+# Use a new operation key and restore the route fixture after this quote.
+zero_route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+assert run(admin,mutate,("route","cart-a",zero_route_v,0))==[(zero_route_v+1,)]
+zero_settings=run(None,"SELECT rate_cup_per_km,min_km,min_fee_cup FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+from decimal import Decimal
+zero_expected=max(int((zero_settings[0]*zero_settings[1]).to_integral_value(rounding='ROUND_CEILING')),zero_settings[2])
+zero_revision=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+zero_quote=run(a,q,("zero-distance-minimum","cart-a","customer-a",zero_revision))
+assert zero_quote==[("committed",zero_expected,zero_expected,0)],zero_quote
+assert run(a,q,("zero-distance-minimum","cart-a","customer-a",zero_revision))==[("replayed",zero_expected,zero_expected,0)]
+assert run(admin,mutate,("route","cart-a",zero_route_v+1,5))==[(zero_route_v+2,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
