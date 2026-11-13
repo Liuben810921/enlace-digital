@@ -19,3 +19,11 @@ La regresión Python registra el número de cotizaciones visibles para el gestor
 **Estado:** pendiente de verificación de CI sobre `8f0debb` o commit posterior que contenga la corrección y la regresión. No cerrar hasta éxito comprobado.
 
 **Límites:** solo GitHub en rama aislada; no se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — 13 noviembre 2026
+
+**Validación confirmada:** [GitHub Actions #43514938955](https://github.com/Liuben810921/enlace-digital/actions/runs/43514938955) finalizó `completed/success`, incluido el trabajo `test` (ID `132194388094`). Commit validado: `8832f4ea8c246f079bd84f99f5328f08ad385a12`.
+
+Este commit incorpora la condición SQL `btrim(p_key)=''` para rechazar claves de operación formadas únicamente por espacios y la regresión que comprueba el rechazo mediante `InvalidParameterValue` y la ausencia de nuevas cotizaciones persistidas. Las pruebas cubren claves de uno y varios espacios.
+
+**Dictamen:** auditoría de claves de idempotencia en blanco **cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. El cierre es exclusivamente documental; no implica fusión, despliegue ni validación de staging o producción. Se respetaron las restricciones de no acceder ni modificar Supabase, staging, producción, clientes reales o pedidos.
