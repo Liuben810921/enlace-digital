@@ -154,4 +154,12 @@ assert_error(admin,mutate,errors.InvalidParameterValue,(None,"cart-a",before_rou
 assert run(None,"SELECT route_version,distance_km,expires_at FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==before_route
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==before_audit
 
+# Warehouse updates are global; caller-supplied cart identifiers must not contaminate audit attribution.
+warehouse_v=run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")[0][0]
+audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")[0][0]
+assert run(admin,mutate,("warehouse","cart-b",warehouse_v,None))==[(warehouse_v+1,)]
+assert run(None,"SELECT change_kind,cart_id,previous_version,next_version FROM ed_rpc_lab.context_audit ORDER BY event_id DESC LIMIT 1")==[("warehouse",None,warehouse_v,warehouse_v+1)]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(audit_before+1,)]
+assert run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")==[(warehouse_v+1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
