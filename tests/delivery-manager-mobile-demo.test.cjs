@@ -29,7 +29,7 @@ assert.equal(e('results').hidden,true);
 e('savedAddress').value='Centro Habana, punto de referencia';
 e('calculate').listeners.click();
 assert.equal(e('customerFee').textContent,'700 CUP');
-assert.match(e('lastFee').textContent,/600 CUP/);
+assert.match(html,/id="lastFee">600 CUP<\/strong>/);
 assert.match(e('quoteReason').textContent,/Centro Habana/);
 e('addressMode').value='alternativa';e('addressMode').listeners.change();
 assert.equal(e('alternativeArea').hidden,false);
