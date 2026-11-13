@@ -1561,11 +1561,14 @@ function edOsmAndMatrixValidate(data){
  const ids=new Set(),clean=[];
  for(const row of data){
   if(!row||typeof row!=='object'||Array.isArray(row))return null;
-  const id=String(row.id||'').trim(),label=String(row.label||'').trim();
+  const id=typeof row.id==='string'?row.id.trim():'',label=typeof row.label==='string'?row.label.trim():'';
+  if(!Object.keys(row).every(k=>['id','label','osmandKm','engineKm','status'].includes(k)))return null;
+  if(/[<>\x00-\x1f]/.test(label))return null;
   if(!/^[a-zA-Z0-9_-]{1,32}$/.test(id)||ids.has(id)||!label||label.length>120)return null;
-  const osmandKm=Number(row.osmandKm),engineKm=Number(row.engineKm);
+  if(typeof row.osmandKm!=='number'||typeof row.engineKm!=='number')return null;
+  const osmandKm=row.osmandKm,engineKm=row.engineKm;
   if(!Number.isFinite(osmandKm)||osmandKm<=0||osmandKm>300||!Number.isFinite(engineKm)||engineKm<0||engineKm>300)return null;
-  const status=String(row.status||'ok');
+  const status=row.status===undefined?'ok':row.status;
   if(!['ok','unavailable'].includes(status))return null;
   ids.add(id);clean.push({id,label,osmandKm,engineKm,status});
  }
@@ -1579,19 +1582,80 @@ function edOsmAndMatrixAssess(row){
  const deviation=Math.abs(row.engineKm-row.osmandKm);
  return {approved:deviation<=0.5||deviation/row.osmandKm<=0.10,reason:deviation<=0.5||deviation/row.osmandKm<=0.10?'Dentro de tolerancia':'Tarifa pendiente de confirmar',deviation};
 }
+
+function edOsmAndMatrixFixtures(){
+ const routes=[
+ ['H01','Habana Vieja · centro',2.4,2.6,'ok'],
+ ['H02','Centro Habana · sentidos únicos',3.8,4.6,'ok'],
+ ['H03','Playa · intermunicipal',7.4,7.8,'ok'],
+ ['H04','Marianao · intermunicipal',8.1,9.5,'ok'],
+ ['H05','Guanabacoa · accesos',12.3,12.6,'ok'],
+ ['H06','Habana del Este · trayecto largo',16.2,0,'unavailable'],
+ ['H07','Boyeros · periferia',11.4,11.7,'ok'],
+ ['H08','Arroyo Naranjo · periferia',9.2,10.8,'ok'],
+ ['H09','Cotorro · trayecto largo',19.5,19.9,'ok'],
+ ['H10','La Lisa · intermunicipal',10.6,10.9,'ok'],
+ ['H11','Mismo municipio · distancia mínima',1.7,1.8,'ok'],
+ ['H12','Dos almacenes · origen efectivo',13.5,15.8,'ok']
+ ];
+ return routes.map(([id,label,osmandKm,engineKm,status])=>({id,label:'SIMULACIÓN · '+label,osmandKm,engineKm,status}));
+}
+function edOsmAndMatrixLoadFixtures(){
+ if(edOsmAndMatrixRead().length&&!confirm('¿Reemplazar la matriz local con 12 rutas completamente ficticias?'))return false;
+ localStorage.setItem(ED_OSMAND_MATRIX_KEY,JSON.stringify(edOsmAndMatrixFixtures()));
+ adminTab('delivery');return true;
+}
+function edOsmAndMatrixStats(rows){
+ const total=rows.length;
+ let available=0,withinTolerance=0,sumAbsoluteKm=0,sumRelative=0,maxAbsoluteKm=0;
+ for(const r of rows){
+  const a=edOsmAndMatrixAssess(r);
+  if(r.status!=='ok')continue;
+  available++;
+  if(a.approved)withinTolerance++;
+  sumAbsoluteKm+=a.deviation;
+  sumRelative+=a.deviation/r.osmandKm;
+  maxAbsoluteKm=Math.max(maxAbsoluteKm,a.deviation);
+ }
+ return {total,available,unavailable:total-available,withinTolerance,requiresReview:available-withinTolerance,
+  availabilityPercent:total?100*available/total:null,
+  withinTolerancePercent:available?100*withinTolerance/available:null,
+  meanAbsoluteErrorKm:available?sumAbsoluteKm/available:null,
+  meanRelativeErrorPercent:available?100*sumRelative/available:null,
+  maxAbsoluteErrorKm:available?maxAbsoluteKm:null};
+}
+function edOsmAndMatrixReport(){
+ const rows=edOsmAndMatrixRead();
+ return {schema:'ed-osmand-synthetic-report-v1',synthetic:true,criteria:{absoluteKm:0.5,relativePercent:10,operator:'OR'},
+  statistics:edOsmAndMatrixStats(rows),
+  routes:rows.map(r=>({id:r.id,label:r.label,osmandKm:r.osmandKm,engineKm:r.engineKm,status:r.status,
+   validation:edOsmAndMatrixAssess(r).reason}))};
+}
+function edOsmAndMatrixExportReport(){
+ const report=JSON.stringify(edOsmAndMatrixReport(),null,2);
+ const el=document.getElementById('edMatrixJson');
+ if(el)el.value=report;
+ return report;
+}
+
 function edOsmAndMatrixPanel(){
  const rows=edOsmAndMatrixRead();
+ const stats=edOsmAndMatrixStats(rows);
+ const fmt=n=>n===null?'Sin datos':n.toFixed(2);
+ const summary='<p class="note">Total: '+stats.total+' · Disponibles: '+stats.available+' · Sin ruta: '+stats.unavailable+' · Dentro de tolerancia: '+stats.withinTolerance+' · Revisión: '+stats.requiresReview+'</p><p class="note">Disponibilidad: '+fmt(stats.availabilityPercent)+' % · Aprobación de rutas disponibles: '+fmt(stats.withinTolerancePercent)+' % · Error absoluto medio: '+fmt(stats.meanAbsoluteErrorKm)+' km · Error relativo medio: '+fmt(stats.meanRelativeErrorPercent)+' % · Error máximo: '+fmt(stats.maxAbsoluteErrorKm)+' km</p>';
  const table=rows.map(r=>{const a=edOsmAndMatrixAssess(r);return '<tr><td>'+esc(r.id)+'</td><td>'+esc(r.label)+'</td><td>'+r.osmandKm+'</td><td>'+r.engineKm+'</td><td>'+esc(a.reason)+'</td></tr>'}).join('');
  return '<div class="panel"><h3>Laboratorio de rutas OsmAnd (solo pruebas)</h3><p class="note">Matriz local de referencias sintéticas. No conecta servicios externos ni calcula tarifas reales. Umbral provisional: 0,5 km O 10 % de diferencia. No introducir datos de clientes.</p>'+
  '<div class="grid2"><div class="field"><label>ID de prueba</label><input id="edMatrixId" maxlength="32" placeholder="H01"></div><div class="field"><label>Ruta de referencia (sin domicilios)</label><input id="edMatrixLabel" maxlength="120" placeholder="Almacén de prueba → Playa"></div></div>'+
  '<div class="grid2"><div class="field"><label>Distancia OsmAnd (km)</label><input id="edMatrixOsmAnd" type="number" min="0.001" max="300" step="any"></div><div class="field"><label>Distancia simulada del motor (km)</label><input id="edMatrixEngine" type="number" min="0" max="300" step="any"></div></div>'+
  '<div class="field"><label>Disponibilidad simulada</label><select id="edMatrixStatus"><option value="ok">Ruta disponible</option><option value="unavailable">Sin ruta / servicio no disponible</option></select></div>'+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixAdd()">Guardar ruta de prueba</button> '+
- '<button type="button" class="secondary" onclick="edOsmAndMatrixExport()">Exportar JSON</button> '+
+ '<button type="button" class="secondary" onclick="edOsmAndMatrixLoadFixtures()">Cargar 12 rutas ficticias</button> '+
+ '<button type="button" class="secondary" onclick="edOsmAndMatrixExport()">Exportar matriz JSON</button> '+
+ '<button type="button" class="secondary" onclick="edOsmAndMatrixExportReport()">Exportar reporte JSON</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixImport()">Importar JSON</button> '+
  '<button type="button" class="secondary" onclick="edOsmAndMatrixClear()">Vaciar matriz de pruebas</button>'+
  '<div class="field"><label>Importación / exportación JSON (solo datos sintéticos)</label><textarea id="edMatrixJson" rows="5" placeholder="Pega aquí un arreglo JSON de rutas de prueba"></textarea></div>'+
- '<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Ruta</th><th>OsmAnd km</th><th>Motor km</th><th>Resultado</th></tr></thead><tbody>'+table+'</tbody></table></div><p class="note">'+rows.length+' rutas de prueba registradas en este navegador.</p></div>';
+ summary+'<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Ruta</th><th>OsmAnd km</th><th>Motor km</th><th>Resultado</th></tr></thead><tbody>'+table+'</tbody></table></div><p class="note">'+rows.length+' rutas de prueba registradas en este navegador.</p></div>';
 }
 function edOsmAndMatrixAdd(){
  const value=id=>document.getElementById(id)?.value;
