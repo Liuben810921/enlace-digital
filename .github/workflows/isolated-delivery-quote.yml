@@ -26,6 +26,8 @@ on:
       - 'tests/delivery-accounting-manager-isolated.test.cjs'
       - 'tests/fixtures/delivery-admin-mobile-demo.html'
       - 'tests/delivery-admin-mobile-demo.test.cjs'
+      - 'tests/delivery-manager-customer-preview-isolated.cjs'
+      - 'tests/delivery-manager-customer-preview-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -50,3 +52,4 @@ jobs:
       - run: node tests/delivery-promotion-admin-preview-isolated.test.cjs
       - run: node tests/delivery-accounting-manager-isolated.test.cjs
       - run: node tests/delivery-admin-mobile-demo.test.cjs
+      - run: node tests/delivery-manager-customer-preview-isolated.test.cjs
