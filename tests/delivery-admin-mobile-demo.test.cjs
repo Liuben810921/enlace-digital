@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync(require('node:path').join(__dirname,'fixtures/delivery-admin-mobile-demo.html'),'utf8');
+for(const id of ['threshold','rounding','promotion','subtotal','distance','special','productFree','calculate','revert','feedback','gross','customer','covered','reason'])
+ assert.match(html,new RegExp('id="'+id+'"'));
+for(const label of ['threshold','rounding','promotion','subtotal','distance','special','productFree'])assert.match(html,new RegExp('for="'+label+'"'));
+assert.match(html,/name="viewport"/);
+assert.match(html,/aria-live="polite"/);
+assert.match(html,/@media\(max-width:360px\)/);
+assert.doesNotMatch(html,/\bfetch\s*\(|XMLHttpRequest|supabase|localStorage|sessionStorage|navigator\.geolocation/);
+const elements=new Map();
+for(const id of ['threshold','rounding','promotion','subtotal','distance','special','productFree','calculate','revert','feedback','gross','customer','covered','reason','results']){
+ elements.set(id,{id,type:['promotion','productFree'].includes(id)?'checkbox':'number',value:'',checked:false,hidden:id==='results',textContent:'',listeners:{},addEventListener(event,fn){this.listeners[event]=fn;}});
+}
+const context={document:{getElementById:id=>elements.get(id)},Number,Object,Math};
+const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+vm.runInNewContext(script,context,{timeout:1000});
+const el=id=>elements.get(id);
+el('revert').listeners.click();
+assert.equal(el('threshold').value,'200');
+assert.equal(el('rounding').value,'100');
+el('calculate').listeners.click();
+assert.equal(el('gross').textContent,'700 CUP');
+assert.equal(el('customer').textContent,'0 CUP');
+assert.equal(el('covered').textContent,'700 CUP');
+el('subtotal').value='199.99';
+el('calculate').listeners.click();
+assert.equal(el('customer').textContent,'700 CUP');
+el('productFree').checked=true;
+el('calculate').listeners.click();
+assert.equal(el('customer').textContent,'0 CUP');
+el('special').value='1250';
+el('calculate').listeners.click();
+assert.equal(el('gross').textContent,'1300 CUP');
+assert.equal(el('covered').textContent,'1300 CUP');
+el('rounding').value='0';
+el('calculate').listeners.click();
+assert.equal(el('results').hidden,true);
+assert.match(el('feedback').textContent,/Revisa/);
+el('revert').listeners.click();
+assert.equal(el('results').hidden,true);
+assert.equal(el('productFree').checked,false);
+console.log('PASS mobile demo: accessible labels, standalone offline, round-up, free order, ledger and reset');
