@@ -146,6 +146,14 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
+# A long padded reason must not bypass the 160-character stored audit limit.
+padded_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
+padded_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
+for padded_reason in ("valid reason"+" "*161," "*161+"valid reason","\t"*161+"valid reason"):
+    assert_error(admin,u,errors.InvalidParameterValue,(padded_before[0][0],275,padded_reason))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==padded_before
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==padded_audit_before
+
 # Audit reasons containing only control whitespace must be rejected without changing tariff or audit.
 rate_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 audit_rate_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
