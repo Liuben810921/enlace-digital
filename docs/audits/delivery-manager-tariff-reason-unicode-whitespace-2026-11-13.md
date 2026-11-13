@@ -13,4 +13,12 @@ La RPC sintética `ed_rpc_lab.update_rate` exige una justificación significativ
 - Prueba `0deb05e9062410d6300564e9e3a79deee1c960fe`.
 - Corrección `5b89e26b3f9270cb425fa9ba457db2bd7e0e33ea`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Alcance exclusivo: rama GitHub aislada y laboratorio PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
+**Estado: cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Alcance exclusivo: rama GitHub aislada y laboratorio PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Verificada [GitHub Actions #43519376932](https://github.com/Liuben810921/enlace-digital/actions/runs/43519376932): `completed/success` sobre el commit `5b89e26b3f9270cb425fa9ba457db2bd7e0e33ea`. El trabajo `test` (ID `132209483925`) finalizó `completed/success`.
+
+Las pruebas reproducibles de los espacios Unicode U+00A0, U+202F y U+3000 están aprobadas, incluida la comprobación de que una solicitud inválida no altera tarifa, versión ni historial de auditoría.
+
+**Dictamen: auditoría cerrada satisfactoriamente.** Exclusivamente laboratorio PostgreSQL desechable y cierre documental en la rama aislada de GitHub; sin modificación de SQL ni pruebas en este cierre, sin fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
