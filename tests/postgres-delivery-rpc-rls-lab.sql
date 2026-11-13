@@ -82,7 +82,8 @@ BEGIN
  -- Serialize rate edits and quote commits; do not trust caller-supplied money/route.
  -- Cart/route SELECT is read-only: FOR SHARE would require UPDATE privileges.
  -- Cart/route concurrent mutation still needs a versioned transactional contract.
- SELECT * INTO s FROM ed_rpc_lab.settings WHERE singleton=true FOR SHARE;
+ PERFORM pg_catalog.pg_advisory_xact_lock_shared(917321);
+ SELECT * INTO s FROM ed_rpc_lab.settings WHERE singleton=true;
  SELECT * INTO c FROM ed_rpc_lab.carts WHERE cart_id=p_cart;
  IF NOT FOUND OR (actor<>'ed_lab_admin' AND c.manager_role<>actor)
     OR c.customer_id<>p_customer THEN
@@ -128,6 +129,7 @@ BEGIN
     OR p_reason IS NULL OR length(trim(p_reason)) NOT BETWEEN 3 AND 160 THEN
   RAISE EXCEPTION 'invalid_change' USING ERRCODE='22023';
  END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(917321);
  SELECT rate_cup_per_km INTO old_rate FROM ed_rpc_lab.settings WHERE singleton=true AND version=p_expected FOR UPDATE;
  IF NOT FOUND THEN RAISE EXCEPTION 'version_conflict' USING ERRCODE='40001'; END IF;
  UPDATE ed_rpc_lab.settings SET version=version+1,rate_cup_per_km=p_new
