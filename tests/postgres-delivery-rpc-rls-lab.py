@@ -170,6 +170,14 @@ for unicode_reason in ("valid\u2028forged event","valid\u2029forged event"):
 assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==unicode_reason_before
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==unicode_audit_before
 
+# Unicode bidirectional formatting controls can spoof a stored tariff audit reason.
+bidi_reason_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+bidi_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")[0][0]
+for bidi_reason in ("valid\u202ereversed","valid\u202aembedded","valid\u2066isolate","valid\u2069end"):
+    assert_error(admin,u,errors.InvalidParameterValue,(bidi_reason_before[0],275,bidi_reason))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==[bidi_reason_before]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==[(bidi_audit_before,)]
+
 # Embedded control characters can forge multi-line tariff audit narratives.
 embedded_before=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")
 embedded_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")
