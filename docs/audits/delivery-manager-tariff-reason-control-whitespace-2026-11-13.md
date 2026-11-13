@@ -16,3 +16,11 @@ En `tests/postgres-delivery-rpc-rls-lab.sql` se sustituyó el recorte predetermi
 - CI: **pendiente de confirmación de éxito sobre el commit que incluye corrección y regresión**.
 
 **Estado:** abierto hasta que GitHub Actions valide el conjunto. Alcance restringido a GitHub y laboratorio PostgreSQL desechable; sin acceso ni modificaciones de Supabase, staging, producción, clientes reales o pedidos.
+
+## Incidencia de CI y corrección de fixture
+
+[GitHub Actions #43515287691](https://github.com/Liuben810921/enlace-digital/actions/runs/43515287691) terminó `completed/failure` en el commit `a05d2e9`. Los logs identificaron `AssertionError` en la línea 153 de `tests/postgres-delivery-rpc-rls-lab.py`: la prueba enviaba secuencias literales escapadas (barra invertida más letra), en vez de caracteres de control. El fallo no demuestra un defecto de la corrección SQL; demuestra un defecto en el fixture de regresión.
+
+Se corrigió únicamente la representación de los casos de prueba para que Python envíe tabulaciones y saltos de línea reales mediante escapes de cadena normales. Commit: `01d7ab63bd6ccd29bbc468ef4f4b3fb17ce8a72f`.
+
+**Estado:** pendiente de nueva ejecución CI con el fixture corregido; no cerrar hasta `completed/success`.
