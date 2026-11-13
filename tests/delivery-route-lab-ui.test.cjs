@@ -33,4 +33,27 @@ assert.equal(call('edOsmAndMatrixImport()'),false);
 assert.equal(call('edOsmAndMatrixRead().length'),2);
 assert.equal(call('edOsmAndMatrixClear()'),true);
 assert.equal(call('edOsmAndMatrixRead().length'),0);
+
+assert.equal(call('edOsmAndMatrixLoadFixtures()'),true);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+const stats=JSON.parse(JSON.stringify(call('edOsmAndMatrixStats(edOsmAndMatrixRead())')));
+assert.equal(stats.total,12);
+assert.equal(stats.unavailable,1);
+assert.equal(stats.available,11);
+assert.equal(stats.withinTolerance+stats.requiresReview,11);
+assert.ok(stats.meanAbsoluteErrorKm>0);
+const report=JSON.parse(call('edOsmAndMatrixExportReport()'));
+assert.equal(report.synthetic,true);
+assert.equal(report.routes.length,12);
+assert.equal(report.statistics.total,12);
+assert.equal(call('edOsmAndMatrixPanel().includes("Error absoluto medio")'),true);
+el('edMatrixJson').value=JSON.stringify([{id:'P01',label:'Injected',osmandKm:'7',engineKm:8,status:'ok'}]);
+assert.equal(call('edOsmAndMatrixImport()'),false);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+el('edMatrixJson').value=JSON.stringify([{id:'P02',label:'<img src=x onerror=alert(1)>',osmandKm:7,engineKm:8,status:'ok'}]);
+assert.equal(call('edOsmAndMatrixImport()'),false);
+el('edMatrixJson').value=JSON.stringify([{id:'P03',label:'extra',osmandKm:7,engineKm:8,status:'ok',customerPhone:'123'}]);
+assert.equal(call('edOsmAndMatrixImport()'),false);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+
 console.log('PASS isolated admin route lab: input, tolerance, import/export, invalid JSON, duplicate ID, clearing');
