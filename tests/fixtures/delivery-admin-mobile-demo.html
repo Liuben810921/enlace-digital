@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ENLACE DIGITAL · Laboratorio de entregas</title>
 <style>
-:root{font-family:system-ui,sans-serif;color:#eaf5ff;background:#0c1c32}*{box-sizing:border-box}body{margin:0;padding:16px}main{max-width:680px;margin:auto}h1{font-size:1.4rem}h2{font-size:1.1rem}.panel{background:#172b46;border:1px solid #3c5573;border-radius:14px;padding:16px;margin:14px 0}label{display:block;margin:12px 0 6px;font-weight:600}input,button{font:inherit}input[type=number]{width:100%;padding:12px;border-radius:8px;border:1px solid #9eb7ce;background:#fff;color:#15233a}input[type=checkbox]{width:22px;height:22px;vertical-align:middle;margin-right:8px}button{padding:12px 16px;border-radius:9px;border:0;background:#25c9cf;color:#08243c;font-weight:700;min-height:44px}button.secondary{background:#d5e5f3}button:focus-visible,input:focus-visible{outline:3px solid #ffce66;outline-offset:3px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.metric{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #3c5573}.hint{color:#c1d3e3;font-size:.9rem}.warning{color:#ffe2a0}output{display:block;margin-top:12px;min-height:1.5em}@media(max-width:360px){body{padding:8px}.panel{padding:12px}.metric{display:block}}
+:root{font-family:system-ui,sans-serif;color:#eaf5ff;background:#0c1c32}*{box-sizing:border-box}body{margin:0;padding:16px;overflow-wrap:anywhere}main{max-width:680px;margin:auto;min-width:0}h1{font-size:1.4rem}h2{font-size:1.1rem}.panel{background:#172b46;border:1px solid #3c5573;border-radius:14px;padding:16px;margin:14px 0}label{display:block;margin:12px 0 6px;font-weight:600}input,button{font:inherit}input[type=number]{width:100%;padding:12px;border-radius:8px;border:1px solid #9eb7ce;background:#fff;color:#15233a}input[type=checkbox]{width:22px;height:22px;vertical-align:middle;margin-right:8px}button{padding:12px 16px;border-radius:9px;border:0;background:#25c9cf;color:#08243c;font-weight:700;min-height:44px}button.secondary{background:#d5e5f3}button:focus-visible,input:focus-visible{outline:3px solid #ffce66;outline-offset:3px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.actions button{flex:1 1 210px}.metric{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #3c5573}.metric strong{text-align:right;font-variant-numeric:tabular-nums}.hint{color:#c1d3e3;font-size:.9rem}.warning{color:#ffe2a0}output{display:block;margin-top:12px;min-height:1.5em}@media(max-width:360px){body{padding:8px}.panel{padding:12px}.metric{display:block}.metric strong{display:block;text-align:left}.actions button{flex-basis:100%}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style></head><body><main>
 <h1>ENLACE DIGITAL · Administración de entregas</h1>
 <p class="warning">DEMOSTRACIÓN AISLADA · Datos ficticios · Sin pedidos ni cambios reales</p>
@@ -17,8 +17,8 @@
 <label for="special">Tarifa especial simulada (CUP; 0 = ninguna)</label><input id="special" type="number" min="0" step="1" value="0" inputmode="numeric">
 <label for="productFree"><input id="productFree" type="checkbox">Algún producto tiene entrega gratis</label>
 <div class="actions"><button id="calculate" type="button">Calcular vista previa</button><button id="revert" class="secondary" type="button">Restablecer demostración</button></div>
-<output id="feedback" role="status" aria-live="polite"></output>
-<div id="results" hidden aria-label="Resultados simulados"><div class="metric"><span>Valor comercial calculado</span><strong id="gross"></strong></div><div class="metric"><span>Paga el cliente</span><strong id="customer"></strong></div><div class="metric"><span>Mensajería bonificada</span><strong id="covered"></strong></div><p id="reason" class="hint"></p></div>
+<output id="feedback" role="status" aria-live="polite" aria-atomic="true"></output>
+<div id="results" hidden role="region" aria-label="Resultados simulados"><div class="metric"><span>Valor comercial calculado</span><strong id="gross"></strong></div><div class="metric"><span>Paga el cliente</span><strong id="customer"></strong></div><div class="metric"><span>Mensajería bonificada</span><strong id="covered"></strong></div><p id="reason" class="hint"></p></div>
 </section><p class="hint">El costo real pagado al mensajero se registrará por separado. No se consulta un motor de rutas ni se almacena información.</p></main>
 <script>
 'use strict';
@@ -29,12 +29,13 @@ function calculate(){
  $('results').hidden=true;
  const threshold=Number($('threshold').value),rounding=Number($('rounding').value),subtotal=Number($('subtotal').value),distance=Number($('distance').value),special=Number($('special').value);
  const valid=(id,n,min)=>$(id).value.trim()!==''&&Number.isFinite(n)&&n>=min;
- if(!valid('rounding',rounding,1)||!Number.isSafeInteger(rounding)||rounding>10000||!valid('subtotal',subtotal,0)||!valid('distance',distance,0)||!valid('special',special,0)||!Number.isSafeInteger(special)||($('promotion').checked&&(!valid('threshold',threshold,0.01)||Math.round(threshold*100)!==threshold*100))){
+ const validCents=n=>Math.abs(n*100-Math.round(n*100))<1e-7;
+ if(!valid('rounding',rounding,1)||!Number.isSafeInteger(rounding)||rounding>10000||!valid('subtotal',subtotal,0)||!validCents(subtotal)||subtotal>1000000||!valid('distance',distance,0)||distance>100000||!valid('special',special,0)||!Number.isSafeInteger(special)||special>1000000||($('promotion').checked&&(!valid('threshold',threshold,0.01)||threshold>1000000||!validCents(threshold)))){
   $('feedback').textContent='Revisa los importes y la distancia de demostración.';return;
  }
  const base=Math.max(600,Math.ceil(Math.max(3,distance)*200));
  const gross=Math.ceil(Math.max(base,special)/rounding)*rounding;
- if(!Number.isSafeInteger(gross)){$('feedback').textContent='Importe fuera del rango permitido.';return;}
+ if(!Number.isSafeInteger(gross)||gross>100000000){$('feedback').textContent='Importe fuera del rango permitido.';return;}
  const free=$('productFree').checked||($('promotion').checked&&subtotal>=threshold);
  const customer=free?0:gross;
  $('gross').textContent=money(gross);$('customer').textContent=money(customer);$('covered').textContent=money(gross-customer);
