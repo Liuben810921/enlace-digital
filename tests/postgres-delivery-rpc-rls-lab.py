@@ -125,7 +125,9 @@ with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 second' WHERE cart_id='cart-a'")
 started=threading.Event()
 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-    with db(admin) as blocker:
+    # Only the disposable fixture superuser can lock the protected quote row.
+    # The login admin correctly lacks direct SELECT FOR UPDATE privileges.
+    with db(None) as blocker:
         blocker.execute("BEGIN")
         blocker.execute("SELECT * FROM ed_rpc_lab.quotes WHERE actor_role=%s AND operation_key=%s FOR UPDATE",(a,"expiry-wait"))
         def delayed_replay():
