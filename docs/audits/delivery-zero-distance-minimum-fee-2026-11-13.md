@@ -12,4 +12,10 @@ La prueba configura temporalmente una ruta sintética con `distance_km=0`, obtie
 ## Criterio de cierre
 Si GitHub Actions pasa, documentar que no se ha demostrado defecto y cerrar sin modificar SQL. Si falla, inspeccionar logs y corregir exclusivamente un fallo demostrado, seguido de nueva ejecución.
 
-**Estado: pendiente de GitHub Actions.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; pruebas aprobadas, sin defecto demostrado y sin cambios SQL.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — pruebas satisfactorias
+
+Se verificó [GitHub Actions #43528056766](https://github.com/Liuben810921/enlace-digital/actions/runs/43528056766): workflow `completed/success` sobre el commit de pruebas `1c2ae2d640ea0cdf571e1fe61339ffa491eb6924`; trabajo `test` (ID `132238601650`) `completed/success`.
+
+El escenario de distancia cero conserva el cálculo `max(ceil(min_km * rate_cup_per_km), min_fee_cup)`, la idempotencia del resultado y la restauración de la ruta sintética. **Dictamen: no existe fallo demostrado en el escenario comprobado; auditoría cerrada sin modificar SQL.** El cierre es exclusivamente documental; no se fusiona ni despliega y no se accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
