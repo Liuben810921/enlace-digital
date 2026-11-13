@@ -6,7 +6,7 @@ assert.equal(ok.approved,true);
 assert.equal(ok.feeStatus,'eligible_for_quote');
 const near=assessRoute({osmandKm:2,engineKm:2.45});
 assert.equal(near.approved,true);
-assert.equal(near.absoluteDeviationKm,0.4500000000000002);
+assert.ok(Math.abs(near.absoluteDeviationKm-0.45)<1e-9);
 const bad=assessRoute({osmandKm:7.4,engineKm:9.2});
 assert.equal(bad.approved,false);
 assert.equal(bad.reason,'distance_discrepancy');
