@@ -12,9 +12,10 @@ done
 wait
 eq "$(sql "SELECT count(*) FROM quote_lab.operations")" "12"
 for i in $(seq 1 12); do
-  eq "$(cat "/tmp/quote-a-$i")" "committed|700|1"
-  # Both may report committed on first race due to ON CONFLICT DO NOTHING: exactly-once row is authoritative.
-  [[ "$(cat "/tmp/quote-b-$i")" == "committed|700|1" || "$(cat "/tmp/quote-b-$i")" == "replayed|700|1" ]] || exit 1
+  for side in a b; do
+    actual="$(cat "/tmp/quote-$side-$i")"
+    [[ "$actual" == "committed|700|1" || "$actual" == "replayed|700|1" ]] || { echo "FAIL parallel result: $actual"; exit 1; }
+  done
 done
 eq "$(sql "SELECT outcome,amount,version FROM quote_lab.quote('gestor','same-1','payload',999,1)")" "replayed|700|1"
 # Unknown commit: client disconnects after server commit, retry discovers the committed row.
