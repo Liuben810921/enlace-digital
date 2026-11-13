@@ -1659,7 +1659,7 @@ function edOsmAndMatrixPanel(){
 }
 function edOsmAndMatrixAdd(){
  const value=id=>document.getElementById(id)?.value;
- const row={id:value('edMatrixId'),label:value('edMatrixLabel'),osmandKm:value('edMatrixOsmAnd'),engineKm:value('edMatrixEngine'),status:value('edMatrixStatus')};
+ const row={id:value('edMatrixId'),label:value('edMatrixLabel'),osmandKm:value('edMatrixOsmAnd')===''?NaN:Number(value('edMatrixOsmAnd')),engineKm:value('edMatrixEngine')===''?NaN:Number(value('edMatrixEngine')),status:value('edMatrixStatus')};
  const rows=edOsmAndMatrixRead().filter(x=>x.id!==row.id);
  const valid=edOsmAndMatrixValidate([...rows,row]);
  if(!valid){alert('Datos de prueba inválidos. Comprueba ID, nombre y kilómetros.');return false}
