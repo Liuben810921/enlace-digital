@@ -99,4 +99,22 @@ assert.equal(call('edOsmAndMatrixRead().length'),0);
 ctx.localStorage.getItem=oldGet;
 assert.equal(JSON.parse(call('edOsmAndMatrixExportReport()')).routes.length,12);
 
+
+const ui=call('edOsmAndMatrixPanel()');
+for(const id of ['edMatrixId','edMatrixLabel','edMatrixOsmAnd','edMatrixEngine','edMatrixStatus','edMatrixJson'])assert.match(ui,new RegExp('for="'+id+'"'));
+assert.match(ui,/aria-live="polite"/);
+assert.match(ui,/role="region"/);
+assert.match(ui,/tabindex="0"/);
+assert.match(ui,/<caption>Comparación sintética de rutas<\/caption>/);
+assert.match(ui,/inputmode="decimal"/);
+const oldSetAgain=ctx.localStorage.setItem;
+ctx.localStorage.setItem=()=>{throw Error('QuotaExceededError')};
+el('edMatrixJson').value=JSON.stringify([{id:'A11',label:'Ruta simulada',osmandKm:4,engineKm:4.2,status:'ok'}]);
+assert.equal(call('edOsmAndMatrixImport()'),false);
+ctx.localStorage.setItem=oldSetAgain;
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+el('edMatrixJson').value='invalid JSON';
+assert.equal(call('edOsmAndMatrixImport()'),false);
+assert.match(messages[messages.length-1],/JSON válido/);
+
 console.log('PASS isolated admin route lab: input, tolerance, import/export, invalid JSON, duplicate ID, clearing');
