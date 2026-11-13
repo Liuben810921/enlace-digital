@@ -15,3 +15,11 @@ En `tests/postgres-delivery-rpc-rls-lab.sql` se añade el rechazo de `p_reason ~
 - Corrección SQL: `4d1b31e2e1dc4f437c179e335c2bed792af919e6`.
 
 **Estado: pendiente de GitHub Actions `completed/success`**. Solo laboratorio PostgreSQL desechable en GitHub; no se accedió ni modificó Supabase, staging, producción, clientes reales o pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Se verificó [GitHub Actions #43518323615](https://github.com/Liuben810921/enlace-digital/actions/runs/43518323615): estado `completed`, conclusión `success`, commit probado `4d1b31e2e1dc4f437c179e335c2bed792af919e6`. El trabajo `test` (ID `132205903443`) también finalizó `completed/success`.
+
+La ejecución valida la batería reproducible que incluye rechazo de saltos de línea, retornos de carro y tabulaciones internos en el motivo de tarifa, con preservación del estado ante solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre documental únicamente: sin fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
