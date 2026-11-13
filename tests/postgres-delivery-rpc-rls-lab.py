@@ -277,6 +277,17 @@ assert_error(admin,mutate,errors.InvalidParameterValue,(None,"cart-a",before_rou
 assert run(None,"SELECT route_version,distance_km,expires_at FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==before_route
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==before_audit
 
+# A distance is meaningful only for a route mutation. Reject extraneous
+# distances instead of silently committing a different context operation.
+extra_distance_cart_v=run(None,"SELECT revision,destination_version FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0]
+extra_distance_wh_v=run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")[0][0]
+extra_distance_audit=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")[0][0]
+for kind,expected in (("cart",extra_distance_cart_v[0]),("destination",extra_distance_cart_v[1]),("warehouse",extra_distance_wh_v)):
+    assert_error(admin,mutate,errors.InvalidParameterValue,(kind,"cart-a",expected,5))
+assert run(None,"SELECT revision,destination_version FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")==[extra_distance_cart_v]
+assert run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")==[(extra_distance_wh_v,)]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(extra_distance_audit,)]
+
 # Warehouse updates are global; caller-supplied cart identifiers must not contaminate audit attribution.
 warehouse_v=run(None,"SELECT version FROM ed_rpc_lab.warehouses WHERE singleton=true")[0][0]
 audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")[0][0]
