@@ -197,7 +197,7 @@ BEGIN
   RAISE EXCEPTION 'forbidden_role' USING ERRCODE='42501';
  END IF;
  IF p_kind IS NULL OR p_kind NOT IN ('cart','destination','warehouse','route') OR p_expected IS NULL
-    OR p_expected<1 THEN
+    OR p_expected<1 OR (p_kind<>'route' AND p_distance IS NOT NULL) THEN
   RAISE EXCEPTION 'invalid_mutation' USING ERRCODE='22023';
  END IF;
  PERFORM pg_catalog.pg_advisory_xact_lock_shared(917321);
