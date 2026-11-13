@@ -11,7 +11,7 @@ for(const token of [
  'route_evidence','origin_set_hash','cart_revision','settings_version','destination_hash',
  'PRIMARY KEY(actor_id, operation_key)','ON CONFLICT','pending','completed','failed','expired',
  '40P01','40001','55P03','57014','gross_delivery_cup','customer_fee_cup','promotion_covered_cup',
- 'NO-GO','rollback','A01','A15','No se alteran'
+ 'NO-GO','Rollback','A01','A15','No se alteran'
 ])assert.ok(spec.includes(token),'missing specification control: '+token);
 for(let i=1;i<=7;i++)assert.ok(readiness.includes('B0'+i),'missing staging blocker B0'+i);
 for(let i=1;i<=15;i++)assert.ok(new RegExp('\\bA'+String(i).padStart(2,'0')+'\\b').test(spec),'missing acceptance A'+i);
