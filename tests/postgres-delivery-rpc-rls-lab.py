@@ -101,4 +101,19 @@ for table,statement in (
 ):
     assert_error(admin,statement,errors.InsufficientPrivilege)
 
+
+# Cross-cart operation-key collision under concurrent admin requests must fail
+# closed, not return another cart's committed fee.
+def cross_cart(cart,customer):
+    try:
+        return run(admin,q,("cross-cart-key",cart,customer,1))[0]
+    except errors.UniqueViolation:
+        return "conflict"
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    outcomes=list(pool.map(lambda x: cross_cart(*x),
+                           [("cart-a","customer-a"),("cart-b","customer-b")]))
+assert outcomes.count("conflict")==1, outcomes
+assert sum(isinstance(x,tuple) and x[0]=="committed" for x in outcomes)==1, outcomes
+assert run(admin,"SELECT count(*) FROM ed_rpc_lab.quotes WHERE operation_key='cross-cart-key'")==[(1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
