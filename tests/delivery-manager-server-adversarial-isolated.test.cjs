@@ -56,7 +56,7 @@ const altReq={customerKind:'habitual',customerId:'c1',alternativeAddress:alt,car
 assert.equal(q(altReq).reason,'missing_fresh_verified_route');
 const altCtx={...context,routes:[{...route,destinationId:'alternative:'+alt}]};
 assert.equal(q(altReq,altCtx).available,true);
-assert.equal(q({...altReq,addressId:'a1'},altCtx).available,true); // alternative explicitly wins; no address mutation
+assert.equal(q({...altReq,addressId:'a1'},altCtx).reason,'ambiguous_destination');
 const free=q(request,{...context,carts:[{...cart,subtotalUsd:200}]});
 assert.equal(free.customerFeeCup,0);
 assert.equal(free.calculatedDeliveryValueCup,700);
