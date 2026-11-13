@@ -12,7 +12,7 @@ Se añadieron tres casos (`0`, `-1`, `-9223372036854775808`) que exigen `Invalid
 ## Plan de verificación
 Ejecutar GitHub Actions con la regresión, comprobar los logs, aplicar solo la corrección SQL demostrada si falla y repetir CI hasta confirmar. No modificar servicios externos.
 
-**Estado: fallo reproducido; corrección SQL mínima aplicada, pendiente de CI posterior.** Trabajo exclusivo en GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; defecto corregido y verificado con CI satisfactoria.** Trabajo exclusivo en GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
 
 ## Evidencia del fallo y corrección
 
@@ -20,4 +20,10 @@ Ejecutar GitHub Actions con la regresión, comprobar los logs, aplicar solo la c
 
 Se modificó exclusivamente la validación inicial de `ed_rpc_lab.update_rate` para rechazar `p_expected<1` con `invalid_change` (`22023`). Commit de corrección SQL: `8b57a613e7f419b4094e0135c025066f1e1e36e8`. Sin cambios en RLS, privilegios, concurrencia, cálculo de tarifa o registros de auditoría.
 
-**Pendiente:** GitHub Actions `completed/success` sobre el commit SQL para cierre definitivo.
+**Verificado:** GitHub Actions `completed/success` sobre el commit de corrección SQL.
+
+## Cierre definitivo — CI satisfactoria
+
+Se comprobó [GitHub Actions #43527294383](https://github.com/Liuben810921/enlace-digital/actions/runs/43527294383): workflow `completed/success` sobre `8b57a613e7f419b4094e0135c025066f1e1e36e8`; trabajo `test` (ID `132236104798`) también `completed/success`.
+
+La regresión había reproducido el fallo en [#43526688720](https://github.com/Liuben810921/enlace-digital/actions/runs/43526688720), y la corrección mínima superó la batería completa. **Dictamen: auditoría cerrada satisfactoriamente, defecto corregido y comprobado.** El cierre modifica únicamente documentación; no se fusiona ni despliega, y no se accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
