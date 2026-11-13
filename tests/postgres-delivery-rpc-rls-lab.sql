@@ -240,7 +240,7 @@ BEGIN
   END IF;
  END IF;
  INSERT INTO ed_rpc_lab.context_audit(actor_role,change_kind,cart_id,previous_version,next_version)
- VALUES(session_user::name,p_kind,p_cart,p_expected,next_v);
+ VALUES(session_user::name,p_kind,CASE WHEN p_kind='warehouse' THEN NULL ELSE p_cart END,p_expected,next_v);
  RETURN next_v;
 END $func$;
 
