@@ -2,6 +2,7 @@
 """Deterministic synthetic races between quotes and context updates on PostgreSQL 16."""
 import concurrent.futures
 import time
+import threading
 import psycopg
 from psycopg import errors
 
@@ -63,56 +64,55 @@ for kind,table,column,where in [
     assert quote("after-"+kind,cartrev())[0]=="committed"
     assert_stale(oldkey,oldrev)
 
-# Race 1: mutator acquires the exclusive cart advisory lock, quote waits.
-# Commit mutation; quote must then reject stale route/cart snapshot.
+# Race 1: admin mutation commits while a quote is waiting on the same context.
 rev=cartrev()
 expected=version("carts","destination_version","cart_id='cart-a'")
-with conn("ed_lab_admin",autocommit=False) as updater:
-    updater.execute("SELECT ed_rpc_lab.mutate_context('destination','cart-a',%s,NULL)",(expected,))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    with conn("ed_lab_admin",autocommit=False) as updater:
+        updater.execute("SELECT ed_rpc_lab.mutate_context('destination','cart-a',%s,NULL)",(expected,))
+        started=threading.Event()
+        pid_box=[]
         def blocked_quote():
             with conn("ed_lab_gestor_a") as c:
-                pid=c.execute("SELECT pg_backend_pid()").fetchone()[0]
+                pid_box.append(c.execute("SELECT pg_backend_pid()").fetchone()[0])
+                started.set()
                 try:
                     c.execute("SELECT * FROM ed_rpc_lab.quote_preview(%s,'cart-a','customer-a',%s)",
                               ("race-after-mutate",rev))
                 except errors.SerializationFailure:
-                    return (pid,"stale")
-                return (pid,"accepted")
+                    return "stale"
+                return "accepted"
         future=pool.submit(blocked_quote)
-        with root() as observer:
-            for _ in range(100):
-                rows=observer.execute("""SELECT pid FROM pg_stat_activity
-                 WHERE usename='ed_lab_gestor_a' AND query LIKE '%race-after-mutate%'
-                   AND wait_event_type='Lock'""").fetchall()
-                if rows: break
-                time.sleep(.03)
-            else: raise AssertionError("quote did not block on mutation")
-        updater.commit()
-        assert future.result(timeout=5)[1]=="stale"
+        assert started.wait(5)
+        try:
+            wait_lock(pid_box[0])
+        finally:
+            updater.commit()
+        assert future.result(timeout=5)=="stale"
 refresh()
 
-# Race 2: quote commits in its transaction only after mutation starts waiting.
-# Mutation cannot overtake the quote; after mutation commits, replay is stale.
+# Race 2: quote holds a shared context lock while admin update waits.
 rev=cartrev()
 expected=version("warehouses","version")
-with conn("ed_lab_gestor_a",autocommit=False) as quoting:
-    result=quoting.execute("SELECT * FROM ed_rpc_lab.quote_preview(%s,'cart-a','customer-a',%s)",
-                           ("race-before-mutate",rev)).fetchone()
-    assert result[0]=="committed"
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    with conn("ed_lab_gestor_a",autocommit=False) as quoting:
+        result=quoting.execute("SELECT * FROM ed_rpc_lab.quote_preview(%s,'cart-a','customer-a',%s)",
+                               ("race-before-mutate",rev)).fetchone()
+        assert result[0]=="committed"
+        started=threading.Event()
+        pid_box=[]
         def blocked_mutation():
-            return mutate("warehouse",expected)
+            with conn("ed_lab_admin") as c:
+                pid_box.append(c.execute("SELECT pg_backend_pid()").fetchone()[0])
+                started.set()
+                return c.execute("SELECT ed_rpc_lab.mutate_context('warehouse',NULL,%s,NULL)",
+                                 (expected,)).fetchone()[0]
         future=pool.submit(blocked_mutation)
-        with root() as observer:
-            for _ in range(100):
-                rows=observer.execute("""SELECT pid FROM pg_stat_activity
-                 WHERE usename='ed_lab_admin' AND query LIKE '%mutate_context%'
-                   AND wait_event_type='Lock'""").fetchall()
-                if rows: break
-                time.sleep(.03)
-            else: raise AssertionError("mutation did not wait for quote")
-        quoting.commit()
+        assert started.wait(5)
+        try:
+            wait_lock(pid_box[0])
+        finally:
+            quoting.commit()
         assert future.result(timeout=5)==expected+1
 assert_stale("race-before-mutate",rev)
 refresh()
