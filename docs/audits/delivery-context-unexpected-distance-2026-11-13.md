@@ -12,4 +12,12 @@ Se añadieron pruebas para `cart`, `destination` y `warehouse` con distancia ine
 ## Procedimiento
 Primero ejecutar la regresión en GitHub Actions. Corregir SQL exclusivamente si el fallo queda demostrado y repetir las pruebas. Preservar el contrato válido de `warehouse` con identificador de cesta opcional, ya documentado.
 
-**Estado: pendiente de evidencia CI.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: defecto confirmado en CI, corrección SQL mínima aplicada; pendiente de CI posterior.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia del fallo y corrección
+
+[GitHub Actions #43527506343](https://github.com/Liuben810921/enlace-digital/actions/runs/43527506343) terminó `completed/failure` en el commit de regresión `69c8ef22b9eccea06b148d150489a9a7832904ba`. El trabajo `test` (ID `132236820844`) falló en la línea 286 de `tests/postgres-delivery-rpc-rls-lab.py`: `AssertionError: ed_lab_admin should reject SELECT ed_rpc_lab.mutate_context(%s,%s,%s,%s)`. La primera operación no fue rechazada; el test detuvo el resto de casos.
+
+Se añadió exclusivamente `OR (p_kind<>'route' AND p_distance IS NOT NULL)` a la validación inicial de `ed_rpc_lab.mutate_context`, con el error `invalid_mutation` (`22023`) existente. Commit SQL `a736916f09961380195d43ea64b744d97e13f200`. Se conservan el contrato de almacén con identificador de cesta opcional, RLS, privilegios, control de versiones y rutas válidas.
+
+**Pendiente:** confirmar `completed/success` de GitHub Actions sobre el commit de corrección antes del cierre definitivo.
