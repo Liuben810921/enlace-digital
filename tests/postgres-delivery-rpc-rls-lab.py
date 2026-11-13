@@ -288,6 +288,14 @@ for invalid_distance in (__import__('decimal').Decimal('NaN'),__import__('decima
 assert run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[(route_bounds_v,)]
 assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(route_bounds_audit,)]
 
+# Precision boundary: 0.005 km must round up to 0.01 km, never to zero.
+# This is a valid positive route update, followed by an explicit zero route.
+precision_boundary_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+assert run(admin,mutate,("route","cart-a",precision_boundary_v,__import__('decimal').Decimal('0.005')))==[(precision_boundary_v+1,)]
+assert run(None,"SELECT distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[(__import__('decimal').Decimal('0.01'),)]
+assert run(admin,mutate,("route","cart-a",precision_boundary_v+1,__import__('decimal').Decimal('0')))==[(precision_boundary_v+2,)]
+assert run(None,"SELECT distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[(__import__('decimal').Decimal('0.00'),)]
+
 # Restore route coherence for the subsequent context-race test suite, which
 # shares this disposable database and starts by quoting the existing cart.
 route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
