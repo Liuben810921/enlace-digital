@@ -31,6 +31,7 @@ function quoteManagerServerContract({request,context}={}){
   if(!customer||customer.assignedManagerId!==principal.userId||!Array.isArray(customer.addresses))return reject('customer_not_accessible');
   if(own(request,'proposedAddress'))return reject('unexpected_new_address');
   if(own(request,'alternativeAddress')){
+   if(own(request,'addressId'))return reject('ambiguous_destination');
    if(!txt(request.alternativeAddress))return reject('invalid_destination');
    destination=request.alternativeAddress;destinationId='alternative:'+destination;
   }else{
