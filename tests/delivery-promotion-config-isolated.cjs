@@ -1,6 +1,6 @@
 'use strict';
 // Synthetic administration policy validator. No browser, persistence, services or checkout.
-const validUsd=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1000000&&Math.round(n*100)===n*100;
+const validUsd=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1000000&&Math.abs(Math.round(n*100)-n*100)<1e-7;
 function validateShippingPromotionConfig(config){
  if(!config||typeof config!=='object'||Array.isArray(config))return {ok:false,reason:'invalid_config'};
  const keys=Object.keys(config);
