@@ -16,6 +16,8 @@ on:
       - 'tests/delivery-route-validation-isolated.test.cjs'
       - 'tests/delivery-route-lab-ui.test.cjs'
       - 'tests/delivery-integration-contracts.test.cjs'
+      - 'tests/delivery-mixed-fees-isolated.cjs'
+      - 'tests/delivery-mixed-fees-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -35,3 +37,4 @@ jobs:
       - run: node tests/delivery-route-validation-isolated.test.cjs
       - run: node tests/delivery-route-lab-ui.test.cjs
       - run: node tests/delivery-integration-contracts.test.cjs
+      - run: node tests/delivery-mixed-fees-isolated.test.cjs
