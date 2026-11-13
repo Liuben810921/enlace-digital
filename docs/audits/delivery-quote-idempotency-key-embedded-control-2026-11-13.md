@@ -15,3 +15,11 @@
 - Corrección `a28687b012466b18fffc12ec51b1fce28b3e4e2a`.
 
 **Estado: abierto hasta GitHub Actions `completed/success`.** Exclusivamente laboratorio PostgreSQL desechable en GitHub; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
+
+## Cierre definitivo — GitHub Actions aprobada
+
+Se verificó [GitHub Actions #43518505101](https://github.com/Liuben810921/enlace-digital/actions/runs/43518505101): estado `completed`, conclusión `success`, commit probado `a28687b012466b18fffc12ec51b1fce28b3e4e2a`. El trabajo `test` (ID `132206514732`) también finalizó `completed/success`.
+
+La ejecución valida la batería reproducible que incluye rechazo de saltos de línea, retornos de carro y tabulaciones internos en las claves de idempotencia, sin insertar nuevas cotizaciones ante solicitudes inválidas.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. Cierre documental únicamente: sin fusiones ni despliegues y sin acceso ni modificaciones a Supabase, staging, producción, clientes reales o pedidos.
