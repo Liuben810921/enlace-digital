@@ -14,4 +14,10 @@ La RPC `ed_rpc_lab.update_rate` rechazaba controles POSIX y separadores Unicode,
 - Prueba de regresión: `69eff4d2e5ed04f6f91ef0cb0c5dd698e7a3fd90`.
 - Corrección SQL: `999164806669751b790e1b9da3c49b868fe11b1b`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Laboratorio PostgreSQL desechable y rama aislada únicamente; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada tras GitHub Actions `completed/success`.** Laboratorio PostgreSQL desechable y rama aislada únicamente; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — CI aprobada
+
+Se verificó [GitHub Actions #43522992468](https://github.com/Liuben810921/enlace-digital/actions/runs/43522992468): workflow `completed/success`, commit probado `999164806669751b790e1b9da3c49b868fe11b1b`. El trabajo `test` (ID `132221635664`) terminó también `completed/success`.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. El cierre solo modifica este documento; no modifica SQL, pruebas, RLS ni permisos, no fusiona ni despliega y no accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
