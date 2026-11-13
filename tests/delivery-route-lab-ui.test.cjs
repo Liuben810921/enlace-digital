@@ -56,4 +56,47 @@ el('edMatrixJson').value=JSON.stringify([{id:'P03',label:'extra',osmandKm:7,engi
 assert.equal(call('edOsmAndMatrixImport()'),false);
 assert.equal(call('edOsmAndMatrixRead().length'),12);
 
+
+const snapshot=call('edOsmAndMatrixExport()');
+const same=JSON.parse(snapshot);
+assert.equal(call('edOsmAndMatrixValidate('+JSON.stringify(same)+').length'),12);
+const generatedReport=call('edOsmAndMatrixExportReport()');
+el('edMatrixJson').value=generatedReport;
+assert.equal(call('edOsmAndMatrixImport()'),false);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+for(const label of ['Casa 22','Calle 17','Contacto 53544655','Línea \u007f inválida']){
+ el('edMatrixJson').value=JSON.stringify([{id:'SAFE',label,osmandKm:7,engineKm:8,status:'ok'}]);
+ assert.equal(call('edOsmAndMatrixImport()'),false);
+}
+for(const bad of [
+ [{id:'bad',label:'synthetic',osmandKm:0,engineKm:1,status:'ok'}],
+ [{id:'bad',label:'synthetic',osmandKm:301,engineKm:1,status:'ok'}],
+ [{id:'bad',label:'synthetic',osmandKm:1,engineKm:-1,status:'ok'}],
+ [{id:'bad',label:'synthetic',osmandKm:1,engineKm:301,status:'ok'}],
+ [{id:'bad',label:'synthetic',osmandKm:1,engineKm:1,status:'broken'}],
+ Array.from({length:101},(_,i)=>({id:'R'+i,label:'Prueba',osmandKm:1,engineKm:1,status:'ok'}))
+]){
+ el('edMatrixJson').value=JSON.stringify(bad);
+ assert.equal(call('edOsmAndMatrixImport()'),false);
+ assert.equal(call('edOsmAndMatrixRead().length'),12);
+}
+el('edMatrixJson').value='x'.repeat(50001);
+assert.equal(call('edOsmAndMatrixImport()'),false);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+store.set('ed_osmand_route_matrix_demo_v1','{malformed');
+assert.equal(call('edOsmAndMatrixRead().length'),0);
+store.set('ed_osmand_route_matrix_demo_v1',snapshot);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+const oldSet=ctx.localStorage.setItem;
+ctx.localStorage.setItem=()=>{throw Error('QuotaExceededError')};
+el('edMatrixId').value='FAIL';el('edMatrixLabel').value='Ruta ficticia';el('edMatrixOsmAnd').value='4';el('edMatrixEngine').value='4';el('edMatrixStatus').value='ok';
+assert.equal(call('edOsmAndMatrixAdd()'),false);
+assert.equal(call('edOsmAndMatrixRead().length'),12);
+ctx.localStorage.setItem=oldSet;
+const oldGet=ctx.localStorage.getItem;
+ctx.localStorage.getItem=()=>{throw Error('StorageAccessDenied')};
+assert.equal(call('edOsmAndMatrixRead().length'),0);
+ctx.localStorage.getItem=oldGet;
+assert.equal(JSON.parse(call('edOsmAndMatrixExportReport()')).routes.length,12);
+
 console.log('PASS isolated admin route lab: input, tolerance, import/export, invalid JSON, duplicate ID, clearing');
