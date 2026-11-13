@@ -12,7 +12,7 @@ Se añadieron pruebas para `cart`, `destination` y `warehouse` con distancia ine
 ## Procedimiento
 Primero ejecutar la regresión en GitHub Actions. Corregir SQL exclusivamente si el fallo queda demostrado y repetir las pruebas. Preservar el contrato válido de `warehouse` con identificador de cesta opcional, ya documentado.
 
-**Estado: defecto confirmado en CI, corrección SQL mínima aplicada; pendiente de CI posterior.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; defecto corregido y verificado con CI satisfactoria.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
 
 ## Evidencia del fallo y corrección
 
@@ -20,4 +20,10 @@ Primero ejecutar la regresión en GitHub Actions. Corregir SQL exclusivamente si
 
 Se añadió exclusivamente `OR (p_kind<>'route' AND p_distance IS NOT NULL)` a la validación inicial de `ed_rpc_lab.mutate_context`, con el error `invalid_mutation` (`22023`) existente. Commit SQL `a736916f09961380195d43ea64b744d97e13f200`. Se conservan el contrato de almacén con identificador de cesta opcional, RLS, privilegios, control de versiones y rutas válidas.
 
-**Pendiente:** confirmar `completed/success` de GitHub Actions sobre el commit de corrección antes del cierre definitivo.
+**Verificado:** GitHub Actions `completed/success` sobre el commit de corrección SQL.
+
+## Cierre definitivo — corrección verificada
+
+Se verificó [GitHub Actions #43527639603](https://github.com/Liuben810921/enlace-digital/actions/runs/43527639603): workflow `completed/success` sobre el commit SQL `a736916f09961380195d43ea64b744d97e13f200`; trabajo `test` (ID `132237248479`) también `completed/success`.
+
+La regresión había demostrado la aceptación indebida de una distancia en [#43527506343](https://github.com/Liuben810921/enlace-digital/actions/runs/43527506343). Tras la corrección mínima, la batería completa pasó. **Dictamen: auditoría cerrada satisfactoriamente; defecto corregido y comprobado.** El cierre modifica exclusivamente documentación; no fusiona ni despliega, y no accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
