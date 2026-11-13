@@ -6,6 +6,8 @@ on:
       - 'tests/delivery-quote-isolated.cjs'
       - 'tests/delivery-quote-isolated.test.cjs'
       - 'tests/delivery-origins-ui.test.cjs'
+      - 'tests/delivery-dispatch-isolated.cjs'
+      - 'tests/delivery-dispatch-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -19,3 +21,4 @@ jobs:
       - uses: actions/checkout@v4
       - run: node tests/delivery-quote-isolated.test.cjs
       - run: node tests/delivery-origins-ui.test.cjs
+      - run: node tests/delivery-dispatch-isolated.test.cjs
