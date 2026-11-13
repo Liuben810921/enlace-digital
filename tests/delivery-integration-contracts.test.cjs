@@ -1,0 +1,26 @@
+'use strict';
+// Integration contract checks: no live routing or checkout activation.
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const html=fs.readFileSync('index.html','utf8');
+const cache=fs.readFileSync('tests/delivery-route-cache-isolated.cjs','utf8');
+const validation=fs.readFileSync('tests/delivery-route-validation-isolated.cjs','utf8');
+const dispatch=fs.readFileSync('tests/delivery-dispatch-isolated.cjs','utf8');
+const lab=html.slice(html.indexOf('const ED_OSMAND_MATRIX_KEY='),html.indexOf('function edDeliveryLocationPreview(){'));
+assert.ok(lab.startsWith('const ED_OSMAND_MATRIX_KEY='));
+assert.match(lab,/synthetic:true/);
+assert.match(lab,/edOsmAndMatrixPersist/);
+assert.match(lab,/role="region"/);
+assert.match(lab,/aria-live="polite"/);
+assert.doesNotMatch(lab,/\bfetch\s*\(|XMLHttpRequest|navigator\.geolocation|supabase\.|createOrder\s*\(/i);
+assert.doesNotMatch(cache,/\bfetch\s*\(|XMLHttpRequest|https?:\/\//i);
+assert.match(cache,/routeResponses\[origin\.id\]/);
+assert.match(dispatch,/dispatch_selection_required/);
+assert.match(validation,/pending_confirmation/);
+const {planDelivery}=require('./delivery-dispatch-isolated.cjs');
+const {assessRoute,quoteWithValidation}=require('./delivery-route-validation-isolated.cjs');
+const base={province:'La Habana',origins:[{id:'own',type:'propio',active:true}],lines:[{productId:'p',type:'propio',allowedOriginIds:['own'],dispatchOriginId:'own'}]};
+assert.equal(planDelivery({...base,roadDistancesKm:{}}).reason,'missing_verified_road_distance');
+assert.equal(planDelivery({...base,roadDistancesKm:{own:4}}).available,true);
+assert.equal(quoteWithValidation({assessment:assessRoute({osmandKm:4,engineKm:8}),quote:{available:true,feeCup:1600}}).feeStatus,'pending_confirmation');
+assert.equal(quoteWithValidation({assessment:assessRoute({osmandKm:4,engineKm:4.1}),quote:{available:true,feeCup:800}}).feeStatus,'synthetic_validated');
+console.log('PASS isolated integration contracts: no network, explicit origin, fail-closed validation');
