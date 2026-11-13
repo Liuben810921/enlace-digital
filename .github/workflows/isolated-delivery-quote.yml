@@ -12,6 +12,8 @@ on:
       - 'tests/delivery-route-adapter-isolated.test.cjs'
       - 'tests/delivery-route-cache-isolated.cjs'
       - 'tests/delivery-route-cache-isolated.test.cjs'
+      - 'tests/delivery-route-validation-isolated.cjs'
+      - 'tests/delivery-route-validation-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -28,3 +30,4 @@ jobs:
       - run: node tests/delivery-dispatch-isolated.test.cjs
       - run: node tests/delivery-route-adapter-isolated.test.cjs
       - run: node tests/delivery-route-cache-isolated.test.cjs
+      - run: node tests/delivery-route-validation-isolated.test.cjs
