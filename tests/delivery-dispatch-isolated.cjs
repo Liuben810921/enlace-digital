@@ -2,7 +2,7 @@
 // Deterministic synthetic dispatch planner. No geocoding, routing, orders or network.
 // Distances MUST be externally verified road distances; synthetic fixtures only here.
 const {quoteDelivery}=require('./delivery-quote-isolated.cjs');
-function planDelivery({province,lines,origins,roadDistancesKm,rateCupPerKm=200,minKm=3,minFeeCup=600}){
+function planDelivery({province,lines,origins,roadDistancesKm,rateCupPerKm=200,minKm=3,minFeeCup=600,specialFeeCup=null,freeShipping=false}){
  if(province!=='La Habana')return {available:false,reason:'outside_coverage'};
  if(!Array.isArray(lines)||!lines.length||!Array.isArray(origins)||!roadDistancesKm||typeof roadDistancesKm!=='object')
   return {available:false,reason:'invalid_input'};
@@ -24,7 +24,7 @@ function planDelivery({province,lines,origins,roadDistancesKm,rateCupPerKm=200,m
   selected.push({productId:line.productId,originId:chosen.id,roadDistanceKm:distance});
  }
  if(unresolved.length)return {available:false,reason:'dispatch_selection_required',unresolved};
- const q=quoteDelivery({province,distancesKm:selected.map(x=>x.roadDistanceKm),rateCupPerKm,minKm,minFeeCup});
+ const q=quoteDelivery({province,distancesKm:selected.map(x=>x.roadDistanceKm),rateCupPerKm,minKm,minFeeCup,specialFeeCup,freeShipping});
  if(!q.available)return q;
  return {...q,selectedOrigins:selected,distinctOriginIds:[...new Set(selected.map(x=>x.originId))],synthetic:true};
 }
