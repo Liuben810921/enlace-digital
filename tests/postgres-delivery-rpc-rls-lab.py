@@ -41,10 +41,10 @@ assert_error(admin,u,errors.SerializationFailure,(1,300,"stale"))
 assert_error(a,"DELETE FROM ed_rpc_lab.quotes",errors.InsufficientPrivilege)
 assert_error(admin,"UPDATE ed_rpc_lab.audit SET reason='tampered'",errors.InsufficientPrivilege)
 # Same key, multiple concurrent sessions: unique persisted row and deterministic result.
-def concurrent(_):
+def parallel_quote(_):
     return run(a,q,("parallel","cart-a","customer-a",1))[0]
 with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-    rows=list(pool.map(concurrent,range(8)))
+    rows=list(pool.map(parallel_quote,range(8)))
 assert all(x[1:]==(1250,1250,0) for x in rows),rows
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes WHERE operation_key='parallel'")==[(1,)]
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
