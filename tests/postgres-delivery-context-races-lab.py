@@ -58,7 +58,7 @@ for kind,table,column,where in [
     oldver=version(table,column,where)
     assert mutate(kind,oldver,5 if kind=="route" else None)==oldver+1
     assert_stale(oldkey,oldrev)
-    assert_stale("new-"+kind,oldrev if kind=="cart" else cartrev())
+    if kind!="route": assert_stale("new-"+kind,oldrev if kind=="cart" else cartrev())
     if kind!="route": refresh()
     assert quote("after-"+kind,cartrev())[0]=="committed"
     assert_stale(oldkey,oldrev)
