@@ -347,6 +347,10 @@ assert run(admin,mutate,("route","cart-a",zero_route_v+1,5))==[(zero_route_v+2,)
 threshold=run(None,"SELECT free_threshold_usd FROM ed_rpc_lab.settings WHERE singleton=true")[0][0]
 original_subtotal=run(None,"SELECT subtotal_usd FROM ed_rpc_lab.carts WHERE cart_id='cart-b'")[0][0]
 threshold_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-b'")[0][0]
+# Earlier warehouse mutation invalidates cart-b route: refresh its snapshot first.
+threshold_route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-b'")[0][0]
+threshold_distance=run(None,"SELECT distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-b'")[0][0]
+assert run(admin,mutate,("route","cart-b",threshold_route_v,threshold_distance))==[(threshold_route_v+1,)]
 try:
     run(None,"UPDATE ed_rpc_lab.carts SET subtotal_usd=%s WHERE cart_id='cart-b' RETURNING subtotal_usd",(threshold,))
     at_threshold=run(b,q,("threshold-exact","cart-b","customer-b",threshold_rev))
