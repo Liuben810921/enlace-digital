@@ -5,8 +5,8 @@ import psycopg
 from psycopg import errors
 DSN="host=127.0.0.1 port=5432 dbname=postgres user=postgres password=postgres connect_timeout=5"
 def db(role=None):
-    c=psycopg.connect(DSN,autocommit=True)
-    if role: c.execute("SET ROLE "+role)
+    c=psycopg.connect(DSN if role is None else
+        "host=127.0.0.1 port=5432 dbname=postgres user="+role+" password=disposable-lab-only connect_timeout=5",autocommit=True)
     return c
 def run(role,sql,params=()):
     with db(role) as c:
