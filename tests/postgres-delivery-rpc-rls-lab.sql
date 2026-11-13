@@ -79,14 +79,16 @@ BEGIN
   RAISE EXCEPTION 'invalid_request' USING ERRCODE='22023';
  END IF;
  -- Serialize rate edits and quote commits; do not trust caller-supplied money/route.
+ -- Cart/route SELECT is read-only: FOR SHARE would require UPDATE privileges.
+ -- Cart/route concurrent mutation still needs a versioned transactional contract.
  SELECT * INTO s FROM ed_rpc_lab.settings WHERE singleton=true FOR SHARE;
- SELECT * INTO c FROM ed_rpc_lab.carts WHERE cart_id=p_cart FOR SHARE;
+ SELECT * INTO c FROM ed_rpc_lab.carts WHERE cart_id=p_cart;
  IF NOT FOUND OR (actor<>'ed_lab_admin' AND c.manager_role<>actor)
     OR c.customer_id<>p_customer THEN
   RAISE EXCEPTION 'not_accessible' USING ERRCODE='42501';
  END IF;
  IF c.revision<>p_revision THEN RAISE EXCEPTION 'stale_cart' USING ERRCODE='40001'; END IF;
- SELECT * INTO r FROM ed_rpc_lab.routes WHERE cart_id=p_cart FOR SHARE;
+ SELECT * INTO r FROM ed_rpc_lab.routes WHERE cart_id=p_cart;
  IF NOT FOUND OR r.cart_revision<>c.revision OR r.source<>'server_fixture'
     OR r.expires_at<=clock_timestamp() THEN
   RAISE EXCEPTION 'stale_route' USING ERRCODE='40001';
