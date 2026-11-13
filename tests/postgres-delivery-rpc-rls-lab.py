@@ -146,8 +146,10 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
 with db(None) as root_conn:
     root_conn.execute("UPDATE ed_rpc_lab.routes SET expires_at=clock_timestamp()+interval '1 hour' WHERE cart_id='cart-a'")
 
-# Verify operation keys consisting solely of spaces are currently accepted.
-assert run(a,q,("   ","cart-a","customer-a",1))[0][0]=="committed"
+# Whitespace-only idempotency keys must fail closed without persisting quotes.
+blank_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+assert_error(a,q,errors.InvalidParameterValue,("   ","cart-a","customer-a",1))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(blank_before,)]
 # NULL mutation kind must fail closed, preserving route state and audit history.
 mutate="SELECT ed_rpc_lab.mutate_context(%s,%s,%s,%s)"
 before_route=run(None,"SELECT route_version,distance_km,expires_at FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")
