@@ -362,4 +362,24 @@ try:
 finally:
     run(None,"UPDATE ed_rpc_lab.carts SET subtotal_usd=%s WHERE cart_id='cart-b' RETURNING subtotal_usd",(original_subtotal,))
 
+# Tariff rounding and minimum-fee dominance: a fractional positive CUP fee
+# rounds upward; a larger configured minimum fee takes precedence.
+# These settings are temporary fixtures in disposable PostgreSQL only.
+rounding_settings=run(None,"SELECT min_km,min_fee_cup FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+rounding_route_v=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+assert run(admin,mutate,("route","cart-a",rounding_route_v,Decimal("0.01")))==[(rounding_route_v+1,)]
+rounding_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+try:
+    run(None,"UPDATE ed_rpc_lab.settings SET min_km=0,min_fee_cup=0 WHERE singleton=true RETURNING min_km")
+    rounding_quote=run(a,q,("ceil-fractional-cup","cart-a","customer-a",rounding_rev))
+    rounding_rate=run(None,"SELECT rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0][0]
+    rounded_up=int((Decimal("0.01")*rounding_rate).to_integral_value(rounding="ROUND_CEILING"))
+    assert rounding_quote==[("committed",rounded_up,rounded_up,0)],rounding_quote
+    run(None,"UPDATE ed_rpc_lab.settings SET min_fee_cup=%s WHERE singleton=true RETURNING min_fee_cup",(rounded_up+17,))
+    min_dominates=run(a,q,("minimum-dominates","cart-a","customer-a",rounding_rev))
+    assert min_dominates==[("committed",rounded_up+17,rounded_up+17,0)],min_dominates
+finally:
+    run(None,"UPDATE ed_rpc_lab.settings SET min_km=%s,min_fee_cup=%s WHERE singleton=true RETURNING min_km",(rounding_settings[0],rounding_settings[1]))
+    run(admin,mutate,("route","cart-a",rounding_route_v+1,5))
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
