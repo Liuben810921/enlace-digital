@@ -20,3 +20,16 @@ En `quote_preview`, tras `INSERT ... ON CONFLICT DO NOTHING`, el código recuper
 
 ## Límites
 Este prototipo no garantiza seguridad frente a escritores privilegiados que eludan el protocolo ni es integración productiva. El bloqueo por cesta usa `hashtext`, que puede generar colisiones conservadoras de bloqueo, no autorización cruzada. Se mantiene el propietario `NOLOGIN NOBYPASSRLS` y FORCE RLS.
+
+## Cierre verificado de GitHub Actions — 13 noviembre 2026
+
+Se consultaron directamente las ejecuciones y sus jobs mediante el conector de GitHub:
+
+| Run | Commit probado | Estado y conclusión | Job |
+| --- | --- | --- | --- |
+| [43510623945](https://github.com/Liuben810921/enlace-digital/actions/runs/43510623945) | `67a994d7fb93e36c344c963ee2f98edd54af6e62` | `completed / success` | `test`, ID `132179607991`, `completed / success` |
+| [43510643746](https://github.com/Liuben810921/enlace-digital/actions/runs/43510643746) | `00f0a02ec3a11ba32b31b9eabbdea66bb613059b` | `completed / success` | `test`, ID `132179675171`, `completed / success` |
+
+**Dictamen:** la ejecución más reciente que incluye el test concurrente está aprobada. No se detectaron fallos de CI que justifiquen cambios adicionales. Este commit modifica únicamente documentación y no requiere repetir pruebas del código.
+
+**Restricción mantenida:** solo rama aislada; sin acceso ni modificación a Supabase, staging, producción, clientes reales ni pedidos.
