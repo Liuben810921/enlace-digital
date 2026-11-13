@@ -19,3 +19,13 @@ La inserción de `context_audit` utiliza `CASE WHEN p_kind='warehouse' THEN NULL
 - [GitHub Actions #43512094716](https://github.com/Liuben810921/enlace-digital/actions/runs/43512094716): en cola en primera consulta.
 
 **CI pendiente:** esta fase no puede declararse aprobada hasta confirmar el resultado de la ejecución que incluye la prueba nueva. Ningún despliegue ni fusión. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+
+## Incidencia de integración CI y corrección — 13 noviembre 2026
+
+- Run [#43512075820](https://github.com/Liuben810921/enlace-digital/actions/runs/43512075820), commit `c3030cd11d0274eba6bc357dbc6bd89816d8d9dd`: `completed/success`.
+- Run [#43512094716](https://github.com/Liuben810921/enlace-digital/actions/runs/43512094716), commit `1a847106b70a0188793a49c98e9259882ca326b9`: `completed/failure`. Log del trabajo `132184627259`: `tests/postgres-delivery-context-races-lab.py`, línea 58, `psycopg.errors.SerializationFailure: stale_route`.
+- **Causa comprobada:** la nueva prueba de atribución incrementa la versión global de almacenes, invalidando intencionalmente la ruta sintética; la batería de carreras que corre después asume una ruta válida. El fallo es de aislamiento/secuenciación de fixtures, no de privilegios.
+- **Corrección limitada:** [commit ba0030c318350877ca4ab2689f6f2db44c06ea58](https://github.com/Liuben810921/enlace-digital/commit/ba0030c318350877ca4ab2689f6f2db44c06ea58). La prueba actualiza la ruta sintética mediante la RPC administrativa existente al concluir la comprobación de almacenes. No altera SQL, permisos, RLS ni lógica operativa.
+- **Nueva CI:** [#43513419881](https://github.com/Liuben810921/enlace-digital/actions/runs/43513419881), en cola en la consulta inicial. **Cierre pendiente de `completed/success`.**
+
+El alcance sigue limitado a GitHub y PostgreSQL desechable, sin Supabase, staging, producción, clientes reales ni pedidos.
