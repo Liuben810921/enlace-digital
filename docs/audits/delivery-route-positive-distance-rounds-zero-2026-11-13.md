@@ -12,4 +12,10 @@ Se comprobó que el HEAD de `audit/delivery-map-readonly-20261113` coincidía co
 - Commit de prueba: `a4ac9f9c8c749001aa2d0e4cc771eb0d756edb6f`.
 - Commit de corrección: `e96b3a4c942dc63877ce7e0c5660b2d5b327eb21`.
 
-**Estado: pendiente de GitHub Actions `completed/success`.** Cambios solo en rama aislada y laboratorio PostgreSQL desechable. No se ha accedido ni modificado Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada satisfactoriamente tras GitHub Actions `completed/success`.** Cambios solo en rama aislada y laboratorio PostgreSQL desechable. No se ha accedido ni modificado Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — CI aprobada
+
+Se verificó [GitHub Actions #43523901787](https://github.com/Liuben810921/enlace-digital/actions/runs/43523901787): workflow `completed/success`, commit probado `e96b3a4c942dc63877ce7e0c5660b2d5b327eb21`. El trabajo `test` (ID `132224761594`) finalizó también `completed/success`.
+
+**Dictamen: auditoría cerrada satisfactoriamente** para el laboratorio PostgreSQL desechable. El cierre modifica exclusivamente este informe; no cambia SQL, pruebas, permisos o RLS, no fusiona ni despliega y no accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
