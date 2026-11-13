@@ -12,4 +12,10 @@ En PostgreSQL 16 desechable, se crea una ruta sintética de 0.01 km, se fijan te
 ## Criterio de cierre
 Si CI pasa, cerrar sin modificar SQL: no se ha demostrado defecto. Si falla, inspeccionar logs y corregir únicamente el fallo reproducido antes de repetir las pruebas.
 
-**Estado: pendiente de GitHub Actions.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; pruebas aprobadas y sin modificaciones SQL.** Solo GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — CI satisfactoria
+
+[GitHub Actions #43529095041](https://github.com/Liuben810921/enlace-digital/actions/runs/43529095041) terminó `completed/success` para el commit `30ebff6a7f13099f15009a87d775dbe73400275a`. El trabajo `test` (ID `132242041115`) terminó `completed/success`.
+
+La regresión comprobó el redondeo hacia arriba de CUP fraccionarios y la prevalencia de la tarifa mínima en el prototipo PostgreSQL desechable. No se demostró defecto en SQL y **no se modificó SQL**. El cierre es exclusivamente documental, sin merge ni despliegue. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
