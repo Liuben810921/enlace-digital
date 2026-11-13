@@ -40,4 +40,19 @@ assert.equal(previewForManager({...base,actorRole:'gestor'}).previewOnly,true);
 assert.equal(previewForManager({...base,actorRole:'gestor'}).orderCreated,false);
 assert.equal(previewForManager({...base,actorRole:'cliente'}).reason,'forbidden_role');
 assert.equal(previewForManager({...base,actorRole:'gestor',roadDistancesKm:{}}).reason,'missing_verified_road_distance');
+for(const [distance,expected] of [[0,600],[2.99,600],[3,600],[3.01,700],[3.5,700],[4,800],[4.01,900]]){
+ const result=q({orderSubtotalUsd:199.99,lines:[lines[0]],roadDistancesKm:{a:distance,b:3.4}});
+ assert.equal(result.customerFeeCup,expected,'distance '+distance);
+ assert.equal(result.calculatedDeliveryValueCup,expected);
+ assert.equal(result.promotionCoveredCup,0);
+}
+for(const [special,expected] of [[0,600],[601,700],[699,700],[700,700],[701,800],[1250,1300]]){
+ const result=q({orderSubtotalUsd:200,lines:[{...lines[0],specialFeeCup:special}]});
+ assert.equal(result.customerFeeCup,0);
+ assert.equal(result.calculatedDeliveryValueCup,expected);
+ assert.equal(result.promotionCoveredCup,expected);
+}
+assert.equal(q({orderSubtotalUsd:200,lines:[{...lines[0],freeShipping:true}],freeShippingThresholdUsd:null}).freeReason,'product_promotion');
+assert.equal(q({orderSubtotalUsd:199.99,roundToCup:1,lines:[{...lines[0],specialFeeCup:601}]}).customerFeeCup,601);
+assert.equal(q({orderSubtotalUsd:199.99,roundToCup:100,lines:[{...lines[0],specialFeeCup:601}]}).customerFeeCup,700);
 console.log('PASS accounting/manager: gross vs customer fee, rounding, promotion, role guard, preview only');
