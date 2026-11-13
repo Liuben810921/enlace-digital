@@ -148,7 +148,7 @@ with db(None) as root_conn:
 
 # Whitespace-only idempotency keys must fail closed without persisting quotes.
 blank_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
-for blank_key in (" ","   ","\t","\n","\r\n"," \t "):
+for blank_key in (" ","   ","\t","\n","\r\n","\v","\f"," \t "):
     assert_error(a,q,errors.InvalidParameterValue,(blank_key,"cart-a","customer-a",1))
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(blank_before,)]
 # NULL mutation kind must fail closed, preserving route state and audit history.
