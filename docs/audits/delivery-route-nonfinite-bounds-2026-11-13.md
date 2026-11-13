@@ -12,6 +12,12 @@ Una distancia `NaN`, `Infinity`, `-Infinity`, negativa muy pequeña o superior a
 Commit de pruebas: `a694ce38bdead2afb5e72b1cc6fb72784f5de244`.
 
 ## Decisión
-No se modifica SQL sin evidencia de un fallo reproducido. La regresión debe ejecutarse en GitHub Actions antes de concluir si el riesgo está cubierto.
+No se modifica SQL sin evidencia de un fallo reproducido. La regresión se ejecutó satisfactoriamente en GitHub Actions: las validaciones existentes cubren el riesgo examinado y no se requiere cambio SQL.
 
-**Estado: pendiente de CI `completed/success`.** No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada satisfactoriamente tras CI `completed/success`.** No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+
+## Cierre definitivo — CI aprobada
+
+Se verificó [GitHub Actions #43524951416](https://github.com/Liuben810921/enlace-digital/actions/runs/43524951416): workflow `completed/success` sobre `a694ce38bdead2afb5e72b1cc6fb72784f5de244`. El trabajo `test` (ID `132228280422`) finalizó igualmente `completed/success`.
+
+**Dictamen: auditoría cerrada satisfactoriamente, sin defecto reproducido ni corrección SQL necesaria.** Este cierre modifica exclusivamente el informe. No se fusiona ni despliega, y no se accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
