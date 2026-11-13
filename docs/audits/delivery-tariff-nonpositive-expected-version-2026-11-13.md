@@ -12,4 +12,12 @@ Se añadieron tres casos (`0`, `-1`, `-9223372036854775808`) que exigen `Invalid
 ## Plan de verificación
 Ejecutar GitHub Actions con la regresión, comprobar los logs, aplicar solo la corrección SQL demostrada si falla y repetir CI hasta confirmar. No modificar servicios externos.
 
-**Estado: pendiente de CI de regresión.** Trabajo exclusivo en GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: fallo reproducido; corrección SQL mínima aplicada, pendiente de CI posterior.** Trabajo exclusivo en GitHub y PostgreSQL desechable; sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia del fallo y corrección
+
+[GitHub Actions #43526688720](https://github.com/Liuben810921/enlace-digital/actions/runs/43526688720) finalizó `completed/failure` sobre `45a297fb4c86c94c836f101611d7d23ebf6202c2`. El trabajo `test` (ID `132234080074`) registró en la línea 69 de la prueba Python `psycopg.errors.SerializationFailure: version_conflict` (SQLSTATE `40001`) al esperar `InvalidParameterValue` (SQLSTATE `22023`).
+
+Se modificó exclusivamente la validación inicial de `ed_rpc_lab.update_rate` para rechazar `p_expected<1` con `invalid_change` (`22023`). Commit de corrección SQL: `8b57a613e7f419b4094e0135c025066f1e1e36e8`. Sin cambios en RLS, privilegios, concurrencia, cálculo de tarifa o registros de auditoría.
+
+**Pendiente:** GitHub Actions `completed/success` sobre el commit SQL para cierre definitivo.
