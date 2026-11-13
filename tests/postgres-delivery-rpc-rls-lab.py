@@ -214,6 +214,12 @@ for control_key in ("order\nforged","order\rforged","order\tforged"):
     assert_error(a,q,errors.InvalidParameterValue,(control_key,"cart-a","customer-a",1))
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(control_key_before,)]
 
+# Bidirectional formatting controls can visually spoof an operation key.
+bidi_key_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+for bidi_key in ("order\u202eforged","order\u202aforged","order\u2066forged","order\u2069forged"):
+    assert_error(a,q,errors.InvalidParameterValue,(bidi_key,"cart-a","customer-a",1))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(bidi_key_before,)]
+
 # Invisible format-only keys are not meaningful operation identifiers.
 invisible_key_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
 for invisible_key in ("\u200b"*3,"\u2060"*3,"\ufeff"*3):
