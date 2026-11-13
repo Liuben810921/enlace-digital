@@ -8,6 +8,8 @@ on:
       - 'tests/delivery-origins-ui.test.cjs'
       - 'tests/delivery-dispatch-isolated.cjs'
       - 'tests/delivery-dispatch-isolated.test.cjs'
+      - 'tests/delivery-route-adapter-isolated.cjs'
+      - 'tests/delivery-route-adapter-isolated.test.cjs'
       - 'index.html'
       - '.github/workflows/isolated-delivery-quote.yml'
   workflow_dispatch:
@@ -22,3 +24,4 @@ jobs:
       - run: node tests/delivery-quote-isolated.test.cjs
       - run: node tests/delivery-origins-ui.test.cjs
       - run: node tests/delivery-dispatch-isolated.test.cjs
+      - run: node tests/delivery-route-adapter-isolated.test.cjs
