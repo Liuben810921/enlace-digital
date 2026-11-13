@@ -14,7 +14,7 @@ Se verificó que la rama aislada `audit/delivery-map-readonly-20261113` coincid�
 2. Si CI demuestra el fallo esperado, corregir únicamente la validación de `p_revision`.
 3. Volver a ejecutar CI y cerrar el informe solo tras `completed/success`.
 
-**Estado: defecto confirmado en CI, corrección mínima aplicada; pendiente de CI posterior.** Solo GitHub y PostgreSQL desechable. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; defecto corregido y verificado con CI satisfactoria.** Solo GitHub y PostgreSQL desechable. No se accedió ni modificó Supabase, staging, producción, clientes reales ni pedidos.
 
 ## Evidencia y corrección
 
@@ -22,4 +22,10 @@ GitHub Actions [#43525804231](https://github.com/Liuben810921/enlace-digital/act
 
 Se aplicó exclusivamente la condición `OR p_revision<1` al bloque de validación inicial de `quote_preview`, sin modificar su cálculo, permisos, RLS ni lógica de concurrencia. Commit SQL: `d24f4b3170ffc689bbb6e06d96cdac485997c9d4`.
 
-**Pendiente:** verificar nueva ejecución GitHub Actions sobre el commit de corrección antes de declarar cierre definitivo.
+**Verificado:** la nueva ejecución GitHub Actions sobre el commit de corrección terminó `completed/success`.
+
+## Cierre definitivo — corrección verificada
+
+Se comprobó [GitHub Actions #43526046840](https://github.com/Liuben810921/enlace-digital/actions/runs/43526046840): workflow `completed/success` sobre el commit SQL `d24f4b3170ffc689bbb6e06d96cdac485997c9d4`; trabajo `test` (ID `132231943490`) también `completed/success`.
+
+La regresión reprodujo previamente el fallo en [#43525804231](https://github.com/Liuben810921/enlace-digital/actions/runs/43525804231), y la corrección mínima superó la batería completa. **Dictamen: auditoría cerrada satisfactoriamente, defecto corregido y comprobado.** Este cierre modifica únicamente documentación; no fusiona ni despliega y no accede ni modifica Supabase, staging, producción, clientes reales ni pedidos.
