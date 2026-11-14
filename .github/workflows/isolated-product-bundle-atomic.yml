@@ -13,6 +13,7 @@ on:
       - 'tests/postgres-product-bundle-integrated-adversarial.py'
       - 'tests/postgres-product-bundle-integrated-advanced.py'
       - 'tests/postgres-product-bundle-integrated-deadlocks.py'
+      - 'tests/postgres-product-bundle-integrated-retries.py'
       - '.github/workflows/isolated-product-bundle-atomic.yml'
   workflow_dispatch:
 permissions:
@@ -55,6 +56,7 @@ jobs:
           python3 tests/postgres-product-bundle-integrated-adversarial.py 2>&1 | tee -a product-bundle-atomic-results.log
           python3 tests/postgres-product-bundle-integrated-advanced.py 2>&1 | tee -a product-bundle-atomic-results.log
           python3 tests/postgres-product-bundle-integrated-deadlocks.py 2>&1 | tee -a product-bundle-atomic-results.log
+          python3 tests/postgres-product-bundle-integrated-retries.py 2>&1 | tee -a product-bundle-atomic-results.log
       - name: Upload non-sensitive synthetic evidence
         if: always()
         uses: actions/upload-artifact@v4
