@@ -180,3 +180,12 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se reabrió el workflow desde la rama aislada: `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v6`; `runs-on: ubuntu-24.04`, `node-version: '22'`, `package-manager-cache: false`. Configuración presente; ejecución posterior aún no verificada.
 - `fetch_commit_workflow_runs(1429c3bf)` devolvió una lista vacía, insuficiente para concluir ausencia de ejecuciones `push`. No hay run ID posterior disponible para recuperar logs o artefactos.
 - No se cambió código ni se revirtió la actualización por falta de fallos demostrados. Pendiente: cuando el índice registre un `head_sha` igual o posterior a `1429c3bf`, consultar jobs, logs y artefactos; confirmar PASS y ausencia de aviso Node 20. El registro almacena una sola ejecución, por lo que su actualización puede retrasarse o ser reemplazada por una ejecución posterior.
+
+## Regresión definitiva de acciones v6 — PASS #43643460112
+- El registro automático publicó `run_id=43643460112`, `head_sha=1429c3bf4fcf46fc2b35bea9d8d20251b5f27ed9`, `chromium_job_result=success`. Se recuperó directamente desde GitHub sin intervención manual.
+- Job `chromium-accessibility` `132595864532`: **success** en todos los pasos, incluidos checkout@v6, setup-node@v6, instalación Playwright, pruebas de cuarentena/zoom/teclado, CSS real/contraste/foco y upload-artifact@v6. Los logs confirman Node **v22.23.4** y runner **ubuntu-24.04**.
+- Logs: `PASS Chromium width=320 zoom 100/200%, keyboard, quarantine and invalidation`, también 375 y 430 px; `PASS real CSS text contrast and keyboard focus on 320/375/430px`.
+- Job `Record isolated Chromium run identifier` `132596033221`: **success**, log de publicación confirma `run_id=43643460112`, `attempt=1`.
+- **No aparece la advertencia `Node.js 20 is deprecated`** en los logs de ninguno de los dos jobs. Las acciones v6 ejecutan su runtime de manera compatible con el runner, conservando Node 22 para el proyecto.
+- Artefacto publicado `delivery-chromium-zoom-keyboard` ID `14132448732`, tamaño **1 092 434 bytes**, digest `sha256:e89a230f70714c970271d39ae00b54184d8fc77af9495e3d9ca1bc99e2fc2ad9`. Se verificó metadata y publicación, no inspección visual individual de capturas.
+- **Conclusión:** migración de acciones GitHub v6 validada por ejecución real y sin fallos demostrados; no se requieren correcciones adicionales. No se accedió ni modificó Supabase, staging, producción, clientes o pedidos, ni se desplegó.
