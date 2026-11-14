@@ -75,6 +75,22 @@ const {chromium}=require('playwright');
    assert.equal(await page.evaluate(()=>document.activeElement?.id),'edDeliveryPanelTitle','Adding supplier must restore focus');
    assert.equal(await page.evaluate(()=>edDeliverySuppliersRead().some(x=>x.name==='Proveedor adicional')),true,'Supplier persistence failed');
    console.log('PASS reset/save/add focus and local persistence');
+   const rollback=await page.evaluate(()=>{
+    const key='ed_delivery_origins_demo_v1',revisionKey='ed_delivery_context_revision_demo_v1';
+    const before=localStorage.getItem(key),revision=localStorage.getItem(revisionKey);
+    const original=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(k,v){if(k===revisionKey)throw new Error('synthetic revision write failure');return original.call(this,k,v)};
+    let result;
+    try{result=edDeliveryPersistAndInvalidate(key,[{id:'synthetic-invalid-write',name:'No guardar'}],'synthetic_rollback')}
+    finally{Storage.prototype.setItem=original}
+    return {result,unchanged:localStorage.getItem(key)===before,revisionUnchanged:localStorage.getItem(revisionKey)===revision,quarantined:edDeliveryIsQuarantined()};
+   });
+   assert.equal(rollback.result,false,'Revision write failure must reject persistence');
+   assert.equal(rollback.unchanged,true,'Failed invalidation must roll back warehouse storage');
+   assert.equal(rollback.revisionUnchanged,true,'Failed invalidation must preserve quote revision');
+   assert.equal(rollback.quarantined,false,'Successful rollback must not quarantine');
+   console.log('PASS simulated localStorage revision failure rolls back without quote invalidation');
+
 
 
 
