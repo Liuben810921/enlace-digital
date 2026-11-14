@@ -12,10 +12,20 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare isolated Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install isolated Playwright
+        shell: bash
         run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+          set -euxo pipefail
+          mkdir -p "$RUNNER_TEMP/ed-playwright"
+          cd "$RUNNER_TEMP/ed-playwright"
+          npm init -y
+          npm install --no-audit --no-fund --save-exact playwright@1.56.1
+          ./node_modules/.bin/playwright install --with-deps chromium
+          echo "NODE_PATH=$RUNNER_TEMP/ed-playwright/node_modules" >> "$GITHUB_ENV"
       - name: Run actual extracted delivery module in Chromium
         run: node tests/delivery-chromium-zoom-keyboard-isolated.cjs
       - name: Preserve screenshot evidence
