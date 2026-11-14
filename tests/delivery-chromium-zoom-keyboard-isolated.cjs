@@ -121,6 +121,12 @@ const {chromium}=require('playwright');
    await page.locator('button:has-text("Verificar y desbloquear")').focus();
    await page.keyboard.press('Space');
    assert.equal(await page.evaluate(()=>edDeliveryIsQuarantined()),true,'Invalid associations must remain quarantined');
+   assert.equal(await page.locator('[role="alert"]').count(),1,'Failed recovery must keep accessible quarantine announcement');
+   assert.equal(await page.getByRole('button',{name:'Verificar y desbloquear'}).count(),1,'Recovery action must remain available');
+   assert.equal(await page.locator('fieldset:disabled').count(),2,'Failed recovery must preserve disabled forms');
+   assert.equal(await page.evaluate(()=>localStorage.getItem('ed_delivery_associations_quarantine_demo_v1')),'1','Failed recovery must persist quarantine');
+   console.log('PASS failed quarantine recovery remains announced and locked');
+
    console.log('PASS Chromium width='+width+' zoom 100/200%, keyboard, quarantine and invalidation');
    await page.close();
   }
