@@ -88,3 +88,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Artefacto de capturas `delivery-chromium-zoom-keyboard` ID `14131837952` (1 001 546 bytes), SHA-256 `9ecc4340e3c8f976e3610da19a0b126f2bdd715e0cfea0c2379265e535742f2d`, subido correctamente. Capturas conservadas; su inspección visual individual no se realizó en esta revisión.
 - Advertencia no bloqueante en logs: Node.js 20 de acciones `checkout@v4`, `setup-node@v4`, `upload-artifact@v4` forzado a Node.js 24; planificar actualización de acciones en mantenimiento separado.
 - Alcance: módulo extraído y datos sintéticos en Chromium; no prueba integral de sitio desplegado ni autorización para staging/producción.
+
+## Seguimiento de accesibilidad posterior a Chromium PASS
+- Inspección directa de `index.html`: el campo `textarea#edOriginAddress` mostraba `<label>Dirección de salida</label>` sin `for`; la etiqueta no estaba asociada programáticamente al control. Defecto verificado en el código fuente.
+- Corrección acotada: `<label for="edOriginAddress">Dirección de salida</label>` (commit `7763c0e6`), sin modificar reglas de cuarentena, almacenamiento ni cotización.
+- Prueba de regresión Chromium: comprobar existencia de `label[for="edOriginAddress"]` y `textarea.labels[0].textContent === 'Dirección de salida'` en el fixture que ejecuta funciones extraídas del HTML real (commit `0305a973`).
+- **Pendiente de ejecución CI para estos dos commits**: el PASS #43641205396 corresponde al commit anterior `c7d1bb68`, por lo que no valida todavía la nueva asociación de etiqueta. No atribuir PASS hasta recuperar el nuevo run.
+- Pendientes no cubiertos: auditoría completa de nombres accesibles de otros campos, contraste medido, zoom nativo, Shift+Tab, foco visible bajo diferentes estados y pruebas con lector de pantalla. Requieren pruebas específicas, no inferencias a partir del PASS existente.
+- Restricciones: exclusivamente rama aislada, sin Supabase, staging, producción, clientes reales, pedidos ni despliegue.
