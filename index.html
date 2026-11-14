@@ -1848,7 +1848,7 @@ function edDeliveryOriginSave(){
  const supplierId=type==='proveedor'?val('edOriginSupplier'):null;
  if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){alert('Selecciona un proveedor activo.');return}
  const latRaw=val('edOriginLat'),lngRaw=val('edOriginLng');
- if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){alert('Completa nombre, tipo, municipio y dirección.');return}
+ if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){const first=!name?'edOriginName':!['propio','proveedor'].includes(type)?'edOriginType':!municipality?'edOriginMunicipality':'edOriginAddress';document.getElementById(first).focus();alert('Completa nombre, tipo, municipio y dirección.');return}
  if(Boolean(latRaw)!==Boolean(lngRaw)){alert('Indica ambas coordenadas o deja las dos vacías.');return}
  const lat=latRaw===''?null:Number(latRaw),lng=lngRaw===''?null:Number(lngRaw);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return}
