@@ -38,6 +38,12 @@ for attempt in range(3):
     try:
         current = request("GET", api + "?" + urllib.parse.urlencode({"ref": branch}))
         sha = current["sha"]
+        previous = json.loads(base64.b64decode(current["content"]).decode("utf-8"))
+        previous_order = (int(previous["run_id"]), int(previous["run_attempt"]))
+        incoming_order = (record["run_id"], record["run_attempt"])
+        if previous_order >= incoming_order:
+            print(json.dumps({"skipped_stale_run": record["run_id"], "latest": previous_order}))
+            sys.exit(0)
     except urllib.error.HTTPError as error:
         if error.code != 404:
             raise
