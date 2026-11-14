@@ -1846,12 +1846,12 @@ function edDeliveryOriginSave(){
  const val=id=>document.getElementById(id).value.trim();
  const id=val('edOriginId'),name=val('edOriginName'),type=val('edOriginType'),municipality=val('edOriginMunicipality'),address=val('edOriginAddress');
  const supplierId=type==='proveedor'?val('edOriginSupplier'):null;
- if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){alert('Selecciona un proveedor activo.');return}
+ if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){document.getElementById('edOriginSupplier').focus();alert('Selecciona un proveedor activo.');return}
  const latRaw=val('edOriginLat'),lngRaw=val('edOriginLng');
  if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){const first=!name?'edOriginName':!['propio','proveedor'].includes(type)?'edOriginType':!municipality?'edOriginMunicipality':'edOriginAddress';document.getElementById(first).focus();alert('Completa nombre, tipo, municipio y dirección.');return}
- if(Boolean(latRaw)!==Boolean(lngRaw)){alert('Indica ambas coordenadas o deja las dos vacías.');return}
+ if(Boolean(latRaw)!==Boolean(lngRaw)){document.getElementById(latRaw?'edOriginLng':'edOriginLat').focus();alert('Indica ambas coordenadas o deja las dos vacías.');return}
  const lat=latRaw===''?null:Number(latRaw),lng=lngRaw===''?null:Number(lngRaw);
- if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return}
+ if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){document.getElementById(!Number.isFinite(lat)||lat< -90||lat>90?'edOriginLat':'edOriginLng').focus();alert('Coordenadas fuera de rango.');return}
  const items=edDeliveryOriginsRead();
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
