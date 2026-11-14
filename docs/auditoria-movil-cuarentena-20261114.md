@@ -414,3 +414,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Causa confirmada: delimitadores dollar-quote de la nueva función escritos como AS $ y END $; en vez de AS $$ y END $$;. Corrección limitada al SQL en commit 3dd8687ce2c4b454eccaf4954c089b9fbe3a8fec.
 - Nuevo run PostgreSQL 43648443974, job 132611351116, observado en progreso. No se declara PASS ni se atribuyen logs/artefactos hasta finalizar.
 - El resto de la configuración permanece aislado; no se tocó inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Cierre de CI adversarial PostgreSQL — run 43648443974
+- Run 43648443974 del workflow isolated-product-bundle-atomic.yml, job product-bundle-atomic ID 132611351116: completed/success tras corregir delimitadores dollar-quote PL/pgSQL en commit 3dd8687ce2c4b454eccaf4954c089b9fbe3a8fec.
+- Logs: PASS RLS technical owner without BYPASSRLS, no direct client write; PASS CAS/draft/active warehouse/own origin/idempotency/replay; PASS rollback; PASS two-connection row-lock concurrency and stale loser; PASS direct SELECT INSERT UPDATE denied and FORCE RLS; PASS multiple warehouses/canonical order/duplicates/inactive origin; PASS multi-warehouse rollback; PASS concurrent operation and product conflict; PASS post-commit response loss simulation and payload conflict.
+- Errores PostgreSQL permission denied en products y context son negativos esperados por los tests adversariales; no indican fallo de CI.
+- Artefacto isolated-product-bundle-atomic ID 14135161130, SHA256 68ad9a88d746bc81b9df65104aee0e599cb781191c7a24042870e512e35b9634, no expirado. Advertencia no bloqueante Node.js 20 de checkout@v4/upload-artifact@v4.
+- Limitaciones: no se corta la conexión durante COMMIT; se simula pérdida de respuesta después del commit confirmado. RLS multiusuario y aislamiento multiempresa, política de publicación, fallos de red reales y reglas de cotización por múltiples almacenes no están validados. Aprobación de CI no implica aptitud para integrar en producción.
+- Sin modificación de inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
