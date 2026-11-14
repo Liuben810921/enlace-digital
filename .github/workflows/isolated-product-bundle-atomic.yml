@@ -1,0 +1,46 @@
+name: Isolated PostgreSQL product bundle atomicity
+on:
+  push:
+    branches: [plan/maestro-finalizacion-seguridad-20261113]
+    paths:
+      - 'tests/postgres-product-bundle-atomic-lab.sql'
+      - 'tests/postgres-product-bundle-atomic-lab.py'
+      - '.github/workflows/isolated-product-bundle-atomic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  product-bundle-atomic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated PostgreSQL client and psycopg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          python3 -m pip install --quiet --break-system-packages 'psycopg[binary]>=3.2,<4'
+      - name: Execute isolated schema and transactional concurrency assertions
+        run: |
+          set -euo pipefail
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-product-bundle-atomic-lab.sql
+          python3 tests/postgres-product-bundle-atomic-lab.py 2>&1 | tee product-bundle-atomic-results.log
+      - name: Upload non-sensitive synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-product-bundle-atomic
+          path: product-bundle-atomic-results.log
+          if-no-files-found: ignore
