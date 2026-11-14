@@ -1489,6 +1489,31 @@ function edDeliveryOriginsWrite(items){
 const ED_DELIVERY_SUPPLIERS_KEY='ed_delivery_suppliers_demo_v1';
 function edDeliverySuppliersRead(){try{const v=JSON.parse(localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)||'[]');return Array.isArray(v)?v.filter(p=>p&&typeof p.id==='string'&&typeof p.name==='string'):[]}catch(e){return []}}
 const ED_DELIVERY_CONTEXT_REV_KEY='ed_delivery_context_revision_demo_v1';
+const ED_DELIVERY_QUARANTINE_KEY='ed_delivery_associations_quarantine_demo_v1';
+let edDeliveryQuarantinedInSession=false;
+function edDeliveryIsQuarantined(){
+ if(edDeliveryQuarantinedInSession)return true;
+ try{return localStorage.getItem(ED_DELIVERY_QUARANTINE_KEY)!==null}catch(e){return true}
+}
+function edDeliveryQuarantine(){
+ edDeliveryQuarantinedInSession=true;
+ try{localStorage.setItem(ED_DELIVERY_QUARANTINE_KEY,'1')}catch(e){}
+}
+function edDeliveryRecoverQuarantine(){
+ if(!edDeliveryIsQuarantined())return true;
+ try{
+  const origins=JSON.parse(localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)||'[]');
+  const suppliers=JSON.parse(localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)||'[]');
+  const associations=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');
+  if(!Array.isArray(origins)||!Array.isArray(suppliers)||!associations||typeof associations!=='object'||Array.isArray(associations))return false;
+  const ids=new Set(origins.filter(p=>p&&typeof p.id==='string'&&p.active!==false&&(p.type==='propio'||p.type==='proveedor'&&suppliers.some(x=>x.id===p.supplierId&&x.active!==false))).map(p=>p.id));
+  if(Object.values(associations).some(v=>!Array.isArray(v)||v.some(id=>!ids.has(id))))return false;
+  if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
+  localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
+  edDeliveryQuarantinedInSession=false;
+  return true;
+ }catch(e){return false}
+}
 function edDeliveryContextRevision(){try{const raw=localStorage.getItem(ED_DELIVERY_CONTEXT_REV_KEY);if(raw===null)return 0;const n=Number(raw);return Number.isSafeInteger(n)&&n>=0?n:null}catch(e){return null}}
 function edDeliveryContextInvalidate(reason){
  const current=edDeliveryContextRevision();
@@ -1498,7 +1523,7 @@ function edDeliveryContextInvalidate(reason){
  catch(e){alert('No se pudo invalidar la cotización local. No utilices tarifas anteriores.');return null}
 }
 function edDeliveryQuoteSnapshot(){return {contextRevision:edDeliveryContextRevision(),status:'pending_verified_road_distance'}}
-function edDeliveryQuoteStillValid(snapshot){const current=edDeliveryContextRevision();return current!==null&&!!snapshot&&snapshot.contextRevision!==null&&snapshot.contextRevision===current&&snapshot.status==='pending_verified_road_distance'}
+function edDeliveryQuoteStillValid(snapshot){const current=edDeliveryContextRevision();return !edDeliveryIsQuarantined()&&current!==null&&!!snapshot&&snapshot.contextRevision!==null&&snapshot.contextRevision===current&&snapshot.status==='pending_verified_road_distance'}
 function edDeliverySupplierEdit(id){
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
  const name=prompt('Nombre del proveedor',supplier.name);if(name===null)return;
@@ -1817,6 +1842,7 @@ function edDeliveryOriginToggle(id){
 const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(e){return {}}}
 function edProductOriginsSave(productId,ids){
+ if(edDeliveryIsQuarantined()&&!edDeliveryRecoverQuarantine()){alert('Asociaciones bloqueadas: revisa los almacenes antes de continuar.');return false}
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&(p.type!=='proveedor'||edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))))){alert('Selecciona únicamente almacenes activos y proveedores habilitados.');return false}
  const map=edProductOriginsRead(),key=String(productId);
  let previous;
@@ -1825,7 +1851,7 @@ function edProductOriginsSave(productId,ids){
  try{
   localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));
   if(edDeliveryContextInvalidate('product_origins')===null){
-   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous)}catch(rollbackError){}
+   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous)}catch(rollbackError){edDeliveryQuarantine()}
    alert('Asociación no confirmada: comprueba el almacenamiento local antes de continuar.');return false;
   }
   return true
