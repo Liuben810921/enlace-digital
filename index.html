@@ -1567,7 +1567,7 @@ function edDeliverySupplierAdd(){
  const list=edDeliverySuppliersRead();
  if(list.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return}
  list.push({id:'supplier-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name,active:true});
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,list,'supplier_added'))adminTab('delivery')
+ if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,list,'supplier_added')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
 }
 function edDeliverySupplierOptions(selected){
  return '<option value="">Selecciona proveedor</option>'+edDeliverySuppliersRead().filter(p=>p.active!==false||p.id===selected).map(p=>'<option value="'+esc(p.id)+'" '+(selected===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('');
@@ -1825,6 +1825,7 @@ function edDeliveryOriginReset(){
  document.getElementById('edOriginType').value='propio';
  document.getElementById('edOriginMunicipality').value='';edDeliveryOriginTypeChange();
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
+ document.getElementById('edOriginName').focus();
 }
 function edDeliveryOriginEdit(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
@@ -1856,7 +1857,7 @@ function edDeliveryOriginSave(){
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
  const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false};
  if(existing)items.splice(items.indexOf(existing),1,point);else items.push(point);
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed'))adminTab('delivery')
+ if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
 }
 function edDeliveryOriginToggle(id){
  const items=edDeliveryOriginsRead(),p=items.find(x=>x.id===id);
