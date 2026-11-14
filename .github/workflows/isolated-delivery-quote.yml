@@ -9,6 +9,7 @@ on:
       - 'tests/delivery-quote-concurrency-isolated.test.cjs'
       - 'tests/delivery-quote-context-isolated.cjs'
       - 'tests/delivery-quote-context-isolated.test.cjs'
+      - 'tests/delivery-effective-origins-ui.test.cjs'
       - 'tests/delivery-admin-context-invalidation.test.cjs'
       - 'tests/delivery-warehouse-registry-isolated.cjs'
       - 'tests/delivery-warehouse-registry-isolated.test.cjs'
@@ -89,6 +90,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: node tests/delivery-quote-concurrency-isolated.test.cjs
       - run: node tests/delivery-quote-context-isolated.test.cjs
+      - run: node tests/delivery-effective-origins-ui.test.cjs
       - run: node tests/delivery-admin-context-invalidation.test.cjs
       - run: node tests/delivery-warehouse-mobile-demo.test.cjs
       - run: node tests/delivery-warehouse-registry-isolated.test.cjs
