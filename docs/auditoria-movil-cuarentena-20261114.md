@@ -222,3 +222,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Job índice `132597836087`: **success**. Los seis tests offline reportan `ok`, resumen `Ran 6 tests in 0.007s` / `OK`; publicación de metadatos exitosa en intento 1.
 - Artefacto `delivery-chromium-zoom-keyboard`, ID `14133212739`, tamaño **1 092 449 bytes**, digest `sha256:f47c6cbdb217cf692e3a97564993f41da4cdada4450a70d0ed1f05b16dfd8d03`. Se verificó publicación y metadata, no inspección individual de capturas.
 - Conclusión: las siete asociaciones nuevas y la octava ya existente superan la regresión en Chromium real. Sin defectos confirmados que corregir. Solo rama aislada; sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Auditoría siguiente: nombres accesibles de acciones de proveedores y almacenes
+- Hallazgo por inspección del código real `edDeliveryOriginsPanel()`: acciones repetidas `Editar` y `Activar/Desactivar` sin contexto en su nombre accesible; con varios registros los lectores de pantalla no distinguen el objetivo del botón.
+- Corrección `0b9bcf37`: añade `aria-label` específico por proveedor/punto de salida y nombre escapado del registro a los cuatro tipos de acciones. Conserva el texto visible, el bloqueo `disabled aria-disabled` en cuarentena y los manejadores existentes.
+- Regresión `d460f16d`: Chromium verifica que las cuatro acciones de datos sintéticos se encuentran por nombre accesible exacto y único, además de las comprobaciones preexistentes de teclado, cuarentena, zoom, ocho etiquetas y contraste.
+- Estado: cambio y prueba incorporados; **pendiente** comprobar un run con `head_sha` igual o posterior a `d460f16d`, revisar logs de `PASS supplier and warehouse action accessible names`, los seis tests offline del índice y los artefactos. No se ha demostrado todavía PASS de la nueva regresión.
