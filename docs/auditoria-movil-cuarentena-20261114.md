@@ -562,3 +562,12 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Comprueba revisión CAS, RLS FORCE, propietario NOBYPASSRLS y ausencia de productos publicados.
 - Run inicial 43652600357, job 132624144521 observado in_progress; falta validar logs y artefacto.
 - Límites: el COMMIT durable con respuesta perdida es una simulación de aplicación; el cierre de conexión se realiza antes de COMMIT y no simula incertidumbre de ACK de red durante COMMIT. Reloj de presupuesto es sintético, no valida tiempo real de red ni cancelación de consulta ya iniciada.
+
+## Cierre verificado de novena batería — recuperación ante resultado incierto
+- GitHub Actions PostgreSQL 16 run #43652600357, job 132624144521: completed/success.
+- Artefacto isolated-product-bundle-atomic ID 14136648014, SHA256 45cd978dc24081a5d54fd09221be0b6f3de415e37340f296819a1d4529660e20, no expirado.
+- Logs PASS durable commit with discarded response: same-key replay exactly once; PASS connection termination before COMMIT rolls back; same-key recovery creates one draft.
+- Logs PASS retry time budget prevents extra attempts and excessive sleep; PASS non-retryable 23505 immediately propagated, no extra attempts.
+- Logs PASS RLS FORCE, non-BYPASSRLS owner, CAS revisions, drafts unpublished; las baterías anteriores de 40P01, 40001, CAS, aislamiento, permisos, rollback y revocación/restauración también PASS.
+- Límite: pérdida de respuesta tras COMMIT durable simulada a nivel de aplicación; cierre de conexión antes de COMMIT sí es real. No se afirma reproducción de pérdida de ACK de red durante COMMIT. Deadline se prueba con reloj sintético y no cancela SQL ya iniciado.
+- Warning Node.js 20/24 en GitHub Actions no bloqueante. Sin cambios en inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
