@@ -153,3 +153,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Job `132594833774` `Record isolated Chromium run identifier`: **success**. Confirmada escritura y lectura del archivo `.github/ci-evidence/latest-chromium-run.json` con `run_id=43643064400`, `chromium_job_result=failure` y SHA de origen. La búsqueda de run ID mediante archivo ya funciona sin enlaces manuales.
 - Corrección dirigida en `index.html`, commit `c7be9b51`: `button.primary` con fondo `#08717d` (contraste teórico con blanco ~5,45:1) y foco visible de 3 px en botones principales, secundarios y encabezado, colores de contorno adaptados a fondo claro/oscuro. No se alteran datos, lógica, ni estados de pedido.
 - **Pendiente:** verificar la nueva ejecución Chromium posterior a la corrección y sus nueve mediciones. El contraste teórico no sustituye el resultado calculado en navegador. La prueba es sintética y no certifica accesibilidad integral de la web.
+
+## Seguimiento posterior a corrección c7be9b51
+- Consulta directa de `.github/ci-evidence/latest-chromium-run.json`: último registro `run_id=43643064400`, `head_sha=b141bd4cf85d65f2c041cf605c061fcc7e00dfc8`, resultado `failure`; es **anterior** a la corrección CSS `c7be9b51`.
+- Confirmado en `index.html` que permanecen las reglas de contraste/foco introducidas por `c7be9b51`, y en el workflow que `push` y `record-run-id` siguen configurados.
+- No se ha localizado mediante el registro una ejecución nueva, y la herramienta de búsqueda de ejecuciones por commit no cubre `push`. No se dispone de ID posterior para consultar jobs/logs/artefactos. La API pública directa tampoco proporcionó una respuesta utilizable en esta revisión.
+- **Estado: verificación Chromium posterior a corrección pendiente, no fallida**. No se atribuye PASS ni se modifica código por ausencia de resultados. El registro funciona en al menos una ejecución confirmada, pero su actualización continua todavía no está demostrada.
