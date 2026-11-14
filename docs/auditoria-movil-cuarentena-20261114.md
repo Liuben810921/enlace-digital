@@ -571,3 +571,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Logs PASS RLS FORCE, non-BYPASSRLS owner, CAS revisions, drafts unpublished; las baterías anteriores de 40P01, 40001, CAS, aislamiento, permisos, rollback y revocación/restauración también PASS.
 - Límite: pérdida de respuesta tras COMMIT durable simulada a nivel de aplicación; cierre de conexión antes de COMMIT sí es real. No se afirma reproducción de pérdida de ACK de red durante COMMIT. Deadline se prueba con reloj sintético y no cancela SQL ya iniciado.
 - Warning Node.js 20/24 en GitHub Actions no bloqueante. Sin cambios en inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Décima batería — terminación real dentro de COMMIT y timeouts PostgreSQL
+- tests/postgres-product-bundle-integrated-commit-kill.py commit 1a67da7de806c850f6cafffce1e7731d407e9744; workflow commit 635f97d2e919519302c94f404f8d8be1c4f1c42b.
+- Constraint trigger DEFERRABLE INITIALLY DEFERRED induce pg_sleep dentro de COMMIT. Otro backend desechable comprueba pg_stat_activity y termina la conexión real con pg_terminate_backend. Tras desconexión se comprueba atomicidad de producto/operación/revisión, se reconcilia la misma clave de operación y se verifica replay sin duplicados.
+- lock_timeout PostgreSQL real 100ms ante UPDATE que mantiene lock de versión; espera SQLSTATE 55P03, rollback sin producto. statement_timeout PostgreSQL real 100ms ante pg_sleep; espera SQLSTATE 57014.
+- Verifica FORCE RLS, rol técnico sin BYPASSRLS, CAS y borradores no publicados. Run #43654620338, job 132630318734 inicialmente in_progress; no afirmar éxito sin logs.
+- Límites: interrupción controlada mientras COMMIT ejecuta un trigger diferido, no demuestra incertidumbre de ACK después de WAL durable; timeout SQL no garantiza límite estricto de tiempo total del cliente bajo fallos de red. No modifica inventario, Supabase, staging ni producción.
