@@ -9,6 +9,8 @@ on:
       - 'tests/delivery-quote-concurrency-isolated.test.cjs'
       - 'tests/delivery-quote-context-isolated.cjs'
       - 'tests/delivery-quote-context-isolated.test.cjs'
+      - 'tests/build-delivery-mobile-visual-fixture.py'
+      - 'tests/delivery-mobile-visual.playwright.cjs'
       - 'tests/delivery-mobile-markup-contract.test.cjs'
       - 'tests/delivery-mobile-quarantine-visibility.test.cjs'
       - 'tests/delivery-ambiguous-local-write.test.cjs'
@@ -154,3 +156,25 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-delivery-six-context-security-lab.sql
           python3 tests/postgres-delivery-six-context-security-lab.py
+
+  mobile-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate offline fixture from actual delivery functions
+        run: python3 tests/build-delivery-mobile-visual-fixture.py
+      - name: Install Chromium for isolated visual tests
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Check mobile layout and screenshots at 320, 375 and 430 px
+        run: node tests/delivery-mobile-visual.playwright.cjs
+      - name: Preserve mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: delivery-mobile-visual-320-375-430
+          path: tests/artifacts/delivery-mobile-visual/
+          if-no-files-found: warn
+          retention-days: 7
