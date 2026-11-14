@@ -1818,7 +1818,9 @@ const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(e){return {}}}
 function edProductOriginsSave(productId,ids){
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&(p.type!=='proveedor'||edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))))){alert('Selecciona únicamente almacenes activos y proveedores habilitados.');return false}
- const map=edProductOriginsRead(),key=String(productId),previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+ const map=edProductOriginsRead(),key=String(productId);
+ let previous;
+ try{previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudo leer el almacenamiento local de asociaciones.');return false}
  map[key]=ids;
  try{
   localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));
