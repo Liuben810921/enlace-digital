@@ -23,6 +23,7 @@ jobs:
           set -euxo pipefail
           mkdir -p ci-evidence
           node --check tests/delivery-chromium-zoom-keyboard-isolated.cjs
+          node --check tests/delivery-real-css-focus-contrast-isolated.cjs
           node tests/delivery-mobile-quarantine-accessibility.test.cjs 2>&1 | tee ci-evidence/quarantine-accessibility-node.log
           node tests/delivery-mobile-quarantine-visibility.test.cjs 2>&1 | tee ci-evidence/quarantine-recovery-node.log
       - name: Install isolated Playwright
@@ -39,6 +40,8 @@ jobs:
           echo "NODE_PATH=$RUNNER_TEMP/ed-playwright/node_modules" >> "$GITHUB_ENV"
       - name: Run actual extracted delivery module in Chromium
         run: node tests/delivery-chromium-zoom-keyboard-isolated.cjs
+      - name: Audit real CSS keyboard focus and contrast
+        run: node tests/delivery-real-css-focus-contrast-isolated.cjs
       - name: Preserve screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
