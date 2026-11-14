@@ -375,3 +375,12 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - No se dispone todavía de run ID posterior confirmado; por tanto no se puede verificar conclusión Chromium, seis tests offline, logs ni artefactos de estos commits. No se afirma PASS.
 - Limitación explícita: el prototipo local no dispone de compare-and-swap ni exclusión mutua transaccional. La prueba de intercalación modela pérdida de actualización; no convierte el prototipo en seguro para escritores concurrentes.
 - Sin cambios al inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Cierre de CI de concurrencia — ejecución confirmada
+- Registro automático: run 43647902724, head c6ab6e2e433dd1d5d9179b87a1ba1828c83388bd, chromium_job_result success.
+- Jobs: chromium-accessibility 132609662352 completed/success; Record isolated Chromium run identifier 132609823323 completed/success.
+- Chromium: PASS synthetic sequential concurrency, unknown commit replay, revision conflict and persistent quarantine; PASS synthetic interleaving exposes localStorage lost-update limitation (backend CAS required). Estos PASS se repiten en 320, 375 y 430 px, junto con zoom 100/200 %, teclado, foco, contraste, validaciones, rollback, cuarentena y selección de almacenes.
+- Seis pruebas offline del registro: 6/6 OK (0.008 s).
+- Artefacto delivery-chromium-zoom-keyboard ID 14134975612, tamaño 1132773 bytes, digest sha256:3e046d7ed5ae29afb9496cc3779c67d28d441cafb844654df6055ec96a83756c, no expirado. Se verificaron metadatos, no las capturas individuales.
+- No se confirmaron fallos de CI. La prueba de lost update pasa porque reproduce el defecto de concurrencia; no es una corrección ni una garantía de seguridad. El prototipo local no cuenta con CAS. Requiere operación transaccional autoritativa para integración futura.
+- Sin cambios al inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
