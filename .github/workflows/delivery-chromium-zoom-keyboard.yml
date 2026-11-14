@@ -16,6 +16,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate JavaScript and quarantine logic without browser
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ci-evidence
+          node --check tests/delivery-chromium-zoom-keyboard-isolated.cjs
+          node tests/delivery-mobile-quarantine-accessibility.test.cjs 2>&1 | tee ci-evidence/quarantine-accessibility-node.log
+          node tests/delivery-mobile-quarantine-visibility.test.cjs 2>&1 | tee ci-evidence/quarantine-recovery-node.log
       - name: Install isolated Playwright
         shell: bash
         run: |
