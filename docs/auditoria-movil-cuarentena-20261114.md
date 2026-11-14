@@ -312,3 +312,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Pendiente: ejecutar nueva regresión Chromium y seis tests offline; verificar jobs, logs, artefactos mediante registro automático. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
 
 - Prueba adicional `f9381a7f`: simula excepción de `Storage.prototype.setItem` exclusivamente para la clave de revisión; exige resultado falso, rollback de almacenes, revisión intacta y ausencia de cuarentena cuando el rollback sí funciona. Pendiente de CI; no se afirma PASS.
+
+## Cierre de coordenadas, proveedor y rollback — PASS #43645311659
+- Índice automático `run_id=43645311659`, `head_sha=ff5dc2acec751b85256affd436219eaad5ac0c23`, `chromium_job_result=success`, posterior a `f9381a7f`.
+- Job `chromium-accessibility` `132601632158` **success**, sin fallos reportados. En 320, 375 y 430 px: `PASS coordinate and inactive supplier validation focus and quote integrity`, `PASS simulated localStorage revision failure rolls back without quote invalidation`, `PASS invalid warehouse save focuses field without persistence or quote invalidation`, `PASS reset/save/add focus and local persistence`, `PASS warehouse form explicit labels for 8 controls`, `PASS quarantine recovery restores accessible focus`, `PASS failed quarantine recovery remains announced and locked`, `PASS Chromium width=... zoom 100/200%, keyboard, quarantine and invalidation`. También PASS en nombres accesibles y contraste CSS.
+- Job `Record isolated Chromium run identifier` `132601887251` **success**: seis tests offline `ok`, `Ran 6 tests in 0.008s`, `OK`, índice actualizado.
+- Artefacto `delivery-chromium-zoom-keyboard` ID `14134015560`, tamaño **1 132 785 bytes**, digest `sha256:f731dce833f2d51322387be028ca1c409f7ee79b715356b034b056eb31481d10`, no expirado. Metadata verificada; capturas individuales no inspeccionadas.
+- Sin fallos confirmados en esta ejecución; no se requieren correcciones. Alcance: solo rama aislada de GitHub, sin Supabase, staging, producción, clientes, pedidos ni despliegues.
