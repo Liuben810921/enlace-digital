@@ -51,3 +51,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se añadió captura persistente de `node --version`, `npm --version`, `npm install` y `playwright install --with-deps chromium` a `ci-evidence/*`, con `tee` y `pipefail`. Se conserva el código de salida y se suben los logs con `if: always()`, incluso si la instalación falla. Commit `faa00049`.
 - La consulta `fetch_commit_workflow_runs` solo devuelve runs disparados por PR y `get_commit_combined_status` no expone checks de Actions: resultados vacíos no significan ausencia de ejecuciones.
 - No se verificó PASS, ni se inspeccionaron nuevas capturas. Próxima comprobación: recuperar run/job ID por un mecanismo que liste ejecuciones `push` y examinar `ci-evidence`; si falla, corregir según log real.
+
+## Continuación autónoma — diagnóstico y preflight sin Chromium
+- Verificado el contenido actual del workflow: `setup-node@v4` con Node 22, instalación temporal de Playwright 1.56.1, `tee` + `pipefail`, y subida de `ci-evidence/*` incluso en caso de fallo.
+- Se intentó consultar ejecuciones del commit `6981e9dc` mediante `fetch_commit_workflow_runs` y estados combinados: ambos vacíos. La primera consulta excluye workflows `push`; la segunda no expone checks de GitHub Actions. El acceso HTTP directo desde el entorno no estuvo disponible. **No se recuperaron logs nuevos ni artefactos del workflow**.
+- Para que una falla de instalación no impida obtener toda evidencia, se agregó un preflight anterior a Playwright: `node --check` del test Chromium, y las pruebas Node/VM `delivery-mobile-quarantine-accessibility.test.cjs` y `delivery-mobile-quarantine-visibility.test.cjs`. Sus salidas se conservan en `ci-evidence/quarantine-*.log` (commit `4148e350`).
+- Este preflight no sustituye Chromium: sus resultados **siguen sin confirmación de ejecución**. No se declara CI verde ni accesibilidad WCAG validada.
+- Para acceder a logs y artefactos de una ejecución `push` es necesario obtener su ID numérico de ejecución por una API de listado que el conector actual no expone, o disponer de una URL de run. No se intentaron reejecuciones sin identificador válido.
