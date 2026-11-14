@@ -167,3 +167,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Artefacto `delivery-chromium-zoom-keyboard` ID `14133341096`, tamaño 1 092 439 bytes, SHA-256 `5e855e1173a1298a535199532d71372809346e5fb8dd0af475d4ec8803ca95d5`. Se confirmó su publicación; no se han inspeccionado individualmente las capturas.
 - Avisos no bloqueantes: deprecación de `punycode`/`url.parse()` y acciones `checkout@v4`, `setup-node@v4`, `upload-artifact@v4` forzadas de Node 20 a Node 24. Programar actualización separada con regresión; no es necesario alterar el workflow que ya pasa.
 - Alcance: pruebas sintéticas de tres clases de botones y módulo de entregas; no es una auditoría WCAG completa. Sin modificaciones a Supabase, staging, producción, clientes ni pedidos; sin despliegues.
+
+## Mantenimiento de acciones Node 24 — commit 1429c3bf
+- Se verificó en el workflow aislado el uso previo de `actions/checkout@v4` (dos jobs), `actions/setup-node@v4` y `actions/upload-artifact@v4`. Los logs del Chromium PASS #43643329045 advertían que estas acciones Node 20 se forzaban a Node 24.
+- Se migraron las tres acciones a `@v6`, conservando `runs-on: ubuntu-24.04` en ambos jobs y `node-version: '22'` para el código de pruebas. Se añadió `package-manager-cache: false` a setup-node para evitar caché npm implícita no requerida.
+- Alcance del cambio: exclusivamente `.github/workflows/delivery-chromium-zoom-keyboard.yml`. Se mantienen los mismos jobs, permisos, tests, artefactos y registro de ejecución. Las versiones v6 de estas acciones usan Node 24; la ejecución efectiva necesita un runner compatible.
+- Consulta posterior al commit: el registro automático seguía apuntando a `run_id=43643381906` / `head_sha=41346880283708b3cc7742259b0e5aec7045de9f`, anterior a `1429c3bf`. **No hay aún regresión confirmada ni PASS de la migración**. Revisar una nueva entrada con SHA igual o posterior a `1429c3bf`, recuperar jobs/logs/artefactos y comprobar ausencia de aviso Node 20.
+- No se ha modificado Supabase, staging, producción, clientes, pedidos ni se ha desplegado.
