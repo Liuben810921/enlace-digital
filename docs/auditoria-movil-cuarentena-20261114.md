@@ -528,3 +528,12 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Ensayo: reintento de operación administrativa abortada con orden consistente, rollback RPC antes de COMMIT, reintento con misma clave, replay idempotente y conflicto de payload; todos los productos continúan unpublished/draft.
 - Run inicial 43650454626, job 132617519104 observado in_progress; resultados no validados todavía.
 - Limitaciones: se fuerza un interbloqueo de dos filas, no prueba exhaustiva de topologías multi-almacén ni política de reintentos con backoff exponencial y jitter; no se modifica código operativo ni se hacen pruebas en Supabase/staging/producción.
+
+## Cierre verificado de séptima batería — proveedor concurrente y deadlock 40P01
+- GitHub Actions PostgreSQL 16 run 43650454626, job 132617519104: completed/success; artefacto isolated-product-bundle-atomic ID 14136040800, SHA256 b166a6f079778fcf85b55ffd8456602d168128def6b8d88b054a95a6c214dd51, no expirado.
+- Logs PASS supplier deactivation concurrent with FOR SHARE rejects stale origin, no draft.
+- Logs PASS opposite administrative row-lock order yields one PostgreSQL 40P01 victim; dos conexiones y barrera reproducen ciclo, una transacción aborta y otra confirma.
+- Logs PASS deadlock-victim administrative retry, RPC rollback retry, idempotent replay, drafts unpublished.
+- Se mantienen PASS de RLS forzada dentro de SECURITY DEFINER sin BYPASSRLS, privilegios mínimos, CAS, aislamiento multiempresa, claves foráneas compuestas, rollback y recuperación idempotente.
+- Límite: el reintento administrativo fue manual en el laboratorio, no implementa todavía política automática acotada de backoff/jitter ni manejo de 40001; el ciclo de dos almacenes no demuestra ausencia de otros deadlocks. La prueba de respuesta descartada tras COMMIT es simulación a nivel de aplicación. Warning Node.js 20 de GitHub Actions no bloqueante.
+- Alcance: solo PostgreSQL desechable en GitHub Actions y rama aislada. No inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
