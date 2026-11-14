@@ -63,4 +63,52 @@ END $$;
 ALTER FUNCTION ed_bundle_lab.commit_bundle(text,text,text,text,text,bigint) OWNER TO ed_bundle_owner;
 REVOKE ALL ON FUNCTION ed_bundle_lab.commit_bundle(text,text,text,text,text,bigint) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ed_bundle_lab.commit_bundle(text,text,text,text,text,bigint) TO ed_bundle_client;
+
+-- Additional isolated multi-warehouse RPC; all writes remain within one transaction.
+CREATE TABLE ed_bundle_lab.product_warehouses(product_id text NOT NULL REFERENCES ed_bundle_lab.products(id),warehouse_id text NOT NULL REFERENCES ed_bundle_lab.warehouses(id),PRIMARY KEY(product_id,warehouse_id));
+ALTER TABLE ed_bundle_lab.product_warehouses OWNER TO ed_bundle_owner;
+ALTER TABLE ed_bundle_lab.product_warehouses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ed_bundle_lab.product_warehouses FORCE ROW LEVEL SECURITY;
+CREATE POLICY owner_product_warehouses ON ed_bundle_lab.product_warehouses TO ed_bundle_owner USING(true) WITH CHECK(true);
+GRANT SELECT,INSERT ON ed_bundle_lab.product_warehouses TO ed_bundle_owner;
+CREATE FUNCTION ed_bundle_lab.commit_multi(p_op text,p_product text,p_supplier text,p_warehouses text[],p_kind text,p_expected bigint)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_bundle_lab AS $
+DECLARE v_revision bigint; v_payload jsonb; v_previous ed_bundle_lab.operations%ROWTYPE; v_result jsonb; v_sorted text[];
+BEGIN
+ IF p_op IS NULL OR length(trim(p_op))=0 OR p_product IS NULL OR length(trim(p_product))=0 OR p_kind IS NULL OR p_kind NOT IN ('proveedor','propio') OR p_warehouses IS NULL OR cardinality(p_warehouses)=0 THEN
+  RETURN jsonb_build_object('status','invalid');
+ END IF;
+ IF EXISTS(SELECT 1 FROM unnest(p_warehouses) x WHERE x IS NULL OR length(trim(x))=0) OR
+    cardinality(p_warehouses)<>(SELECT count(DISTINCT x) FROM unnest(p_warehouses) x) THEN
+  RETURN jsonb_build_object('status','invalid');
+ END IF;
+ SELECT array_agg(x ORDER BY x) INTO v_sorted FROM unnest(p_warehouses) x;
+ v_payload=jsonb_build_object('product',p_product,'supplier',p_supplier,'warehouses',v_sorted,'kind',p_kind);
+ SELECT revision INTO v_revision FROM ed_bundle_lab.context WHERE id=1 FOR UPDATE;
+ SELECT * INTO v_previous FROM ed_bundle_lab.operations WHERE op=p_op;
+ IF FOUND THEN
+  IF v_previous.payload=v_payload THEN RETURN v_previous.result || jsonb_build_object('replayed',true); END IF;
+  RETURN jsonb_build_object('status','idempotency_conflict');
+ END IF;
+ IF p_expected IS DISTINCT FROM v_revision THEN RETURN jsonb_build_object('status','stale_revision'); END IF;
+ IF EXISTS(
+  SELECT 1 FROM unnest(v_sorted) selected(id)
+  WHERE NOT EXISTS(
+   SELECT 1 FROM ed_bundle_lab.warehouses w LEFT JOIN ed_bundle_lab.suppliers s ON s.id=w.supplier_id
+   WHERE w.id=selected.id AND w.active AND w.kind=p_kind AND
+   ((p_kind='propio' AND p_supplier IS NULL AND w.supplier_id IS NULL) OR
+    (p_kind='proveedor' AND s.id=p_supplier AND s.active))
+  )
+ ) THEN RETURN jsonb_build_object('status','invalid_origin'); END IF;
+ IF EXISTS(SELECT 1 FROM ed_bundle_lab.products WHERE id=p_product) THEN RETURN jsonb_build_object('status','product_conflict'); END IF;
+ INSERT INTO ed_bundle_lab.products(id,supplier_id,kind,warehouse_id) VALUES(p_product,p_supplier,p_kind,v_sorted[1]);
+ INSERT INTO ed_bundle_lab.product_warehouses SELECT p_product,unnest(v_sorted);
+ UPDATE ed_bundle_lab.context SET revision=revision+1 WHERE id=1;
+ v_result=jsonb_build_object('status','draft','product',p_product,'revision',v_revision+1,'published',false,'warehouses',v_sorted);
+ INSERT INTO ed_bundle_lab.operations VALUES(p_op,v_payload,v_result);
+ RETURN v_result;
+END $;
+ALTER FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) OWNER TO ed_bundle_owner;
+REVOKE ALL ON FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) TO ed_bundle_client;
 COMMIT;
