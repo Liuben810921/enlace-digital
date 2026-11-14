@@ -41,11 +41,14 @@ with admin() as c:
  c.execute("REVOKE ALL ON FUNCTION ed_integrated_lab.probe_tenants() FROM PUBLIC")
  c.execute("GRANT EXECUTE ON FUNCTION ed_integrated_lab.probe_tenants() TO ed_integrated_a,ed_integrated_b")
 with client("a") as c:
- assert c.execute("SELECT * FROM ed_integrated_lab.probe_tenants()").fetchall()==[("a",4)]
+ assert c.execute("SELECT * FROM ed_integrated_lab.probe_tenants()").fetchall()==[("a",5)]
 with client("b") as c:
  assert c.execute("SELECT * FROM ed_integrated_lab.probe_tenants()").fetchall()==[("b",3)]
 print("PASS FORCE RLS filters actual rows inside technical SECURITY DEFINER function")
 # Direct FK attacks use privileged test harness, never operational roles.
+with admin() as c:
+ c.execute("INSERT INTO ed_integrated_lab.suppliers VALUES(%s,%s,true)",("b","b-only"))
+ c.execute("INSERT INTO ed_integrated_lab.warehouses VALUES(%s,%s,%s,%s,true)",("b","b-only","b-only","proveedor"))
 def fk_violation(sql,params):
  with admin() as c:
   try:
