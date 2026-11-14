@@ -438,3 +438,13 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Causa comprobable por inspección de las pruebas: la batería adversarial deja la revisión global sintética en 4; el test de interrupción solicitaba CAS 0 y esperaba status=draft. La validación devolvía stale_revision, por lo que el worker no señalaba started. Correcciones en 26f81bef y c0443d2d: CAS esperado 4 y revisión final 4+rows.
 - Nueva ejecución para c0443d2d: run 43648754923, job 132612287966, en progreso al consultar. No declarar PASS de desconexión ni recuperación hasta verificar logs y artefacto de esta ejecución.
 - Límites persistentes: el test usa terminación controlada de backend durante trigger diferido; no simula una pérdida arbitraria de red ni demuestra todas las ventanas entre WAL durable y ACK.
+
+## Cierre confirmado de aislamiento y recuperación — run 43648754923
+- Run 43648754923 (SHA c0443d2d05f4cc9faed0e4c99f34b485221c1845), job product-bundle-atomic 132612287966: completed/success. Las tres baterías sintéticas de PostgreSQL 16 registraron PASS en logs.
+- Base: RLS owner sin BYPASSRLS, cliente sin escritura directa, CAS, borrador, origen activo, idempotencia/replay, rollback y concurrencia de dos conexiones.
+- Adversarial: SELECT/INSERT/UPDATE denegados, FORCE RLS, múltiples almacenes, orden canónico, duplicados/inactivos, rollback, conflicto concurrente de operación/producto y pérdida de respuesta después de COMMIT.
+- Multiempresa: PASS authenticated two-tenant isolation, independent revisions and idempotency; PASS simultaneous multiwarehouse commits isolated by tenant.
+- Desconexión real: PASS actual connection termination during deferred COMMIT; atomic outcome connection_lost 0. El backend fue terminado durante el trigger diferido; no persistió la operación interrumpida ni cambios parciales. PASS idempotent recovery from real commit interruption. No se demostró la ventana de resultado ambiguo posterior a flush durable WAL y anterior al ACK.
+- Artefacto isolated-product-bundle-atomic ID 14134583991, tamaño 699 bytes, SHA256 8726986f49b0830cbb79d43f55aa91f0f192145b1ec98ac93c44e80421eff35c, no expirado. Errores permission denied son aserciones negativas esperadas; advertencia Node.js 20 en checkout@v4 y upload-artifact@v4 no bloqueante.
+- La aprobación es exclusiva del laboratorio sintético. El esquema de identidad multiempresa está separado del esquema producto/proveedor/almacén, no hay validación de pertenencia real de almacenes a empresas, ni autorización de publicación ni auditoría exhaustiva de fallos de red.
+- Sin cambios en inventario operativo, Supabase, staging, producción, clientes, pedidos o despliegues.
