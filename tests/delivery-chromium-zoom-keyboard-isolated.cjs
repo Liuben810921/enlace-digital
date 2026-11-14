@@ -15,12 +15,13 @@ const {chromium}=require('playwright');
    const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
    page.on('dialog',dialog=>dialog.accept());
    await page.route('http://ed.local/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px Arial;margin:0;padding:12px;box-sizing:border-box}*,*:before,*:after{box-sizing:border-box}.panel{border:1px solid #ddd;padding:10px;margin:8px 0}.field{margin:8px 0}input,select,button{max-width:100%}button:focus-visible{outline:3px solid #0b5673;outline-offset:2px}</style></head><body><main id="panel"></main></body></html>'}));await page.goto('http://ed.local/');
-   await page.evaluate(({src})=>{
+   await page.evaluate(()=>{
     window.esc=s=>String(s);
     window.municipios=['Playa'];
     window.adminTab=()=>{document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()};
-    (0,eval)(src);
-   },{src:moduleSource});
+   });
+   // A script element preserves global lexical constants used by the extracted functions.
+   await page.addScriptTag({content:moduleSource});
    await page.evaluate(()=>{
     localStorage.setItem('ed_delivery_suppliers_demo_v1',JSON.stringify([{id:'sup',name:'Proveedor sintético',active:true}]));
     localStorage.setItem('ed_delivery_origins_demo_v1',JSON.stringify([{id:'own',name:'Almacén sintético',type:'propio',active:true,address:'Prueba',municipality:'Playa'}]));
