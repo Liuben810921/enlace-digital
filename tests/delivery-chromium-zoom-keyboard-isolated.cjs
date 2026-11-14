@@ -35,6 +35,11 @@ const {chromium}=require('playwright');
    assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),2,'Toggle actions must be disabled');
    assert.equal(await page.locator('label[for="edOriginAddress"]').count(),1,'Warehouse address must have an explicit label');
    assert.equal(await page.locator('#edOriginAddress').evaluate(el=>el.labels?.[0]?.textContent?.trim()),'Dirección de salida','Warehouse address label must be programmatically associated');
+   for(const id of ['edOriginName','edOriginType','edOriginSupplier','edOriginMunicipality','edOriginAddress','edOriginOsmAnd','edOriginLat','edOriginLng']){
+    const associated=await page.locator('#'+id).evaluate(el=>[...el.labels||[]].some(label=>label.getAttribute('for')===el.id));
+    assert.equal(associated,true,'Missing explicit accessible label for '+id);
+   }
+   console.log('PASS warehouse form explicit labels for 8 controls');
    assert.equal(await page.locator('fieldset:disabled').count(),2);
    assert.equal(await page.locator('[role="alert"]').count(),1);
    assert.equal(await page.evaluate(()=>edDeliveryQuoteStillValid(window.__snapshot)),false);
