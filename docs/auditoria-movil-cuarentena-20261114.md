@@ -588,3 +588,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se conservan PASS anteriores de 40P01, 40001, aislamiento, permisos, rollback, idempotencia y desactivación concurrente de proveedor.
 - Límite: este ensayo produjo rollback confirmado (cero registros) tras interrupción real dentro del COMMIT, no una pérdida del ACK después de confirmar WAL durable; no demuestra ambos desenlaces en la misma carrera. El timeout SQL no impone por sí solo un plazo total de red.
 - Warning no bloqueante de Node.js 20/24 en actions/checkout@v4 y actions/upload-artifact@v4. Exclusivamente rama aislada y PostgreSQL desechable; sin inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Undécima batería — dos desenlaces de COMMIT incierto
+- Nuevo tests/postgres-product-bundle-integrated-dual-outcome.py commit 6e8be9578e0c0b9b44005067223e84419b18480d; workflow commit 2ada474dd149a4aa40e6a18c4f482182fbe0e41c.
+- Desenlace A: prueba anterior mata realmente backend dentro del COMMIT diferido, verifica rollback y reconcilia con misma clave; el nuevo script verifica el estado recuperado y replay.
+- Desenlace B: COMMIT durable confirmado, respuesta descartada deliberadamente por la aplicación y conexión cliente cerrada; nueva sesión comprueba un solo borrador/operación, replay, revisión CAS y conflicto de payload.
+- Se comprueba FORCE RLS en tablas, SECURITY DEFINER de RPC, propietario sin BYPASSRLS y ausencia de productos publicados.
+- Límite explícito: desenlace B es pérdida controlada de respuesta a nivel de aplicación, NO pérdida real del ACK TCP durante un COMMIT confirmado. La carrera física exacta entre durabilidad WAL y desconexión no se demuestra.
+- CI #43655454545 job 132632849392 inicialmente in_progress; logs y artefactos pendientes de verificación.
