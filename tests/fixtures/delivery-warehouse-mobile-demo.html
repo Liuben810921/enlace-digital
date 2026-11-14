@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ENLACE DIGITAL · Laboratorio de almacenes</title>
+<style>
+:root{font-family:system-ui,sans-serif;color-scheme:dark;background:#081c31;color:#f2f7ff}
+body{margin:0;padding:16px}main{max-width:760px;margin:auto}h1{font-size:1.45rem}h2{font-size:1.1rem}
+section{border:1px solid #31536a;border-radius:14px;padding:14px;margin:14px 0;background:#10283d}
+label{display:block;margin:10px 0;font-size:.93rem}input,select,button{font:inherit;border-radius:8px;padding:11px;box-sizing:border-box}
+input,select{display:block;width:100%;background:#071a2c;color:white;border:1px solid #66859b;margin-top:4px}
+button{cursor:pointer;color:white;background:#126b83;border:1px solid #64a7b5;margin:5px 5px 5px 0;min-height:44px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffcb4a}
+small,.note{color:#b5c8d5}article{border-top:1px solid #36556a;padding:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+</style></head><body><main>
+<h1>Administración de entregas · Laboratorio aislado</h1>
+<p class="note">Solo pruebas en este navegador. No se conecta a Supabase, clientes, pedidos ni rutas reales. No escribas domicilios privados.</p>
+<section><h2>Proveedores</h2>
+<form id="supplierForm"><label>Nombre del proveedor<input id="supplierName" maxlength="120" required></label><button>Agregar proveedor</button></form>
+<div id="suppliers"></div></section>
+<section><h2>Almacenes propios y de proveedores</h2>
+<form id="warehouseForm"><input type="hidden" id="warehouseId">
+<div class="grid"><label>Nombre del almacén<input id="warehouseName" maxlength="120" required></label>
+<label>Tipo<select id="warehouseType"><option value="propio">Propio</option><option value="proveedor">De proveedor</option></select></label>
+<label>Proveedor<select id="warehouseSupplier"><option value="">Sin proveedor</option></select></label>
+<label>Latitud<input id="warehouseLat" type="number" min="-90" max="90" step="any" required></label>
+<label>Longitud<input id="warehouseLng" type="number" min="-180" max="180" step="any" required></label></div>
+<button id="warehouseSave">Guardar almacén</button><button type="button" id="warehouseCancel">Cancelar edición</button>
+</form><div id="warehouses"></div></section>
+<section><h2>Asociar producto ficticio a almacenes</h2>
+<form id="assignmentForm"><label>ID de producto de prueba<input id="productId" pattern="[a-zA-Z0-9_-]{1,64}" required></label>
+<div id="originChoices"></div><button>Guardar asociación</button></form><p id="assignmentResult" role="status"></p></section>
+<p id="status" role="status" aria-live="polite"></p>
+</main><script>
+'use strict';
+// Isolated browser-only prototype. No network requests and no real commercial data.
+const KEY='ed_delivery_warehouse_lab_v1';
+const $=id=>document.getElementById(id);
+const state=(()=>{try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.suppliers)&&Array.isArray(x.warehouses)&&Array.isArray(x.assignments))return x}catch{}return {suppliers:[],warehouses:[],assignments:[],revision:0}})();
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>crypto.randomUUID();
+const save=()=>{state.revision++;localStorage.setItem(KEY,JSON.stringify(state));render()};
+const status=msg=>{$('status').textContent=msg};
+const coords=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&a>=-90&&a<=90&&b>=-180&&b<=180;
+function render(){
+ $('suppliers').innerHTML=state.suppliers.map(s=>'<article><strong>'+esc(s.name)+'</strong> · '+(s.active?'Activo':'Inactivo')+' <button data-action="supplier-edit" data-id="'+esc(s.id)+'">Editar</button><button data-action="supplier-toggle" data-id="'+esc(s.id)+'">'+(s.active?'Desactivar':'Activar')+'</button></article>').join('')||'<p class="note">Aún no hay proveedores.</p>';
+ $('warehouseSupplier').innerHTML='<option value="">Sin proveedor</option>'+state.suppliers.filter(s=>s.active).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
+ $('warehouses').innerHTML=state.warehouses.map(w=>'<article><strong>'+esc(w.name)+'</strong> · '+(w.type==='propio'?'Propio':'Proveedor')+' · '+(w.active?'Activo':'Inactivo')+'<p class="note">'+esc(w.lat)+', '+esc(w.lng)+' · versión '+w.version+'</p><button data-action="warehouse-edit" data-id="'+esc(w.id)+'">Editar</button><button data-action="warehouse-toggle" data-id="'+esc(w.id)+'">'+(w.active?'Desactivar':'Activar')+'</button></article>').join('')||'<p class="note">Aún no hay almacenes.</p>';
+ $('originChoices').innerHTML=state.warehouses.filter(w=>w.active&&(w.type==='propio'||state.suppliers.some(s=>s.id===w.supplierId&&s.active))).map(w=>'<label><input type="checkbox" class="origin" value="'+esc(w.id)+'"> '+esc(w.name)+'</label>').join('')||'<p class="note">Primero agrega almacenes activos.</p>';
+}
+$('supplierForm').addEventListener('submit',e=>{e.preventDefault();const name=$('supplierName').value.trim();if(!name)return;state.suppliers.push({id:uid(),name,active:true});$('supplierForm').reset();save();status('Proveedor agregado en laboratorio')});
+$('warehouseType').addEventListener('change',()=>{$('warehouseSupplier').disabled=$('warehouseType').value==='propio'});
+$('warehouseForm').addEventListener('submit',e=>{
+ e.preventDefault();const id=$('warehouseId').value,name=$('warehouseName').value.trim(),type=$('warehouseType').value,supplierId=type==='proveedor'?$('warehouseSupplier').value:null;
+ const lat=Number($('warehouseLat').value),lng=Number($('warehouseLng').value);
+ if(!name||!coords(lat,lng)||(type==='proveedor'&&!state.suppliers.some(s=>s.id===supplierId&&s.active))){status('Revisa nombre, coordenadas y proveedor activo');return}
+ const existing=state.warehouses.find(w=>w.id===id);
+ if(existing){Object.assign(existing,{name,type,supplierId,lat,lng,version:existing.version+1})}
+ else state.warehouses.push({id:uid(),name,type,supplierId,lat,lng,active:true,version:1});
+ $('warehouseForm').reset();$('warehouseId').value='';save();status('Almacén guardado; las cotizaciones dependientes deben recalcularse')});
+$('warehouseCancel').addEventListener('click',()=>{$('warehouseForm').reset();$('warehouseId').value=''});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button[data-action]');if(!b)return;
+ const {action,id}=b.dataset;
+ if(action.startsWith('supplier')){const s=state.suppliers.find(x=>x.id===id);if(!s)return;
+ if(action==='supplier-edit'){const name=prompt('Nuevo nombre del proveedor',s.name);if(name===null)return;if(!name.trim())return status('Nombre obligatorio');s.name=name.trim()}
+ else s.active=!s.active;
+ save();status('Proveedor actualizado');return}
+ const w=state.warehouses.find(x=>x.id===id);if(!w)return;
+ if(action==='warehouse-edit'){$('warehouseId').value=w.id;$('warehouseName').value=w.name;$('warehouseType').value=w.type;$('warehouseSupplier').disabled=w.type==='propio';$('warehouseSupplier').value=w.supplierId||'';$('warehouseLat').value=w.lat;$('warehouseLng').value=w.lng;$('warehouseName').focus()}
+ else {w.active=!w.active;w.version++;save();status('Estado de almacén actualizado; recotización requerida')}
+});
+$('assignmentForm').addEventListener('submit',e=>{e.preventDefault();const productId=$('productId').value.trim(),originIds=[...document.querySelectorAll('.origin:checked')].map(x=>x.value);if(!originIds.length)return status('Selecciona al menos un almacén');state.assignments=state.assignments.filter(a=>a.productId!==productId);state.assignments.push({productId,originIds,revision:state.revision+1});save();$('assignmentResult').textContent='Asociación guardada solo en este navegador';status('Producto asociado')});
+$('warehouseSupplier').disabled=true;render();
+</script></body></html>
