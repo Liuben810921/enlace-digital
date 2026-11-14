@@ -30,6 +30,11 @@ const {chromium}=require('playwright');
     document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel();
    });
    assert.equal(await page.locator('button:has-text("Editar")').count(),2);
+   for(const name of ['Editar proveedor Proveedor sintético','Cambiar estado del proveedor Proveedor sintético','Editar punto de salida Almacén sintético','Cambiar estado del punto de salida Almacén sintético']){
+    assert.equal(await page.getByRole('button',{name,exact:true}).count(),1,'Ambiguous accessible button name: '+name);
+   }
+   console.log('PASS supplier and warehouse action accessible names');
+
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),2,'Supplier and warehouse edit must be disabled');
    assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),2,'Toggle actions must be disabled');
