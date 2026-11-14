@@ -303,3 +303,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Job `Record isolated Chromium run identifier` `132600295274` **success**. Seis pruebas offline `ok`, `Ran 6 tests in 0.010s`, `OK`, registro publicado.
 - Artefacto `delivery-chromium-zoom-keyboard` ID `14133438345`, tamaño **1 132 775 bytes**, digest `sha256:b78e340a3b31252be353a0411a47915d232931f199c08e1df96ddf6813e88b36`, no expirado. Metadata comprobada; capturas individuales no inspeccionadas.
 - Sin fallos confirmados pendientes en este bloque. No se modifica código operativo adicional; rama aislada, sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Auditoría de coordenadas y proveedor — bloque siguiente
+- Defecto confirmado por inspección: guardado de almacén con proveedor no activo, pareja de coordenadas incompleta o coordenada fuera de rango mostraba `alert` sin enfocar el control incorrecto.
+- Corrección `ba8738eb`: foco explícito en `edOriginSupplier`, coordenada ausente o coordenada fuera de rango antes de avisar; sin modificar la lógica de persistencia.
+- Prueba `838ef087`: Chromium verifica foco de latitud 91°, longitud faltante y proveedor no seleccionado; comprueba que los datos locales y revisión de cotizaciones permanecen iguales tras los tres rechazos.
+- Revisión de código de `edDeliveryPersistAndInvalidate`: guarda valor previo, intenta escritura, invalida revisión solo tras escritura, revierte si falla invalidación y activa cuarentena si no puede confirmar rollback. No se ha confirmado defecto adicional en esta inspección; falta batería reproducible de fallos simulados de localStorage.
+- Pendiente: ejecutar nueva regresión Chromium y seis tests offline; verificar jobs, logs, artefactos mediante registro automático. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
