@@ -196,3 +196,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Pruebas offline nuevas `tests/test_chromium_run_registry.py` (`ba898671`): primera escritura, actualización nueva, rechazo de ejecución antigua, idempotencia del mismo intento, nuevo intento y conflicto con reintento. No usan red, tokens ni datos reales.
 - Integración `1c011123`: ejecuta `python3 -m unittest discover -s tests -p test_chromium_run_registry.py -v` en `record-run-id` antes de publicar el identificador; si falla, no se publica. No se cambian privilegios ni la ejecución Chromium.
 - **Pendiente**: obtener un run posterior a `1c011123` mediante el registro automático y verificar ambos jobs y los seis tests. Los commits y la inspección estática no sustituyen una ejecución PASS.
+
+## Seguimiento de seis tests offline del índice — pendiente de CI
+- Se consultó dos veces `.github/ci-evidence/latest-chromium-run.json`: `run_id=43643569932`, `head_sha=028cc019cf1fe5a4f5b2ec43fed10e45ac61a9b1`, `chromium_job_result=success`. El SHA es anterior a la protección `fef87ffe` y a la integración de pruebas `1c011123`.
+- Se releyó `tests/test_chromium_run_registry.py`: contiene seis casos con simulación de API GitHub en memoria, sin red ni credenciales. Se revisaron las rutas de creación, avance, ejecución obsoleta, repetición, nuevo intento y conflicto 409. La inspección estática no equivale a una ejecución PASS.
+- No existe un identificador posterior accesible mediante el registro para obtener jobs/logs/artefactos; no se atribuye aprobación a las pruebas nuevas. Sin fallos demostrados no se hicieron modificaciones de código.
+- Pendiente: cuando el registro publique un `head_sha` posterior o igual a `1c011123`, verificar específicamente el paso `Test run registry ordering and retries offline` en `record-run-id`, el resultado Chromium, los logs y el artefacto. Si falla el propio registro, será necesario localizar el run por una vía alternativa.
