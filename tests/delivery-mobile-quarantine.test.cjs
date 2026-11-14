@@ -1,0 +1,38 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const html=fs.readFileSync('index.html','utf8');
+const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]);
+for(const s of scripts)new vm.Script(s);
+const source=scripts.join('\n'),start=source.indexOf('const ED_DELIVERY_ORIGINS_KEY='),end=source.indexOf('function deliveryBarrios(){',start);
+assert(start>=0&&end>start);
+const store=new Map(),fail=new Set(),warnings=[];
+const ctx={localStorage:{getItem:k=>{if(fail.has('get:'+k))throw Error('read');return store.has(k)?store.get(k):null},setItem:(k,v)=>{if(fail.has('set:'+k))throw Error('write');store.set(k,v)},removeItem:k=>{if(fail.has('remove:'+k))throw Error('remove');store.delete(k)}},document:{getElementById:()=>null},esc:String,municipios:[],Date,Math,Number,JSON,alert:s=>warnings.push(s),adminTab:()=>{}};
+vm.createContext(ctx);vm.runInContext(source.slice(start,end),ctx);
+const call=s=>vm.runInContext(s,ctx);
+const k='ed_product_origins_demo_v1',v='ed_delivery_context_revision_demo_v1',q='ed_delivery_associations_quarantine_demo_v1';
+store.set('ed_delivery_origins_demo_v1',JSON.stringify([{id:'own',type:'propio',active:true}]));
+store.set('ed_delivery_suppliers_demo_v1','[]');
+store.set(k,JSON.stringify({item:['own']}));
+const snap=call('edDeliveryQuoteSnapshot()');
+fail.add('set:'+v);
+fail.add('set:'+k); // must allow initial association write but fail rollback, see toggling below
+fail.delete('set:'+k);
+let writes=0;
+const originalSet=ctx.localStorage.setItem;
+ctx.localStorage.setItem=(key,value)=>{if(key===k&&++writes===2)throw Error('rollback denied');return originalSet(key,value)};
+assert.equal(call("edProductOriginsSave('item',[])"),false);
+assert.equal(call('edDeliveryIsQuarantined()'),true);
+assert.equal(store.get(q),'1');
+assert.equal(call('edDeliveryQuoteStillValid('+JSON.stringify(snap)+')'),false);
+fail.delete('set:'+v);
+assert.equal(call("edProductOriginsSave('item',['own'])"),true);
+assert.equal(call('edDeliveryIsQuarantined()'),false);
+assert.equal(store.has(q),false);
+assert.equal(call('edDeliveryQuoteStillValid('+JSON.stringify(snap)+')'),false);
+assert.equal(JSON.parse(store.get(k)).item[0],'own');
+// Persisted quarantine survives a fresh in-memory session and refuses malformed data.
+store.set(q,'1');
+store.set(k,'{broken');
+assert.equal(call('edDeliveryRecoverQuarantine()'),false);
+assert.equal(call('edDeliveryIsQuarantined()'),true);
+console.log('PASS rollback-failure quarantine, quote rejection, recovery and malformed data refusal');
