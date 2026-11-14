@@ -18,5 +18,5 @@ En `tests/delivery-mobile-visual.playwright.cjs` se añadieron verificaciones Ch
 - El zoom CSS simulado no certifica todas las particularidades del zoom nativo del navegador o de accesibilidad del sistema operativo.
 - No se ha ejecutado lector de pantalla ni prueba Android física.
 - Las comprobaciones de teclado cubren exclusión de campos deshabilitados, no una auditoría WCAG completa.
-- Las nuevas 15 capturas y pruebas ampliadas quedan pendientes de conclusión de CI.
+- La ampliación se ejecutó con éxito en [CI visual #43636061078](https://github.com/Liuben810921/enlace-digital/actions/runs/43636061078) y [CI integral #43636061076](https://github.com/Liuben810921/enlace-digital/actions/runs/43636061076), ambas **success**. Se eliminó una comprobación de zoom redundante para conservar la batería más completa de tres anchuras. La verificación final de esta simplificación corresponde a [visual #43636132373](https://github.com/Liuben810921/enlace-digital/actions/runs/43636132373) e [integral #43636132431](https://github.com/Liuben810921/enlace-digital/actions/runs/43636132431).
 - Sin despliegue ni modificaciones a Supabase, staging, producción, clientes, pedidos o servicios.
