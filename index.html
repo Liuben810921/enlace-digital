@@ -1540,6 +1540,8 @@ function edDeliveryPersistAndInvalidate(key,items,reason){
  return false;
 }
 function edDeliverySupplierEdit(id){
+ if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
+
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
  const name=prompt('Nombre del proveedor',supplier.name);if(name===null)return;
  const clean=name.trim();if(!clean){alert('Introduce el nombre del proveedor.');return}
@@ -1548,6 +1550,8 @@ function edDeliverySupplierEdit(id){
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited'))adminTab('delivery')
 }
 function edDeliverySupplierToggle(id){
+ if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
+
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
  supplier.active=supplier.active===false;
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_status'))adminTab('delivery')
@@ -1798,7 +1802,7 @@ function edDeliveryOriginsPanel(){
  '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+'</p>'+
  '<button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  '<button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div>').join('');
- return quarantineNotice+'<div class="panel"><h3>Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+'<div><button type="button" class="secondary" onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary" onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div></div>').join('')+'<fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><div class="field"><label for="edSupplierName">Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" '+lockAttribute+' onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></fieldset></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
+ return quarantineNotice+'<div class="panel"><h3>Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+'<div><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary"'+lockAttribute+' onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div></div>').join('')+'<fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><div class="field"><label for="edSupplierName">Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" '+lockAttribute+' onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></fieldset></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
  (rows||'<p class="note">Todavía no hay puntos de salida registrados.</p>')+
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><input type="hidden" id="edOriginId">'+
  '<div class="field"><label>Nombre del punto</label><input id="edOriginName" maxlength="120" placeholder="Ej.: Almacén principal"></div>'+
@@ -1818,6 +1822,8 @@ function edDeliveryOriginReset(){
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
 }
 function edDeliveryOriginEdit(id){
+ if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
+
  const p=edDeliveryOriginsRead().find(x=>x.id===id);if(!p)return;
  document.getElementById('edOriginId').value=p.id;
  document.getElementById('edOriginName').value=p.name;
