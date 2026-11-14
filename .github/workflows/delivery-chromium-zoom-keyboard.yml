@@ -12,11 +12,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare isolated Node runtime
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
+          package-manager-cache: false
       - name: Validate JavaScript and quarantine logic without browser
         shell: bash
         run: |
@@ -44,7 +45,7 @@ jobs:
         run: node tests/delivery-real-css-focus-contrast-isolated.cjs
       - name: Preserve screenshot evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: delivery-chromium-zoom-keyboard
           path: |
@@ -59,7 +60,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Publish non-sensitive run metadata
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
