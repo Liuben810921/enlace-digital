@@ -103,3 +103,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Ampliación aislada commit `82863e05`: en Chromium y cada ancho 320/375/430, comprobar `:focus-visible`, `outline-style` distinto de `none`, grosor de outline >= 2 px; retroceder con `Shift+Tab` desde el botón de recuperación, regresar con `Tab` y activar con `Enter`. Se conservan las pruebas anteriores de cuarentena, zoom 100/200 %, invalidación, asociación de etiqueta y rechazo de asociaciones inválidas.
 - La prueba utiliza un fixture sintético que define `button:focus-visible{outline:3px solid #0b5673;outline-offset:2px}`; por tanto, valida el foco del fixture y el comportamiento de teclado, **no** certifica que el CSS del sitio completo tenga el mismo indicador. Pendiente auditoría específica del CSS real.
 - **Pendiente de validación CI del nuevo commit**: no declarar PASS hasta obtener run/job y logs de esta revisión.
+
+## Chromium #43642304904 — regresión de etiqueta, Shift+Tab y foco PASS
+- Ejecución `43642304904`, job `132592327706`, commit `d20d3e4b7165465c7e34fdcc7f1d78dbded28209`: conclusión **success** en todos los pasos.
+- Preflight Node y validación del módulo Chromium: PASS. Chromium reporta `PASS` en anchuras 320, 375 y 430 px con zoom CSS 100/200 %, teclado, cuarentena e invalidación.
+- La batería ejecutada incorpora las aserciones de asociación explícita `label[for=edOriginAddress]`, `textarea.labels`, `:focus-visible`, outline de al menos 2 px y recorrido `Shift+Tab` / `Tab` / `Enter`; el job Chromium completo terminó exitosamente.
+- Capturas y registros subidos al artefacto `14132157821` (1 001 551 bytes), SHA-256 `c7d603d5b69dc7bd30f7548f714a1b57f827c0918ebf882366c8e5a66870812c`. Las imágenes individuales no se inspeccionaron en esta revisión.
+- Advertencia no bloqueante: acciones GitHub `checkout@v4`, `setup-node@v4`, `upload-artifact@v4` emplean Node 20 deprecado y el runner fuerza Node 24. Priorizar actualización controlada de acciones en mantenimiento separado.
+- Límites: foco y contraste evaluados en fixture sintético, no en CSS real de toda la web; sin certificación WCAG integral ni pruebas de lector de pantalla.
