@@ -1532,7 +1532,7 @@ function edProductOriginSupplierChange(mode,productId){
  const selector=target?.querySelector('.ed-product-supplier');
  if(!selector)return;
  const supplierId=selector.value;
- const items=edDeliveryOriginsRead().filter(p=>p.active!==false&&p.type==='proveedor'&&p.supplierId===supplierId);
+ const items=edDeliveryOriginsRead().filter(p=>edDeliveryOriginEligible(p.id,'proveedor',supplierId));
  const checked=new Set([...target.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value));
  if(!checked.size&&items.length===1)checked.add(items[0].id);
  const list=target.querySelector('.ed-product-origin-list');
@@ -1818,12 +1818,23 @@ function edProductOriginsSave(productId,ids){
  const map=edProductOriginsRead();map[String(productId)]=ids;
  try{localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));edDeliveryContextInvalidate('product_origins');return true}catch(e){alert('No se pudo guardar la asociación local de almacenes.');return false}
 }
+function edDeliveryEffectiveOrigins(productId,type,supplierId){
+ const ids=edProductOriginsRead()[String(productId)]||[];
+ if(!Array.isArray(ids))return [];
+ const suppliers=edDeliverySuppliersRead();
+ return edDeliveryOriginsRead().filter(p=>ids.includes(p.id)&&p.active!==false&&p.type===type&&
+ (type==='propio'||p.supplierId===supplierId&&suppliers.some(s=>s.id===supplierId&&s.active!==false)));
+}
+function edDeliveryOriginEligible(id,type,supplierId){
+ return edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&p.type===type&&
+ (type==='propio'||p.supplierId===supplierId&&edDeliverySuppliersRead().some(s=>s.id===supplierId&&s.active!==false)));
+}
 function edProductOriginsPanel(mode,productId){
  const type=mode==='edit'?(document.getElementById('editOrigin')?.value||'propio'):(document.getElementById('porigin')?.value||'propio');
  const saved=productId==null?[]:(edProductOriginsRead()[String(productId)]||[]);
  const supplierIds=[...new Set(edDeliveryOriginsRead().filter(p=>saved.includes(p.id)&&p.supplierId).map(p=>p.supplierId))];
  const supplierId=supplierIds[0]||'';
- const list=edDeliveryOriginsRead().filter(x=>x.active!==false&&x.type===type&&(type==='propio'||x.supplierId===supplierId));
+ const list=edDeliveryOriginsRead().filter(x=>edDeliveryOriginEligible(x.id,type,supplierId));
  const selected=saved.filter(id=>list.some(p=>p.id===id));
  if(!selected.length&&list.length===1)selected.push(list[0].id);
  return '<div class="panel" style="padding:12px;margin:12px 0"><h4>Puntos de salida del producto</h4><p class="note">Selecciona los almacenes disponibles. Datos de prueba guardados solo en este navegador.</p>'+
@@ -1851,11 +1862,12 @@ function edProductOriginQuickSave(mode){
  const type=document.getElementById(mode==='edit'?'editOrigin':'porigin').value;
  const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
  const supplierId=type==='proveedor'?target.querySelector('.ed-product-supplier')?.value:null;
- if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId)){alert('Selecciona primero un proveedor registrado en Administración de entregas.');return}
+ if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){alert('Selecciona primero un proveedor activo en Administración de entregas.');return}
  const items=edDeliveryOriginsRead();
  const id='origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);
- items.push({id,name,type,supplierId,municipality,address,lat:null,lng:null,active:true});
+ items.push({id,name,type,supplierId,municipality,address,lat:null,lng:null,active:true,version:1});
  if(!edDeliveryOriginsWrite(items))return;
+ edDeliveryContextInvalidate('quick_warehouse_added');
  const checked=[...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value);
  const productId=mode==='edit'?document.getElementById('edEditProductOrigins').dataset.productId:null;
  edProductOriginsRender(mode,productId);
@@ -1864,7 +1876,10 @@ function edProductOriginQuickSave(mode){
 }
 function edProductOriginsCollect(mode){
  const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
- return target?[...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value):[];
+ if(!target)return [];
+ const type=document.getElementById(mode==='edit'?'editOrigin':'porigin')?.value||'propio';
+ const supplierId=type==='proveedor'?target.querySelector('.ed-product-supplier')?.value:null;
+ return [...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value).filter(id=>edDeliveryOriginEligible(id,type,supplierId));
 }
 
 function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){let p=state.products.find(x=>x.id===id);if(!p)return;p[k]=k==='qty'?(v===''?null:Math.max(0,Math.floor(Number(v)||0))):Math.max(0,Number(v)||0);save();adminTab('inventory');renderShop()}function updateNewQtyHelp(){const supplier=document.getElementById('porigin')?.value==='proveedor',help=document.getElementById('qtyHelp'),qty=document.getElementById('pqty');if(help)help.textContent=supplier?'Proveedor: sin control obligatorio de existencias.':'Producto propio: introduce existencias para que pueda comprarse.';if(qty)qty.closest('.field').style.display=supplier?'none':'';edToggleSupplierAlias('new')}
