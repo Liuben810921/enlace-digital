@@ -76,6 +76,26 @@ const {chromium}=require('playwright');
    });
    assert.deepEqual(persistentQuarantine,{failure:'rollback_failed',persisted:true,blocked:true,retry:'quarantine',revision:1},'Quarantine must persist across fresh transaction instances after failed rollback');
    console.log('PASS synthetic sequential concurrency, unknown commit replay, revision conflict and persistent quarantine');
+   const interleaving=await page.evaluate(()=>{
+    const api=window.EDSyntheticProductBundle,values=new Map(),ctx={revision:0,warehouses:[{id:'own',type:'propio',active:true}]};
+    const req=(op,id)=>({operationId:op,productId:id,type:'propio',warehouseIds:['own']});
+    let triggered=false,innerResult=null,inner;
+    const store={
+     getItem:k=>values.has(k)?values.get(k):null,
+     setItem:(k,v)=>{
+      if(k===api.KEY&&!triggered){triggered=true;innerResult=inner.commit(req('inner','inner-product'),ctx)}
+      values.set(k,v);
+     },
+     removeItem:k=>values.delete(k)
+    };
+    inner=api.create(store);
+    const outer=api.create(store).commit(req('outer','outer-product'),ctx);
+    const state=api.create(store).read();
+    return {outer:outer.ok,inner:innerResult.ok,lostInner:!state.products['inner-product'],outerExists:!!state.products['outer-product'],revision:state.revision};
+   });
+   assert.deepEqual(interleaving,{outer:true,inner:true,lostInner:true,outerExists:true,revision:1},'Synthetic interleaving must expose non-atomic read/write lost update limitation');
+   console.log('PASS synthetic interleaving exposes localStorage lost-update limitation (backend CAS required)');
+
 
    await page.evaluate(()=>{
     localStorage.setItem('ed_delivery_suppliers_demo_v1',JSON.stringify([{id:'sup',name:'Proveedor sintético',active:true}]));
