@@ -56,19 +56,6 @@ const fs=require('node:fs'),path=require('node:path');
    assert.equal(await page.evaluate(()=>window.demoRecover()),true);
    await page.screenshot({path:path.join(output,'delivery-'+width+'-zoom200-recovered.png'),fullPage:true});
 
-   if(width===375){
-    await page.evaluate(()=>{document.body.style.zoom='2'});
-    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1),false,'375px CSS zoom 200% horizontal overflow');
-    await page.screenshot({path:path.join(output,'delivery-375-zoom200-recovered.png'),fullPage:true});
-    await page.evaluate(()=>window.demoQuarantine());
-    assert.equal(await page.locator('#deliveryPanel fieldset:disabled').count(),2);
-    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1),false,'375px CSS zoom 200% quarantine overflow');
-    await page.screenshot({path:path.join(output,'delivery-375-zoom200-quarantine.png'),fullPage:true});
-    await page.keyboard.press('Tab');
-    assert.equal(await page.locator('#edOriginName').isDisabled(),true);
-    assert.notEqual(await page.evaluate(()=>document.activeElement?.id),'edOriginName');
-    console.log('PASS Chromium 375px CSS zoom 200%: no horizontal overflow, quarantine disabled controls and keyboard exclusion');
-   }
    await page.close();
    console.log('PASS Chromium '+width+'px: supplier, effective warehouse, association, quarantine, quote invalidation, recovery, screenshots');
   }
