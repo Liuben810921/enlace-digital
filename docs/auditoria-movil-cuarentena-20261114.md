@@ -578,3 +578,13 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - lock_timeout PostgreSQL real 100ms ante UPDATE que mantiene lock de versión; espera SQLSTATE 55P03, rollback sin producto. statement_timeout PostgreSQL real 100ms ante pg_sleep; espera SQLSTATE 57014.
 - Verifica FORCE RLS, rol técnico sin BYPASSRLS, CAS y borradores no publicados. Run #43654620338, job 132630318734 inicialmente in_progress; no afirmar éxito sin logs.
 - Límites: interrupción controlada mientras COMMIT ejecuta un trigger diferido, no demuestra incertidumbre de ACK después de WAL durable; timeout SQL no garantiza límite estricto de tiempo total del cliente bajo fallos de red. No modifica inventario, Supabase, staging ni producción.
+
+## Cierre verificado décima batería — interrupción durante COMMIT
+- Run GitHub Actions PostgreSQL 16 #43654620338, job 132630318734: completed/success.
+- Artefacto isolated-product-bundle-atomic ID 14137486713, SHA256 4ca9cc727cee6f557c4d198831e2d1f6d2fc839e80b114abf986e981a883b54d, no expirado.
+- Logs PASS real backend termination inside deferred COMMIT, atomic outcome connection_lost 0: terminación real durante trigger diferido, resultado final cero registros persistidos, sin estado parcial.
+- Logs PASS unknown-result reconciliation by same operation key, one committed draft: recuperación con la misma clave y replay sin duplicados.
+- Logs PASS actual lock_timeout 55P03 and statement_timeout 57014, rollback without draft; PASS FORCE RLS, SECURITY DEFINER owner NOBYPASSRLS, CAS and drafts unpublished.
+- Se conservan PASS anteriores de 40P01, 40001, aislamiento, permisos, rollback, idempotencia y desactivación concurrente de proveedor.
+- Límite: este ensayo produjo rollback confirmado (cero registros) tras interrupción real dentro del COMMIT, no una pérdida del ACK después de confirmar WAL durable; no demuestra ambos desenlaces en la misma carrera. El timeout SQL no impone por sí solo un plazo total de red.
+- Warning no bloqueante de Node.js 20/24 en actions/checkout@v4 y actions/upload-artifact@v4. Exclusivamente rama aislada y PostgreSQL desechable; sin inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
