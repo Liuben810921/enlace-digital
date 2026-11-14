@@ -228,3 +228,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección `0b9bcf37`: añade `aria-label` específico por proveedor/punto de salida y nombre escapado del registro a los cuatro tipos de acciones. Conserva el texto visible, el bloqueo `disabled aria-disabled` en cuarentena y los manejadores existentes.
 - Regresión `d460f16d`: Chromium verifica que las cuatro acciones de datos sintéticos se encuentran por nombre accesible exacto y único, además de las comprobaciones preexistentes de teclado, cuarentena, zoom, ocho etiquetas y contraste.
 - Estado: cambio y prueba incorporados; **pendiente** comprobar un run con `head_sha` igual o posterior a `d460f16d`, revisar logs de `PASS supplier and warehouse action accessible names`, los seis tests offline del índice y los artefactos. No se ha demostrado todavía PASS de la nueva regresión.
+
+## Seguimiento de regresión de nombres accesibles — sin run posterior confirmado
+- El registro `.github/ci-evidence/latest-chromium-run.json` se consultó tres veces y seguía en `run_id=43644113879`, `head_sha=666b9bfb09a61e72b23beff5f87c183019a161f2`, anterior a `d460f16d`.
+- La consulta alternativa `fetch_commit_workflow_runs(d460f16d)` devolvió `workflow_runs=[]`. Esta API puede no incluir ejecuciones disparadas por `push`, por lo que el resultado **no demuestra** que GitHub Actions no se haya ejecutado.
+- Sin un identificador de ejecución posterior no se pueden asociar con rigor jobs, logs ni artefactos a la regresión nueva. No se atribuye PASS ni fallo. Se conserva el código y las pruebas sin modificaciones por falta de defectos demostrados.
+- Pendiente: consultar registro actualizado; verificar `PASS supplier and warehouse action accessible names` en los tres anchos, las ocho etiquetas, teclado, cuarentena, zoom, contraste, seis tests del índice, jobs y artefacto.
