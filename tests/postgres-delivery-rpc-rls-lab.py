@@ -471,4 +471,17 @@ finally:
     if max_route_current!=max_route_before[0]:
         assert run(admin,mutate,("route","cart-a",max_route_current,max_route_before[1]))==[(max_route_current+1,)]
 
+# Idempotency key length boundary: exactly 80 characters is accepted and
+# replayable; 81 characters must fail before any quote is persisted.
+key_limit_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+key_limit_valid="k"*80
+key_limit_invalid="k"*81
+key_limit_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+assert_error(a,q,errors.InvalidParameterValue,(key_limit_invalid,"cart-a","customer-a",key_limit_rev))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(key_limit_before,)]
+key_limit_first=run(a,q,(key_limit_valid,"cart-a","customer-a",key_limit_rev))
+assert key_limit_first[0][0]=="committed",key_limit_first
+assert run(a,q,(key_limit_valid,"cart-a","customer-a",key_limit_rev))==[("replayed",*key_limit_first[0][1:])]
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(key_limit_before+1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
