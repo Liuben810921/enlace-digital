@@ -148,6 +148,20 @@ const {chromium}=require('playwright');
    });
    assert.deepEqual(autoAssignment,{supplier:'sup',initial:['a1'],available:['a1','a2'],own:['own']},'Product origin must default to active supplier warehouse and keep own separate');
    console.log('PASS product form supplier warehouse default and own-origin separation');
+   const defaultSwitch=await page.evaluate(()=>{
+    const key='ed_delivery_origins_demo_v1',supKey='ed_delivery_suppliers_demo_v1',revKey='ed_delivery_context_revision_demo_v1';
+    const before=localStorage.getItem(key),beforeSup=localStorage.getItem(supKey),revision=edDeliveryContextRevision();
+    localStorage.setItem(supKey,JSON.stringify([{id:'sup',name:'Proveedor A',active:true}]));
+    localStorage.setItem(key,JSON.stringify([{id:'a1',name:'Primero',type:'proveedor',supplierId:'sup',active:true,defaultForSupplier:true},{id:'a2',name:'Segundo',type:'proveedor',supplierId:'sup',active:true},{id:'own',name:'Propio',type:'propio',active:true}]));
+    const changed=edDeliveryOriginSetDefault('a2');
+    const list=edDeliveryOriginsRead();
+    const result={changed,defaults:list.filter(p=>p.defaultForSupplier===true).map(p=>p.id),revisionAdvanced:edDeliveryContextRevision()>revision,ownUntouched:!list.find(p=>p.id==='own').defaultForSupplier};
+    localStorage.setItem(key,before);localStorage.setItem(supKey,beforeSup);
+    return result;
+   });
+   assert.deepEqual(defaultSwitch,{changed:true,defaults:['a2'],revisionAdvanced:true,ownUntouched:true},'Switching supplier default must preserve identity and invalidate quotes');
+   console.log('PASS supplier default warehouse switch preserves IDs and invalidates quote revision');
+
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
 
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),3,'All supplier and warehouse edit actions must be disabled');
