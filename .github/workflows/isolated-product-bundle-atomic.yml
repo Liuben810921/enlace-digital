@@ -15,6 +15,7 @@ on:
       - 'tests/postgres-product-bundle-integrated-deadlocks.py'
       - 'tests/postgres-product-bundle-integrated-retries.py'
       - 'tests/postgres-product-bundle-integrated-unknown-commit.py'
+      - 'tests/postgres-product-bundle-integrated-commit-kill.py'
       - '.github/workflows/isolated-product-bundle-atomic.yml'
   workflow_dispatch:
 permissions:
@@ -59,6 +60,10 @@ jobs:
           python3 tests/postgres-product-bundle-integrated-deadlocks.py 2>&1 | tee -a product-bundle-atomic-results.log
           python3 tests/postgres-product-bundle-integrated-retries.py 2>&1 | tee -a product-bundle-atomic-results.log
           python3 tests/postgres-product-bundle-integrated-unknown-commit.py 2>&1 | tee -a product-bundle-atomic-results.log
+      - name: Execute real commit interruption and SQL deadlines
+        run: |
+          set -euo pipefail
+          python3 tests/postgres-product-bundle-integrated-commit-kill.py 2>&1 | tee -a product-bundle-atomic-results.log
       - name: Upload non-sensitive synthetic evidence
         if: always()
         uses: actions/upload-artifact@v4
