@@ -260,3 +260,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Job `Record isolated Chromium run identifier` `132598923275`: **success**. Los seis tests offline reportan `ok`; resumen `Ran 6 tests in 0.008s`, `OK`. Publicación del índice exitosa en primer intento.
 - Artefacto `delivery-chromium-zoom-keyboard` ID `14132654331`, tamaño **1 092 458 bytes**, digest `sha256:3e79704e8d2f343e94845c18f40a90222eaa1acd82ef80ff8371c0904eed7b67`, no expirado. Publicación y metadata verificadas; capturas individuales no inspeccionadas.
 - Conclusión: regresión de foco tras edición y recuperación de cuarentena validada en Chromium real y fixture sintético. No hay fallos demostrados que corregir. Alcance solo rama aislada de GitHub, sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Auditoría de guardado, limpieza, persistencia y recuperación fallida
+- Hallazgo por inspección: `edDeliveryOriginReset` limpiaba campos sin reposicionar foco; `edDeliveryOriginSave` y `edDeliverySupplierAdd` reemplazaban el panel mediante `adminTab('delivery')` sin destino explícito para el foco tras persistencia exitosa.
+- Corrección `529e134c`: limpieza enfoca `edOriginName`; guardado de almacén y alta de proveedor enfocan `#edDeliveryPanelTitle[tabindex=-1]` únicamente si la persistencia e invalidación fueron exitosas.
+- Regresión `8838ecc7`: Chromium comprueba foco y valor vacío después de limpiar, foco y persistencia del almacén después de guardar, foco y persistencia del proveedor tras registrar.
+- Regresión `1817c327`: tras recuperación fallida por asociaciones inválidas, verifica `role=alert`, botón de recuperación disponible, ambos `fieldset:disabled` y marca de cuarentena persistida.
+- Pendiente CI: localizar run posterior a `1817c327`, verificar logs, seis tests offline y artefactos. No se atribuye PASS sin ejecución. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
