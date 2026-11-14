@@ -39,7 +39,6 @@ print("PASS active-session REVOKE blocks new RPC statements, GRANT restores acce
 # Force a supplier deactivation to commit before RPC obtains tenant version lock.
 with admin() as a:
  a.execute("UPDATE ed_integrated_lab.suppliers SET active=false WHERE tenant='a' AND id='s'")
- assert invoke(client(), "unused","unused",7) if False else True
 with client() as c:
  assert invoke(c,"inactive-supplier","no-supplier",7)["status"]=="invalid_origin"
 with admin() as c:
