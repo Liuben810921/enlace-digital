@@ -41,7 +41,7 @@ GRANT SELECT ON ed_integrated_lab.suppliers,ed_integrated_lab.warehouses TO ed_i
 GRANT SELECT,INSERT ON ed_integrated_lab.products,ed_integrated_lab.product_warehouses,ed_integrated_lab.operations TO ed_integrated_owner;
 CREATE FUNCTION ed_integrated_lab.commit_bundle(p_op text,p_product text,p_supplier text,p_warehouses text[],p_kind text,p_expected bigint)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_integrated_lab AS $$
-DECLARE v_tenant text; v_rev bigint; v_prev ed_integrated_lab.operations%ROWTYPE; v_sorted text[]; v_payload jsonb; v_result jsonb;
+DECLARE v_tenant text; v_rev bigint; v_prev ed_integrated_lab.operations%ROWTYPE; v_sorted text[]; v_payload jsonb; v_result jsonb; v_lock text;
 BEGIN
  SELECT tenant INTO v_tenant FROM ed_integrated_lab.identities WHERE login_name=session_user;
  IF v_tenant IS NULL OR p_op IS NULL OR length(trim(p_op))=0 OR p_product IS NULL OR length(trim(p_product))=0 OR p_kind IS NULL OR p_kind NOT IN ('proveedor','propio') OR p_warehouses IS NULL OR cardinality(p_warehouses)=0 OR EXISTS(SELECT 1 FROM unnest(p_warehouses) x WHERE x IS NULL OR length(trim(x))=0) OR cardinality(p_warehouses)<>(SELECT count(DISTINCT x) FROM unnest(p_warehouses) x) THEN
@@ -56,6 +56,16 @@ BEGIN
   RETURN jsonb_build_object('status','idempotency_conflict');
  END IF;
  IF p_expected IS DISTINCT FROM v_rev THEN RETURN jsonb_build_object('status','stale_revision'); END IF;
+ -- Lock the supplier and every chosen warehouse before checking active state.
+ -- FOR SHARE conflicts with UPDATE and protects the state through COMMIT.
+ IF p_supplier IS NOT NULL THEN
+  PERFORM 1 FROM ed_integrated_lab.suppliers
+   WHERE tenant=v_tenant AND id=p_supplier FOR SHARE;
+ END IF;
+ FOREACH v_lock IN ARRAY v_sorted LOOP
+  PERFORM 1 FROM ed_integrated_lab.warehouses
+   WHERE tenant=v_tenant AND id=v_lock FOR SHARE;
+ END LOOP;
  IF EXISTS(
   SELECT 1 FROM unnest(v_sorted) chosen(id)
   WHERE NOT EXISTS (
