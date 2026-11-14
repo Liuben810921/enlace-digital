@@ -520,3 +520,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - La terminación real de conexión durante COMMIT de otra batería produjo resultado no persistido y recuperación idempotente; el escenario de respuesta perdida tras COMMIT durable es simulación de aplicación, no caída de red real.
 - Límites: no se probó aún carrera equivalente de desactivación de proveedor mientras la RPC está esperando, ni orden de bloqueo del administrador, ni deadlocks/reintentos con múltiples proveedores/almacenes. La protección se comprobó en laboratorio, no en Supabase/staging/producción. Warning de Node.js 20 en acciones GitHub no bloqueante.
 - No se modificaron inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Séptima batería sintética: proveedor concurrente y deadlock administrativo
+- Nuevo tests/postgres-product-bundle-integrated-deadlocks.py ejecutado al final de workflow PostgreSQL 16 aislado; commit de workflow 0aeaaefc0956a3c8ab9b3a70b2e3f55179956fb8.
+- Ensayo: UPDATE supplier.active=false sin confirmar en conexión administrativa mientras RPC con session_user empresa A espera FOR SHARE; después del commit debe devolver invalid_origin sin aumentar revisión ni insertar borrador.
+- Ensayo: dos conexiones administrativas actualizan almacenes w1/w2 en orden opuesto, sincronizadas por barrera; comprobar un aborto PostgreSQL SQLSTATE 40P01 y un commit. Administración usa rol postgres solo en PostgreSQL efímero, no representa los privilegios administrativos definitivos.
+- Ensayo: reintento de operación administrativa abortada con orden consistente, rollback RPC antes de COMMIT, reintento con misma clave, replay idempotente y conflicto de payload; todos los productos continúan unpublished/draft.
+- Run inicial 43650454626, job 132617519104 observado in_progress; resultados no validados todavía.
+- Limitaciones: se fuerza un interbloqueo de dos filas, no prueba exhaustiva de topologías multi-almacén ni política de reintentos con backoff exponencial y jitter; no se modifica código operativo ni se hacen pruebas en Supabase/staging/producción.
