@@ -495,3 +495,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Riesgo que requiere validación: SELECT sin bloqueo explícito de almacenes/proveedores puede observar la última versión confirmada durante UPDATE concurrente; la carrera debe considerarse fallo si la operación publica borrador con origen que fue desactivado antes de su commit. Corregir únicamente tras observarlo en CI.
 - Límite: el ensayo de respuesta perdida descarta el resultado en el cliente después de COMMIT; no provoca caída real de red después del flush WAL.
 - Exclusivamente sintético, sin modificar inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Seguimiento CI sexta batería — fallo de recuperación tras GRANT
+- Run 43649572768, job 132614804627: completed/failure, artefacto isolated-product-bundle-atomic ID 14135975229, SHA256 2832d9c29bdba4cc47ff7bf056d828fd751338199ea54e2480200ad5ac4747d9.
+- Cinco baterías anteriores PASS. La sexta falló en tests/postgres-product-bundle-integrated-advanced.py línea 36: psycopg.errors.InsufficientPrivilege: permission denied for function commit_bundle al reintentar tras GRANT EXECUTE en conexión ya abierta.
+- Corrección de la prueba en e13f7918938fc704e1d5b80aa8356789a9773ede: finalizar la transacción de la conexión cliente después de GRANT y antes de verificar ejecución restaurada. No se ha cambiado el contrato RPC ni RLS.
+- Nueva CI 43649655515, job 132615060702, observada in_progress. No afirmar validación de carreras de estado ni durable replay hasta disponer de logs.
+- Nota de seguridad: el resultado muestra que el permiso revocado bloqueó la sesión; la recuperación del permiso requiere observar límites transaccionales, no implica eludir la revocación.
