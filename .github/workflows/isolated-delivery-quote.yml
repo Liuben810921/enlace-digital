@@ -56,6 +56,8 @@ on:
       - 'tests/postgres-delivery-recovery-lab.py'
       - 'tests/postgres-delivery-rpc-rls-lab.sql'
       - 'tests/postgres-delivery-rpc-rls-lab.py'
+      - 'tests/postgres-delivery-six-context-security-lab.sql'
+      - 'tests/postgres-delivery-six-context-security-lab.py'
       - 'tests/postgres-delivery-six-context-races-lab.sql'
       - 'tests/postgres-delivery-six-context-races-lab.py'
       - 'tests/postgres-delivery-context-races-lab.py'
@@ -132,3 +134,7 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-delivery-six-context-races-lab.sql
           python3 tests/postgres-delivery-six-context-races-lab.py
+      - name: PostgreSQL disposable RLS rollback and retry security lab
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-delivery-six-context-security-lab.sql
+          python3 tests/postgres-delivery-six-context-security-lab.py
