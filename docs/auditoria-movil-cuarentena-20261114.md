@@ -234,3 +234,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - La consulta alternativa `fetch_commit_workflow_runs(d460f16d)` devolvió `workflow_runs=[]`. Esta API puede no incluir ejecuciones disparadas por `push`, por lo que el resultado **no demuestra** que GitHub Actions no se haya ejecutado.
 - Sin un identificador de ejecución posterior no se pueden asociar con rigor jobs, logs ni artefactos a la regresión nueva. No se atribuye PASS ni fallo. Se conserva el código y las pruebas sin modificaciones por falta de defectos demostrados.
 - Pendiente: consultar registro actualizado; verificar `PASS supplier and warehouse action accessible names` en los tres anchos, las ocho etiquetas, teclado, cuarentena, zoom, contraste, seis tests del índice, jobs y artefacto.
+
+## Cierre de regresión de nombres accesibles — PASS #43644182333
+- El registro automático publicó `run_id=43644182333`, `head_sha=b038926853cf935bd333c66d73c6695122674faa`, `chromium_job_result=success`; SHA posterior a `d460f16d`.
+- Job `chromium-accessibility` `132598151329`: **success**. Logs confirman `PASS supplier and warehouse action accessible names` tres veces (320/375/430 px); `PASS warehouse form explicit labels for 8 controls` tres veces; `PASS Chromium width=320/375/430 zoom 100/200%, keyboard, quarantine and invalidation`; `PASS real CSS text contrast and keyboard focus on 320/375/430px`; prueba Node de aviso de cuarentena también PASS.
+- Job `Record isolated Chromium run identifier` `132598308100`: **success**. Seis casos offline individuales `ok`, resumen `Ran 6 tests in 0.008s`, `OK`; publicación de índice exitosa en intento 1.
+- Artefacto `delivery-chromium-zoom-keyboard` ID `14132529501`, tamaño **1 092 433 bytes**, digest `sha256:5e1100b792b5015b0f77b86f90a64aded5fed29a43d9387d670fd79806976255`, no expirado. Metadata y publicación verificadas, capturas individuales no inspeccionadas.
+- No hay fallos confirmados que corregir. La prueba cubre fixture sintético y módulo extraído, no una auditoría de accesibilidad integral de producción. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
