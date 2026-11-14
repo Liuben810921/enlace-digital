@@ -7,7 +7,8 @@ for(const id of ['supplierForm','warehouseForm','warehouseType','warehouseSuppli
 for(const action of ['supplier-edit','supplier-toggle','warehouse-edit','warehouse-toggle'])assert.match(html,new RegExp(action));
 assert.match(html,/localStorage\.setItem\(KEY/);
 assert.doesNotMatch(html,/fetch\(|XMLHttpRequest|supabase\.co|https?:\/\//);
-assert.match(html,/w\.version\+1/);
+assert.match(html,/version:existing\.version\+1/);
+assert.match(html,/w\.version\+\+/);
 const scripts=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)];
 assert.equal(scripts.length,1);
 new vm.Script(scripts[0][1]);
