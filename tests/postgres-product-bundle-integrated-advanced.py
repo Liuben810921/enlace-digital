@@ -33,6 +33,7 @@ with client() as session:
   raise AssertionError("Active session unexpectedly retained EXECUTE after REVOKE")
  with admin() as c:
   c.execute(f"GRANT EXECUTE ON FUNCTION {FN} TO ed_integrated_a")
+ session.commit()  # End transaction to refresh permission cache after GRANT.
  assert invoke(session,"restored","restored-product",6)["status"]=="draft"
  assert session.execute("SELECT session_user").fetchone()[0]=="ed_integrated_a"
 print("PASS active-session REVOKE blocks new RPC statements, GRANT restores access")
