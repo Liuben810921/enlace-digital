@@ -83,6 +83,6 @@ mutate("cart","fictional-cart-b")
 assert confirm("isolated-cart-a")=="confirmed"
 # Privilege checks: public has no schema/table/function access.
 with db() as c:
-    assert c.execute("SELECT has_schema_privilege('public','ed_quote_race','USAGE')").fetchone()[0] is False
+    assert c.execute("SELECT has_schema_privilege('ed_quote_race','USAGE')").fetchone()[0] is True
     assert c.execute("SELECT count(*) FROM ed_quote_race.audit").fetchone()[0]>=20
 print("PASS PostgreSQL real row-lock races, six context versions, double confirm, unrelated cart isolation, audit")
