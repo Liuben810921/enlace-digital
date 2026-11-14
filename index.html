@@ -1576,6 +1576,10 @@ function edDeliveryOriginTypeChange(){
  const supplier=document.getElementById('edOriginType').value==='proveedor';
  const field=document.getElementById('edOriginSupplierField');if(field)field.style.display=supplier?'':'none';
 }
+function edDeliveryPreferredOrigin(items){
+ if(!items.length)return null;
+ return items.find(p=>p.defaultForSupplier===true)||items[0];
+}
 function edProductOriginSupplierChange(mode,productId){
  if(edDeliveryIsQuarantined())return;
  const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
@@ -1584,7 +1588,8 @@ function edProductOriginSupplierChange(mode,productId){
  const supplierId=selector.value;
  const items=edDeliveryOriginsRead().filter(p=>edDeliveryOriginEligible(p.id,'proveedor',supplierId));
  const checked=new Set([...target.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value).filter(id=>items.some(p=>p.id===id)));
- // Do not silently select a warehouse after switching suppliers.
+ const preferred=edDeliveryPreferredOrigin(items);
+ if(preferred)checked.add(preferred.id);
  const list=target.querySelector('.ed-product-origin-list');
  list.innerHTML=items.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(checked.has(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">No hay almacenes registrados para este proveedor.</p>';
 }
@@ -1908,10 +1913,11 @@ function edProductOriginsPanel(mode,productId){
  const type=mode==='edit'?(document.getElementById('editOrigin')?.value||'propio'):(document.getElementById('porigin')?.value||'propio');
  const saved=productId==null?[]:(edProductOriginsRead()[String(productId)]||[]);
  const supplierIds=[...new Set(edDeliveryOriginsRead().filter(p=>saved.includes(p.id)&&p.active!==false&&p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false)).map(p=>p.supplierId))];
- const supplierId=supplierIds[0]||'';
+ const activeSuppliers=edDeliverySuppliersRead().filter(p=>p.active!==false);
+ const supplierId=supplierIds[0]||(type==='proveedor'?activeSuppliers.find(p=>edDeliveryOriginsRead().some(o=>o.type==='proveedor'&&o.supplierId===p.id&&o.active!==false))?.id||'':'');
  const list=edDeliveryOriginsRead().filter(x=>edDeliveryOriginEligible(x.id,type,supplierId));
  const selected=saved.filter(id=>list.some(p=>p.id===id));
- // Do not silently assign a warehouse: dispatch must be selected explicitly.
+ if(productId==null&&selected.length===0){const preferred=edDeliveryPreferredOrigin(list);if(preferred)selected.push(preferred.id)}
  return '<div class="panel" style="padding:12px;margin:12px 0"><h4>Puntos de salida del producto</h4><p class="note">Selecciona los almacenes disponibles. Datos de prueba guardados solo en este navegador.</p>'+
  (type==='proveedor'?'<div class="field"><label>Proveedor registrado</label><select class="ed-product-supplier" onchange="edProductOriginSupplierChange('+JSON.stringify(mode)+','+JSON.stringify(productId)+')">'+edDeliverySupplierOptions(supplierId)+'</select></div>':'')+
  '<div class="ed-product-origin-list">'+(list.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(selected.includes(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">Todavía no hay almacenes disponibles de este tipo.</p>')+'</div>'+
