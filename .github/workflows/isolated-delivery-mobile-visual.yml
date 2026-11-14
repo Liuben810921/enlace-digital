@@ -13,6 +13,7 @@ permissions:
 jobs:
   chromium-mobile:
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.56.1-noble
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +22,6 @@ jobs:
       - name: Install isolated Chromium browser test dependency
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
       - name: Run mobile functional and screenshot assertions without server or deployment
         run: node tests/delivery-mobile-visual.playwright.cjs
       - name: Upload mobile screenshots
