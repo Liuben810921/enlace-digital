@@ -502,3 +502,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección de la prueba en e13f7918938fc704e1d5b80aa8356789a9773ede: finalizar la transacción de la conexión cliente después de GRANT y antes de verificar ejecución restaurada. No se ha cambiado el contrato RPC ni RLS.
 - Nueva CI 43649655515, job 132615060702, observada in_progress. No afirmar validación de carreras de estado ni durable replay hasta disponer de logs.
 - Nota de seguridad: el resultado muestra que el permiso revocado bloqueó la sesión; la recuperación del permiso requiere observar límites transaccionales, no implica eludir la revocación.
+
+## Corrección comprobada de carrera de estado — sexta batería
+- Run 43649655515, job 132615060702: completed/failure; artefacto isolated-product-bundle-atomic ID 14135597581, SHA256 a136f17f7434ff81b3c181bfc66cebac9e031ae8777a4cc5ead670d9392a2624.
+- PASS revocación/restauración EXECUTE en sesión activa y rechazo de proveedor/almacén previamente desactivados. FAIL en advanced.py línea 67: una RPC concurrente no devolvió invalid_origin después de UPDATE de almacén confirmado. Carrera real entre lectura del estado y modificación concurrente.
+- Corrección SQL en 4fb772387c7647e2308929d853c68e50e4d0b3c9: PERFORM ... FOR SHARE sobre proveedor y cada almacén elegido (orden canónico) antes de comprobar active; bloqueos se mantienen hasta final de transacción y se enfrentan a UPDATE concurrente. La validación posterior lee estado confirmado después de esperar bloqueos.
+- Nueva ejecución 43649768597, job 132615398065, inicialmente in_progress; verificar resultado antes de cerrar.
+- Límites: el modelo aún no implementa un flujo administrativo versionado para cambios de proveedor/almacén; FOR SHARE protege la operación RPC frente a UPDATE concurrente pero no elimina posibles interbloqueos con flujos administrativos que bloqueen filas en otro orden. No se ha probado pérdida de ACK de red real después de WAL durable.
