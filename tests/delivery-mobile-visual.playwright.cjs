@@ -36,6 +36,26 @@ const fs=require('node:fs'),path=require('node:path');
    assert.equal(await page.locator('#edNewProductOrigins input[type="checkbox"]').count(),1);
    assert.match(await page.locator('#quoteStatus').innerText(),/invalidada/);
    await page.screenshot({path:path.join(output,'delivery-'+width+'-recovered.png'),fullPage:true});
+   // Zoom 200%: effective layout width remains the target mobile CSS width.
+   await page.setViewportSize({width:width*2,height:860});
+   await page.evaluate(()=>{document.body.style.zoom='2'});
+   const zoomOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1);
+   assert.equal(zoomOverflow,false,width+' horizontal overflow at 200% zoom');
+   assert.equal(await page.locator('#deliveryPanel #edSupplierName').isDisabled(),false,'recovery must restore supplier form');
+   assert.equal(await page.locator('#deliveryPanel #edOriginName').isDisabled(),false,'recovery must restore warehouse form');
+   await page.evaluate(()=>window.demoQuarantine());
+   assert.equal(await page.locator('#deliveryPanel #edSupplierName').isDisabled(),true,'zoomed quarantine must block supplier form');
+   assert.equal(await page.locator('#deliveryPanel #edOriginName').isDisabled(),true,'zoomed quarantine must block warehouse form');
+   await page.locator('#deliveryPanel button').first().focus();
+   const tabSequence=[];
+   for(let k=0;k<12;k++){await page.keyboard.press('Tab');tabSequence.push(await page.evaluate(()=>({tag:document.activeElement?.tagName,id:document.activeElement?.id,disabled:!!document.activeElement?.disabled})))}
+   assert(tabSequence.every(x=>!x.disabled),'keyboard Tab must never focus disabled control');
+   assert(tabSequence.every(x=>x.id!=='edSupplierName'&&x.id!=='edOriginName'),'keyboard skips quarantined forms');
+   assert.equal(await page.locator('#deliveryPanel [role="alert"]').count(),1,'quarantine warning has alert semantics');
+   await page.screenshot({path:path.join(output,'delivery-'+width+'-zoom200-quarantine.png'),fullPage:true});
+   assert.equal(await page.evaluate(()=>window.demoRecover()),true);
+   await page.screenshot({path:path.join(output,'delivery-'+width+'-zoom200-recovered.png'),fullPage:true});
+
    await page.close();
    console.log('PASS Chromium '+width+'px: supplier, effective warehouse, association, quarantine, quote invalidation, recovery, screenshots');
   }
