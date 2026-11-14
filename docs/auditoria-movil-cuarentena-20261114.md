@@ -285,3 +285,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Job `Record isolated Chromium run identifier` `132599761675` **success**: seis pruebas offline `ok`; `Ran 6 tests in 0.011s`, `OK`, registro publicado en primer intento.
 - Artefacto `delivery-chromium-zoom-keyboard` ID `14133129097`, tamaño **1 132 789 bytes**, digest `sha256:762da219780bf87b7af72487b4fb76a13f294484ff3316bf4f84009bc2afd0a0`, no expirado. Se verificó metadata, no se inspeccionaron individualmente las capturas.
 - La corrección mínima `16e88741` resolvió el fallo de conteo de botones deshabilitados después del alta sintética. Sin fallos nuevos demostrados; no se altera código operativo. Alcance solo rama aislada, sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Validación de guardado inválido y revisión de integridad
+- Hallazgo por inspección: el guardado de almacén con campos obligatorios vacíos emitía `alert` sin mover el foco al campo que debía corregirse. El usuario de teclado no recibía orientación directa hacia el error.
+- Corrección `7e66e822`: en la rama de validación obligatoria, enfoca el primer campo inválido (nombre, tipo, municipio o dirección) antes del aviso existente; no altera almacenamiento ni reglas de validación.
+- Prueba Chromium `42f39be8`: intenta guardar con nombre vacío, exige foco en `edOriginName` y comprueba que tanto la representación persistida de almacenes como la revisión de cotización permanecen idénticas. Se mantienen las demás pruebas de cuarentena, persistencia, accesibilidad y zoom.
+- Estado: pendiente de ejecución CI con `head_sha` que incluya `42f39be8`; no se atribuye PASS todavía. No se modificaron Supabase, staging, producción, clientes, pedidos ni despliegues.
