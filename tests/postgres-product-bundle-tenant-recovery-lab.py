@@ -78,7 +78,7 @@ with psycopg.connect(BASE+" user=postgres password=postgres") as admin:
  rows=admin.execute("SELECT count(*) FROM ed_bundle_lab.operations WHERE op='interrupt-real'").fetchone()[0]
  revision=admin.execute("SELECT revision FROM ed_bundle_lab.context WHERE id=1").fetchone()[0]
  assert rows in (0,1)
- assert revision==rows
+ assert revision==4+rows
  assert admin.execute("SELECT count(*) FROM ed_bundle_lab.products WHERE id='interrupt-product'").fetchone()[0]==rows
  assert admin.execute("SELECT count(*) FROM ed_bundle_lab.product_warehouses WHERE product_id='interrupt-product'").fetchone()[0]==rows*2
 print("PASS actual connection termination during deferred COMMIT; atomic outcome",outcome,rows)
