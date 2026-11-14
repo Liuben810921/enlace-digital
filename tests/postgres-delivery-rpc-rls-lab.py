@@ -397,4 +397,24 @@ finally:
     latest_route=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
     run(admin,mutate,("route","cart-a",latest_route,prior_route[1]))
 
+# Minimum-distance boundary: below and equal to min_km use the same fee,
+# while a route one stored centimeter above it must use actual distance.
+min_boundary_settings=run(None,"SELECT min_km,min_fee_cup,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+min_boundary_route=run(None,"SELECT route_version,distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0]
+min_boundary_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+try:
+    min_km,min_fee,rate=min_boundary_settings
+    assert min_km>=Decimal("0.01")
+    expected_floor=max(int((min_km*rate).to_integral_value(rounding="ROUND_CEILING")),min_fee)
+    for label,distance in (("below",min_km-Decimal("0.01")),("equal",min_km),("above",min_km+Decimal("0.01"))):
+        version=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+        assert run(admin,mutate,("route","cart-a",version,distance))==[(version+1,)]
+        expected=max(int((max(distance,min_km)*rate).to_integral_value(rounding="ROUND_CEILING")),min_fee)
+        result=run(a,q,("min-km-"+label,"cart-a","customer-a",min_boundary_rev))
+        assert result==[("committed",expected,expected,0)],(label,result,expected)
+        if label!="above": assert expected==expected_floor
+finally:
+    latest_version=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+    run(admin,mutate,("route","cart-a",latest_version,min_boundary_route[1]))
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
