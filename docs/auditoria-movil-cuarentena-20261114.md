@@ -126,3 +126,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - El workflow `.github/workflows/delivery-chromium-zoom-keyboard.yml` incorpora preflight sintáctico y un paso separado de auditoría CSS real (commit `933ba386`); los artefactos existentes `ci-evidence/*` recogen resultados incluso ante fallo.
 - **CI pendiente de verificar:** estos cambios todavía no tienen resultado confirmado; las aserciones podrían revelar contrastes/focos insuficientes que habrá que corregir basándose en registros. Los tres botones son una muestra representativa, no una auditoría integral WCAG.
 - Alcance estricto: GitHub aislado, sin staging, Supabase, producción, clientes, pedidos ni despliegues.
+
+## Verificación de CI posterior a 292118b6
+- Consultado `fetch_commit_workflow_runs` para `292118b6583ddaf46e1b278305479e866fcb6feb`: `[]`. Este método solo devuelve ejecuciones disparadas por pull request; no permite obtener por sí mismo el run `push` de Chromium.
+- Verificado en la rama que `.github/workflows/delivery-chromium-zoom-keyboard.yml` contiene `node tests/delivery-real-css-focus-contrast-isolated.cjs` y sube `ci-evidence/*` mediante `if: always()`.
+- Revisado el test: carga bloques CSS reales, ejecuta Chromium a 320/375/430 px, registra contraste y estado del foco, y guarda JSON/capturas. **No se han recuperado logs ni artefactos de una nueva ejecución**; tampoco se ha ejecutado el test localmente en esta revisión.
+- Sin resultados Chromium nuevos, no se atribuye PASS ni se cambia CSS o umbrales sin defecto demostrado. Para continuar es necesario el ID/URL de la ejecución `push` de este commit, que permite consultar jobs, logs y artefactos con el conector.
