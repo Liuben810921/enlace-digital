@@ -546,3 +546,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Ensayo RPC fuerza rollback mediante error 40001 después de crear borrador sin confirmar; segundo intento conserva misma clave y revisión, verifica un solo producto/operación, replay, conflicto de payload, FORCE RLS, NOBYPASSRLS y borradores no publicados.
 - CI 43651338682, job 132620259326 inicialmente in_progress. No atribuir PASS sin logs.
 - Límites: jitter reproducible, no entropía criptográfica ni perfil de latencia productivo; la prueba RPC inyecta 40001 deliberadamente, mientras los escenarios administrativos provocan conflictos 40P01/40001 genuinos. No cubre commit de resultado desconocido a nivel de red, ni agotamiento de 40P01 específicamente.
+
+## Cierre verificado octava batería — reintentos acotados
+- Run PostgreSQL 16 #43651338682, job 132620259326: completed/success. Artefacto isolated-product-bundle-atomic ID 14136251741, SHA256 0468a292300f03c6f5936464e21d5a6fd12b0ee655013b43079f359955789772.
+- Logs PASS real 40P01 bounded automatic retry, canonical lock order, exponential backoff+jitter; PASS real 40001 SERIALIZABLE concurrent write, bounded automatic retry; PASS bounded retry exhaustion at 3 attempts; PASS rollback before automatic RPC retry, one draft and operation, replay and payload conflict; PASS FORCE RLS, non-BYPASSRLS technical owner, no published products.
+- También PASS de baterías previas: proveedor concurrente con FOR SHARE, permisos, RLS, CAS, rollback, idempotencia y aislamiento multiempresa.
+- Advertencia no bloqueante: acciones de GitHub basadas en Node.js 20 forzadas a Node.js 24. No representa fallo de PostgreSQL.
+- Límites: prueba RPC usa error 40001 inyectado después de la escritura sin confirmar; 40001 genuino se reproduce en dos transacciones SERIALIZABLE administrativas. Jitter determinista, backoff muy corto de laboratorio. No demuestra rendimiento ni ausencia de todos los deadlocks, ni pérdida de ACK real después de COMMIT durable.
+- Alcance: rama aislada y PostgreSQL desechable, sin modificar inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
