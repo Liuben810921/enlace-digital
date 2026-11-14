@@ -1,0 +1,34 @@
+name: isolated-delivery-mobile-visual
+on:
+  push:
+    branches: [plan/maestro-finalizacion-seguridad-20261113]
+    paths:
+      - index.html
+      - tests/build-delivery-mobile-visual-fixture.py
+      - tests/delivery-mobile-visual.playwright.cjs
+      - .github/workflows/isolated-delivery-mobile-visual.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chromium-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate local offline fixture from actual index.html functions
+        run: python3 tests/build-delivery-mobile-visual-fixture.py
+      - name: Install isolated Chromium browser test dependency
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run mobile functional and screenshot assertions without server or deployment
+        run: node tests/delivery-mobile-visual.playwright.cjs
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-delivery-mobile-320-375-430
+          path: tests/artifacts/delivery-mobile-visual/
+          if-no-files-found: warn
+          retention-days: 7
