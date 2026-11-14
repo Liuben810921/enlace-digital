@@ -22,6 +22,35 @@ const {chromium}=require('playwright');
    });
    // A script element preserves global lexical constants used by the extracted functions.
    await page.addScriptTag({content:moduleSource});
+   await page.addScriptTag({content:fs.readFileSync('tests/fixtures/product-bundle-atomic-isolated.js','utf8')});
+   const atomic=await page.evaluate(()=>{
+    const api=window.EDSyntheticProductBundle;
+    const suppliers=[{id:'s1',active:true},{id:'off',active:false}],warehouses=[{id:'w1',type:'proveedor',supplierId:'s1',active:true},{id:'w2',type:'proveedor',supplierId:'s1',active:true},{id:'own',type:'propio',active:true}];
+    const store=localStorage,tx=api.create(store),req={operationId:'op1',productId:'p1',type:'proveedor',supplierId:'s1',warehouseIds:['w1']};
+    const context={revision:0,suppliers,warehouses};
+    const first=tx.commit(req,context),replay=tx.commit(req,context),conflict=tx.commit({...req,warehouseIds:['w2']},context);
+    const stale=tx.commit({...req,operationId:'op2',productId:'p2'},{...context,revision:0});
+    const invalid=tx.commit({...req,operationId:'op3',productId:'p3',supplierId:'off'},{...context,revision:1});
+    const own=tx.commit({operationId:'op4',productId:'p4',type:'propio',warehouseIds:['own']},{...context,revision:1});
+    const records=tx.read();
+    return {first:first.ok&&!first.record.published&&first.record.status==='draft',replay:replay.ok&&replay.replayed,conflict:conflict.reason,stale:stale.reason,invalid:invalid.reason,own:own.ok,revision:records.revision,products:Object.keys(records.products).length};
+   });
+   assert.deepEqual(atomic,{first:true,replay:true,conflict:'idempotency_conflict',stale:'stale_revision',invalid:'inactive_supplier',own:true,revision:2,products:2},'Synthetic atomic bundle must validate draft, idempotency and revision');
+   const failure=await page.evaluate(()=>{
+    const api=window.EDSyntheticProductBundle;
+    const request={operationId:'fail',productId:'failed',type:'propio',warehouseIds:['own']};
+    const context={revision:0,warehouses:[{id:'own',type:'propio',active:true}]};
+    const base=new Map(),key=api.KEY;
+    const partial={getItem:k=>base.has(k)?base.get(k):null,setItem:(k,v)=>{base.set(k,v);if(k===key)throw Error('partial write')},removeItem:k=>base.delete(k)};
+    const a=api.create(partial).commit(request,context);
+    const restored=base.has(key)===false;
+    let writes=0;
+    const broken={getItem:k=>base.has(k)?base.get(k):null,setItem:(k,v)=>{if(k===key&&++writes===2)throw Error('rollback blocked');base.set(k,v);if(k===key)throw Error('partial write')},removeItem:k=>{throw Error('rollback blocked')}};
+    const tx=api.create(broken),b=tx.commit(request,context);
+    return {first:a.reason,restored,second:b.reason,blocked:tx.blocked()};
+   });
+   assert.deepEqual(failure,{first:'write_failed',restored:true,second:'rollback_failed',blocked:true},'Synthetic write and rollback failures must be isolated and quarantined');
+   console.log('PASS synthetic atomic product bundle draft, idempotency, revision, write rollback and quarantine');
    await page.evaluate(()=>{
     localStorage.setItem('ed_delivery_suppliers_demo_v1',JSON.stringify([{id:'sup',name:'Proveedor sintético',active:true}]));
     localStorage.setItem('ed_delivery_origins_demo_v1',JSON.stringify([{id:'own',name:'Almacén sintético',type:'propio',active:true,address:'Prueba',municipality:'Playa'}]));
