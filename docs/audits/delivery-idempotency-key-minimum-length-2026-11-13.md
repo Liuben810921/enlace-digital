@@ -12,4 +12,8 @@ En PostgreSQL 16 desechable, la prueba comprueba que la clave vacía produce err
 ## Criterio de cierre
 Si CI pasa, cerrar sin cambios SQL; si falla, revisar logs y corregir únicamente el defecto demostrado.
 
-**Estado: pendiente de GitHub Actions.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; CI aprobada y sin modificaciones SQL.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia de cierre
+
+[GitHub Actions #43536253738](https://github.com/Liuben810921/enlace-digital/actions/runs/43536253738) terminó `completed/success` para el commit de pruebas `9794850bf522b0f447cd9b1d62a7be90e5fa265f`. El trabajo `test` (ID `132265859854`) terminó `completed/success`. Se verificó el rechazo de una clave vacía sin persistencia, la aceptación de una clave de un carácter y el replay sin duplicación. No se reprodujo defecto SQL; no se modificó SQL. Cierre exclusivamente documental, sin merge ni despliegue; no se detectaron cambios concurrentes antes del cierre.
