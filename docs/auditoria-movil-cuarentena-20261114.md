@@ -174,3 +174,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Alcance del cambio: exclusivamente `.github/workflows/delivery-chromium-zoom-keyboard.yml`. Se mantienen los mismos jobs, permisos, tests, artefactos y registro de ejecución. Las versiones v6 de estas acciones usan Node 24; la ejecución efectiva necesita un runner compatible.
 - Consulta posterior al commit: el registro automático seguía apuntando a `run_id=43643381906` / `head_sha=41346880283708b3cc7742259b0e5aec7045de9f`, anterior a `1429c3bf`. **No hay aún regresión confirmada ni PASS de la migración**. Revisar una nueva entrada con SHA igual o posterior a `1429c3bf`, recuperar jobs/logs/artefactos y comprobar ausencia de aviso Node 20.
 - No se ha modificado Supabase, staging, producción, clientes, pedidos ni se ha desplegado.
+
+## Revisión de regresión v6 posterior a 5b9249b7
+- El registro automático consultado apunta a `run_id=43643426540`, `head_sha=c777d491ec21adbda18c4efd4e4046c6c11f97ce`, `chromium_job_result=success`. **Esta ejecución es anterior** a la migración `1429c3bf`; no demuestra que las acciones v6 funcionen.
+- Se reabrió el workflow desde la rama aislada: `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v6`; `runs-on: ubuntu-24.04`, `node-version: '22'`, `package-manager-cache: false`. Configuración presente; ejecución posterior aún no verificada.
+- `fetch_commit_workflow_runs(1429c3bf)` devolvió una lista vacía, insuficiente para concluir ausencia de ejecuciones `push`. No hay run ID posterior disponible para recuperar logs o artefactos.
+- No se cambió código ni se revirtió la actualización por falta de fallos demostrados. Pendiente: cuando el índice registre un `head_sha` igual o posterior a `1429c3bf`, consultar jobs, logs y artefactos; confirmar PASS y ausencia de aviso Node 20. El registro almacena una sola ejecución, por lo que su actualización puede retrasarse o ser reemplazada por una ejecución posterior.
