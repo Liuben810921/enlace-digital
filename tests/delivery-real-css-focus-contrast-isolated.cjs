@@ -11,6 +11,7 @@ const contrast=(a,b)=>{const x=luminance(rgb(a)),y=luminance(rgb(b));return (Mat
 (async()=>{
  const browser=await chromium.launch({headless:true});
  const results=[];
+ fs.mkdirSync('ci-evidence',{recursive:true});
  try{
   for(const width of [320,375,430]){
    const page=await browser.newPage({viewport:{width,height:850}});
