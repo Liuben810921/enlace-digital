@@ -51,6 +51,32 @@ const {chromium}=require('playwright');
    });
    assert.deepEqual(failure,{first:'write_failed',restored:true,second:'rollback_failed',blocked:true},'Synthetic write and rollback failures must be isolated and quarantined');
    console.log('PASS synthetic atomic product bundle draft, idempotency, revision, write rollback and quarantine');
+   const concurrency=await page.evaluate(()=>{
+    const api=window.EDSyntheticProductBundle;
+    const records=new Map(),store={getItem:k=>records.has(k)?records.get(k):null,setItem:(k,v)=>records.set(k,v),removeItem:k=>records.delete(k)};
+    const context=revision=>({revision,warehouses:[{id:'own',type:'propio',active:true}]});
+    const request=(op,id)=>({operationId:op,productId:id,type:'propio',warehouseIds:['own']});
+    const writerA=api.create(store),writerB=api.create(store);
+    const first=writerA.commit(request('race-a','product-a'),context(0));
+    const losing=writerB.commit(request('race-b','product-b'),context(0));
+    const retry=writerB.commit(request('race-b','product-b'),context(1));
+    const unknown=writerA.commit(request('race-a','product-a'),context(0));
+    const conflicting=writerB.commit(request('race-a','different-product'),context(2));
+    const after=writerB.read();
+    return {first:first.ok,losing:losing.reason,retry:retry.ok,unknown:unknown.ok&&unknown.replayed,conflicting:conflicting.reason,revision:after.revision,count:Object.keys(after.products).length,allDraft:Object.values(after.products).every(p=>p.status==='draft'&&p.published===false)};
+   });
+   assert.deepEqual(concurrency,{first:true,losing:'stale_revision',retry:true,unknown:true,conflicting:'idempotency_conflict',revision:2,count:2,allDraft:true},'Sequential competing writers must reject stale revision and recover unknown commit by replay');
+   const persistentQuarantine=await page.evaluate(()=>{
+    const api=window.EDSyntheticProductBundle,values=new Map();
+    const store={getItem:k=>values.has(k)?values.get(k):null,setItem:(k,v)=>{values.set(k,v);if(k===api.KEY)throw Error('synthetic partial write')},removeItem:()=>{throw Error('synthetic rollback failure')}};
+    const req={operationId:'q1',productId:'q-product',type:'propio',warehouseIds:['own']},ctx={revision:0,warehouses:[{id:'own',type:'propio',active:true}]};
+    const first=api.create(store).commit(req,ctx);
+    const restarted=api.create(store),again=restarted.commit(req,ctx);
+    return {failure:first.reason,persisted:values.get(api.QUARANTINE)==='1',blocked:restarted.blocked(),retry:again.reason,revision:JSON.parse(values.get(api.KEY)).revision};
+   });
+   assert.deepEqual(persistentQuarantine,{failure:'rollback_failed',persisted:true,blocked:true,retry:'quarantine',revision:1},'Quarantine must persist across fresh transaction instances after failed rollback');
+   console.log('PASS synthetic sequential concurrency, unknown commit replay, revision conflict and persistent quarantine');
+
    await page.evaluate(()=>{
     localStorage.setItem('ed_delivery_suppliers_demo_v1',JSON.stringify([{id:'sup',name:'Proveedor sintético',active:true}]));
     localStorage.setItem('ed_delivery_origins_demo_v1',JSON.stringify([{id:'own',name:'Almacén sintético',type:'propio',active:true,address:'Prueba',municipality:'Playa'}]));
