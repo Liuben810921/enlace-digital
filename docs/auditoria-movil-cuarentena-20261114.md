@@ -537,3 +537,12 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se mantienen PASS de RLS forzada dentro de SECURITY DEFINER sin BYPASSRLS, privilegios mínimos, CAS, aislamiento multiempresa, claves foráneas compuestas, rollback y recuperación idempotente.
 - Límite: el reintento administrativo fue manual en el laboratorio, no implementa todavía política automática acotada de backoff/jitter ni manejo de 40001; el ciclo de dos almacenes no demuestra ausencia de otros deadlocks. La prueba de respuesta descartada tras COMMIT es simulación a nivel de aplicación. Warning Node.js 20 de GitHub Actions no bloqueante.
 - Alcance: solo PostgreSQL desechable en GitHub Actions y rama aislada. No inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Octava batería — reintentos automáticos 40P01 y 40001
+- tests/postgres-product-bundle-integrated-retries.py, commit 2f9f1ad02f0f996604d138dbb1a883583ccb28e9; workflow commit 556cd0fdc3e73d00e032212e5b68de10fe08e592.
+- retry_transaction: conexión/transacción nueva por intento, rollback implícito al error, máximo tres intentos, backoff exponencial acotado a 120 ms y jitter determinista de hasta 6 ms; solo SQLSTATE 40P01 y 40001 son reintentables, los demás se propagan.
+- Dos conexiones generan un deadlock 40P01 real sobre almacenes w1/w2 en orden inverso; reintento usa orden canónico. Dos transacciones SERIALIZABLE leen/escriben la revisión de empresa B para generar 40001 real.
+- Ensayo de agotamiento fuerza error SQLSTATE 40001 en DO PostgreSQL, comprueba exactamente tres intentos sin mutación persistida.
+- Ensayo RPC fuerza rollback mediante error 40001 después de crear borrador sin confirmar; segundo intento conserva misma clave y revisión, verifica un solo producto/operación, replay, conflicto de payload, FORCE RLS, NOBYPASSRLS y borradores no publicados.
+- CI 43651338682, job 132620259326 inicialmente in_progress. No atribuir PASS sin logs.
+- Límites: jitter reproducible, no entropía criptográfica ni perfil de latencia productivo; la prueba RPC inyecta 40001 deliberadamente, mientras los escenarios administrativos provocan conflictos 40P01/40001 genuinos. No cubre commit de resultado desconocido a nivel de red, ni agotamiento de 40P01 específicamente.
