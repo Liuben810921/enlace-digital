@@ -1499,6 +1499,10 @@ function edDeliveryQuarantine(){
  edDeliveryQuarantinedInSession=true;
  try{localStorage.setItem(ED_DELIVERY_QUARANTINE_KEY,'1')}catch(e){}
 }
+function edDeliveryQuarantineRecoverFromPanel(){
+ if(edDeliveryRecoverQuarantine()){alert('Asociaciones verificadas. Las cotizaciones anteriores quedan invalidadas.');adminTab('delivery')}
+ else alert('No se pudo verificar la recuperación. El bloqueo continúa activo.');
+}
 function edDeliveryRecoverQuarantine(){
  if(!edDeliveryIsQuarantined())return true;
  try{
@@ -1776,12 +1780,13 @@ function edDeliveryLocationPreview(){
 
 function edDeliveryOriginsPanel(){
  const items=edDeliveryOriginsRead();
+ const quarantineNotice=edDeliveryIsQuarantined()?'<div class="panel" role="alert" style="border:2px solid #b42318;padding:12px;margin:10px 0"><strong>Asociaciones bloqueadas</strong><p class="note">Falló la recuperación de datos locales. Revisa los almacenes y proveedores antes de continuar.</p><button type="button" class="secondary" onclick="edDeliveryQuarantineRecoverFromPanel()">Verificar y desbloquear</button></div>':'';
  const rows=items.map(p=>'<div class="panel" style="padding:12px;margin:10px 0"><strong>'+esc(p.name)+'</strong> · '+(p.type==='proveedor'?'Proveedor':'Almacén propio')+
  '<p class="note">'+esc([p.address,p.municipality,'La Habana'].filter(Boolean).join(', '))+'</p>'+
  '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+'</p>'+
  '<button type="button" class="secondary" onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div>').join('');
- return '<div class="panel"><h3>Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+'<div><button type="button" class="secondary" onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary" onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div></div>').join('')+'<div class="field"><label>Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
+ return quarantineNotice+'<div class="panel"><h3>Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+'<div><button type="button" class="secondary" onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary" onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div></div>').join('')+'<div class="field"><label>Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
  (rows||'<p class="note">Todavía no hay puntos de salida registrados.</p>')+
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><input type="hidden" id="edOriginId">'+
  '<div class="field"><label>Nombre del punto</label><input id="edOriginName" maxlength="120" placeholder="Ej.: Almacén principal"></div>'+
@@ -1842,7 +1847,7 @@ function edDeliveryOriginToggle(id){
 const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(e){return {}}}
 function edProductOriginsSave(productId,ids){
- if(edDeliveryIsQuarantined()&&!edDeliveryRecoverQuarantine()){alert('Asociaciones bloqueadas: revisa los almacenes antes de continuar.');return false}
+ if(edDeliveryIsQuarantined()){alert('Asociaciones bloqueadas: revisa los almacenes y confirma la recuperación en Administración de entregas.');return false}
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&(p.type!=='proveedor'||edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))))){alert('Selecciona únicamente almacenes activos y proveedores habilitados.');return false}
  const map=edProductOriginsRead(),key=String(productId);
  let previous;
