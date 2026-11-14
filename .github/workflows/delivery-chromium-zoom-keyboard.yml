@@ -61,6 +61,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
+      - name: Test run registry ordering and retries offline
+        run: python3 -m unittest discover -s tests -p test_chromium_run_registry.py -v
       - name: Publish non-sensitive run metadata
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
