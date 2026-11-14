@@ -41,6 +41,19 @@ const {chromium}=require('playwright');
    assert.equal(await page.evaluate(()=>document.activeElement?.id),'edOriginType','Tab must advance from name to type');
    await page.evaluate(()=>document.activeElement.blur());
    console.log('PASS warehouse editing focus and keyboard order');
+   await page.getByRole('button',{name:'Limpiar'}).click();
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edOriginName','Reset must focus warehouse name');
+   assert.equal(await page.locator('#edOriginName').inputValue(),'','Reset must clear warehouse name');
+   await page.getByRole('button',{name:'Editar punto de salida Almacén sintético'}).click();
+   await page.getByRole('button',{name:'Guardar punto'}).click();
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edDeliveryPanelTitle','Saving warehouse must restore focus to heading');
+   assert.equal(await page.evaluate(()=>edDeliveryOriginsRead().find(x=>x.id==='own')?.name),'Almacén sintético','Warehouse persistence failed');
+   await page.locator('#edSupplierName').fill('Proveedor adicional');
+   await page.getByRole('button',{name:'+ Registrar proveedor'}).click();
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edDeliveryPanelTitle','Adding supplier must restore focus');
+   assert.equal(await page.evaluate(()=>edDeliverySuppliersRead().some(x=>x.name==='Proveedor adicional')),true,'Supplier persistence failed');
+   console.log('PASS reset/save/add focus and local persistence');
+
 
 
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
