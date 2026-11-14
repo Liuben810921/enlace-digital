@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const html=fs.readFileSync('tests/fixtures/delivery-warehouse-mobile-demo.html','utf8');
+assert.match(html,/<meta name="viewport"/);
+assert.match(html,/Administración de entregas/);
+for(const id of ['supplierForm','warehouseForm','warehouseType','warehouseSupplier','warehouseLat','warehouseLng','warehouseCancel','assignmentForm','originChoices'])assert.match(html,new RegExp('id="'+id+'"'));
+for(const action of ['supplier-edit','supplier-toggle','warehouse-edit','warehouse-toggle'])assert.match(html,new RegExp(action));
+assert.match(html,/localStorage\.setItem\(KEY/);
+assert.doesNotMatch(html,/fetch\(|XMLHttpRequest|supabase\.co|https?:\/\//);
+assert.match(html,/w\.version\+1/);
+const scripts=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)];
+assert.equal(scripts.length,1);
+new vm.Script(scripts[0][1]);
+console.log('PASS: responsive supplier/warehouse editor fixture syntax, actions, versioning, local-only storage');
