@@ -72,7 +72,7 @@ ALTER TABLE ed_bundle_lab.product_warehouses FORCE ROW LEVEL SECURITY;
 CREATE POLICY owner_product_warehouses ON ed_bundle_lab.product_warehouses TO ed_bundle_owner USING(true) WITH CHECK(true);
 GRANT SELECT,INSERT ON ed_bundle_lab.product_warehouses TO ed_bundle_owner;
 CREATE FUNCTION ed_bundle_lab.commit_multi(p_op text,p_product text,p_supplier text,p_warehouses text[],p_kind text,p_expected bigint)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_bundle_lab AS $
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_bundle_lab AS $$
 DECLARE v_revision bigint; v_payload jsonb; v_previous ed_bundle_lab.operations%ROWTYPE; v_result jsonb; v_sorted text[];
 BEGIN
  IF p_op IS NULL OR length(trim(p_op))=0 OR p_product IS NULL OR length(trim(p_product))=0 OR p_kind IS NULL OR p_kind NOT IN ('proveedor','propio') OR p_warehouses IS NULL OR cardinality(p_warehouses)=0 THEN
@@ -107,7 +107,7 @@ BEGIN
  v_result=jsonb_build_object('status','draft','product',p_product,'revision',v_revision+1,'published',false,'warehouses',v_sorted);
  INSERT INTO ed_bundle_lab.operations VALUES(p_op,v_payload,v_result);
  RETURN v_result;
-END $;
+END $$;
 ALTER FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) OWNER TO ed_bundle_owner;
 REVOKE ALL ON FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ed_bundle_lab.commit_multi(text,text,text,text[],text,bigint) TO ed_bundle_client;
