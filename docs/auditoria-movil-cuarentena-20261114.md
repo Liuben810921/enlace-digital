@@ -554,3 +554,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Advertencia no bloqueante: acciones de GitHub basadas en Node.js 20 forzadas a Node.js 24. No representa fallo de PostgreSQL.
 - Límites: prueba RPC usa error 40001 inyectado después de la escritura sin confirmar; 40001 genuino se reproduce en dos transacciones SERIALIZABLE administrativas. Jitter determinista, backoff muy corto de laboratorio. No demuestra rendimiento ni ausencia de todos los deadlocks, ni pérdida de ACK real después de COMMIT durable.
 - Alcance: rama aislada y PostgreSQL desechable, sin modificar inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Novena batería — resultado COMMIT incierto y presupuesto temporal
+- Nuevo tests/postgres-product-bundle-integrated-unknown-commit.py commit f4a5c6459a4ce1dc783515ffff42e1894db1f8fc; integrado en workflow commit ac4e8f8a29a17cd47f1ceb514a16637f5063f8f6.
+- Comprueba respuesta descartada después de COMMIT confirmado, replay con misma clave y un único borrador; conexión cerrada antes de COMMIT con rollback servidor, recuperación posterior con misma clave.
+- Política experimental de presupuesto temporal comprobada mediante reloj inyectable: deadline antes de intento y de espera, máximo tres intentos, SQLSTATE 40P01/40001 reintentables y 23505 no reintentable. La octava batería ya prueba backoff y jitter; esta añade deadline reproducible.
+- Comprueba revisión CAS, RLS FORCE, propietario NOBYPASSRLS y ausencia de productos publicados.
+- Run inicial 43652600357, job 132624144521 observado in_progress; falta validar logs y artefacto.
+- Límites: el COMMIT durable con respuesta perdida es una simulación de aplicación; el cierre de conexión se realiza antes de COMMIT y no simula incertidumbre de ACK de red durante COMMIT. Reloj de presupuesto es sintético, no valida tiempo real de red ni cancelación de consulta ya iniciada.
