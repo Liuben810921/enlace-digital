@@ -596,3 +596,13 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se comprueba FORCE RLS en tablas, SECURITY DEFINER de RPC, propietario sin BYPASSRLS y ausencia de productos publicados.
 - Límite explícito: desenlace B es pérdida controlada de respuesta a nivel de aplicación, NO pérdida real del ACK TCP durante un COMMIT confirmado. La carrera física exacta entre durabilidad WAL y desconexión no se demuestra.
 - CI #43655454545 job 132632849392 inicialmente in_progress; logs y artefactos pendientes de verificación.
+
+## Cierre verificado undécima batería — ambos desenlaces de COMMIT
+- GitHub Actions run #43655454545, job 132632849392: completed/success.
+- Artefacto isolated-product-bundle-atomic ID 14137633865, SHA256 09e0493258bbcb982d1786afb7fb352c8a606001a2661c94d4c457ed5dfffb05, no expirado.
+- Logs PASS interrupted-COMMIT rollback reconciled once; previous laboratory outcome retained.
+- Logs PASS durable COMMIT with application-discarded response and closed connection, same-key replay once.
+- Logs PASS both outcomes reconciled, no duplicate, CAS, FORCE RLS, SECURITY DEFINER NOBYPASSRLS, unpublished drafts.
+- Logs anteriores también PASS: interrupción real durante COMMIT (connection_lost 0), reconciliación por clave, lock_timeout 55P03, statement_timeout 57014, 40P01, 40001, privilegios mínimos, aislamiento y rollback.
+- Límites: el desenlace durable reproduce respuesta descartada por la aplicación tras COMMIT confirmado, no pérdida TCP de ACK durante COMMIT; el desenlace de terminación real observado fue rollback (cero registros). No se afirma validación de pérdida real de respuesta de red después de WAL durable.
+- Advertencia no bloqueante Node.js 20/24 para checkout@v4/upload-artifact@v4. Sin acceso a inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
