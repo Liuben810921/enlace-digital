@@ -14,7 +14,7 @@ const {chromium}=require('playwright');
   for(const width of [320,375,430]){
    const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
    page.on('dialog',dialog=>dialog.accept());
-   await page.setContent('<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px Arial;margin:0;padding:12px;box-sizing:border-box}*,*:before,*:after{box-sizing:border-box}.panel{border:1px solid #ddd;padding:10px;margin:8px 0}.field{margin:8px 0}input,select,button{max-width:100%}button:focus-visible{outline:3px solid #0b5673;outline-offset:2px}</style></head><body><main id="panel"></main></body></html>');
+   await page.route('http://ed.local/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px Arial;margin:0;padding:12px;box-sizing:border-box}*,*:before,*:after{box-sizing:border-box}.panel{border:1px solid #ddd;padding:10px;margin:8px 0}.field{margin:8px 0}input,select,button{max-width:100%}button:focus-visible{outline:3px solid #0b5673;outline-offset:2px}</style></head><body><main id="panel"></main></body></html>'}));await page.goto('http://ed.local/');
    await page.evaluate(({src})=>{
     window.esc=s=>String(s);
     window.municipios=['Playa'];
