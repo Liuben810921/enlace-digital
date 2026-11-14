@@ -433,4 +433,23 @@ try:
 finally:
     run(None,"UPDATE ed_rpc_lab.settings SET min_fee_cup=%s WHERE singleton=true RETURNING min_fee_cup",(fee_crossover_original[0],))
 
+# Tariff upper-bound regression: reject a rate above 100000 without
+# changing settings/audit; accept the exact cap and quote deterministically.
+cap_before=run(None,"SELECT version,rate_cup_per_km,min_km,min_fee_cup FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+cap_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.audit")[0][0]
+assert_error(admin,u,errors.InvalidParameterValue,(cap_before[0],Decimal("100000.01"),"Tarifa superior al limite"))
+assert run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")==[(cap_before[0],cap_before[1])]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.audit")==[(cap_audit_before,)]
+try:
+    assert run(admin,u,(cap_before[0],Decimal("100000"),"Tarifa maxima permitida"))==[(cap_before[0]+1,)]
+    cap_distance=run(None,"SELECT distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+    cap_revision=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+    cap_expected=max(int((max(cap_distance,cap_before[2])*Decimal("100000")).to_integral_value(rounding="ROUND_CEILING")),cap_before[3])
+    cap_quote=run(a,q,("tariff-exact-cap","cart-a","customer-a",cap_revision))
+    assert cap_quote==[("committed",cap_expected,cap_expected,0)],cap_quote
+finally:
+    cap_current=run(None,"SELECT version,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+    if cap_current[1]!=cap_before[1]:
+        assert run(admin,u,(cap_current[0],cap_before[1],"Restaurar tarifa sintetica"))==[(cap_current[0]+1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
