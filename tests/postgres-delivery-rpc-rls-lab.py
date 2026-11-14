@@ -417,4 +417,20 @@ finally:
     latest_version=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
     run(admin,mutate,("route","cart-a",latest_version,min_boundary_route[1]))
 
+# Exact minimum-fee crossover: one CUP below, equal to, and one CUP above
+# the distance-derived fee must yield the expected maximum without off-by-one.
+fee_crossover_original=run(None,"SELECT min_fee_cup,min_km,rate_cup_per_km FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+fee_crossover_route=run(None,"SELECT route_version,distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0]
+fee_crossover_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+fee_crossover_base=int((max(fee_crossover_route[1],fee_crossover_original[1])*fee_crossover_original[2]).to_integral_value(rounding="ROUND_CEILING"))
+assert fee_crossover_base>=1
+try:
+    for label,minimum in (("below",fee_crossover_base-1),("equal",fee_crossover_base),("above",fee_crossover_base+1)):
+        run(None,"UPDATE ed_rpc_lab.settings SET min_fee_cup=%s WHERE singleton=true RETURNING min_fee_cup",(minimum,))
+        expected=max(fee_crossover_base,minimum)
+        result=run(a,q,("fee-crossover-"+label,"cart-a","customer-a",fee_crossover_rev))
+        assert result==[("committed",expected,expected,0)],(label,result,expected)
+finally:
+    run(None,"UPDATE ed_rpc_lab.settings SET min_fee_cup=%s WHERE singleton=true RETURNING min_fee_cup",(fee_crossover_original[0],))
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
