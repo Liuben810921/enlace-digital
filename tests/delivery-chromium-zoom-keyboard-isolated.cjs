@@ -62,6 +62,18 @@ const {chromium}=require('playwright');
    await page.keyboard.press('Tab');
    const focused=await page.evaluate(()=>document.activeElement?.textContent?.trim()||'');
    assert.match(focused,/Verificar y desbloquear/,'Keyboard focus should reach recovery control first');
+   const focusStyle=await page.evaluate(()=>{
+    const el=document.activeElement;
+    const style=getComputedStyle(el);
+    return {outlineStyle:style.outlineStyle,outlineWidth:parseFloat(style.outlineWidth),outlineColor:style.outlineColor,outlineOffset:style.outlineOffset,focusVisible:el.matches(':focus-visible')};
+   });
+   assert.equal(focusStyle.focusVisible,true,'Recovery control must be focus-visible with keyboard');
+   assert.notEqual(focusStyle.outlineStyle,'none','Recovery control must show focus outline');
+   assert.ok(focusStyle.outlineWidth>=2,'Recovery focus outline must be at least 2px');
+   await page.keyboard.press('Shift+Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'','Shift+Tab must leave recovery control');
+   await page.keyboard.press('Tab');
+   assert.match(await page.evaluate(()=>document.activeElement?.textContent?.trim()||''),/Verificar y desbloquear/,'Tab must return to recovery control after Shift+Tab');
    await page.keyboard.press('Enter');
    assert.equal(await page.evaluate(()=>edDeliveryIsQuarantined()),false,'Keyboard recovery failed');
    assert.equal(await page.evaluate(()=>edDeliveryQuoteStillValid(window.__snapshot)),false,'Old quote was not invalidated');
