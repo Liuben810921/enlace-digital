@@ -484,4 +484,15 @@ assert key_limit_first[0][0]=="committed",key_limit_first
 assert run(a,q,(key_limit_valid,"cart-a","customer-a",key_limit_rev))==[("replayed",*key_limit_first[0][1:])]
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(key_limit_before+1,)]
 
+# Minimum idempotency-key length boundary: reject empty keys without
+# persistence; accept a single meaningful character and replay exactly once.
+min_key_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+min_key_before=run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")[0][0]
+assert_error(a,q,errors.InvalidParameterValue,("","cart-a","customer-a",min_key_rev))
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(min_key_before,)]
+min_key_first=run(a,q,("z","cart-a","customer-a",min_key_rev))
+assert min_key_first[0][0]=="committed",min_key_first
+assert run(a,q,("z","cart-a","customer-a",min_key_rev))==[("replayed",*min_key_first[0][1:])]
+assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(min_key_before+1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
