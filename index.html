@@ -1489,14 +1489,16 @@ function edDeliveryOriginsWrite(items){
 const ED_DELIVERY_SUPPLIERS_KEY='ed_delivery_suppliers_demo_v1';
 function edDeliverySuppliersRead(){try{const v=JSON.parse(localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)||'[]');return Array.isArray(v)?v.filter(p=>p&&typeof p.id==='string'&&typeof p.name==='string'):[]}catch(e){return []}}
 const ED_DELIVERY_CONTEXT_REV_KEY='ed_delivery_context_revision_demo_v1';
-function edDeliveryContextRevision(){const n=Number(localStorage.getItem(ED_DELIVERY_CONTEXT_REV_KEY)||0);return Number.isSafeInteger(n)&&n>=0?n:0}
+function edDeliveryContextRevision(){try{const raw=localStorage.getItem(ED_DELIVERY_CONTEXT_REV_KEY);if(raw===null)return 0;const n=Number(raw);return Number.isSafeInteger(n)&&n>=0?n:null}catch(e){return null}}
 function edDeliveryContextInvalidate(reason){
- const next=edDeliveryContextRevision()+1;
+ const current=edDeliveryContextRevision();
+ if(current===null||current>=Number.MAX_SAFE_INTEGER){alert('No se pudo validar la versión de la cotización local.');return null}
+ const next=current+1;
  try{localStorage.setItem(ED_DELIVERY_CONTEXT_REV_KEY,String(next));return next}
  catch(e){alert('No se pudo invalidar la cotización local. No utilices tarifas anteriores.');return null}
 }
 function edDeliveryQuoteSnapshot(){return {contextRevision:edDeliveryContextRevision(),status:'pending_verified_road_distance'}}
-function edDeliveryQuoteStillValid(snapshot){return !!snapshot&&snapshot.contextRevision===edDeliveryContextRevision()&&snapshot.status==='pending_verified_road_distance'}
+function edDeliveryQuoteStillValid(snapshot){const current=edDeliveryContextRevision();return current!==null&&!!snapshot&&snapshot.contextRevision!==null&&snapshot.contextRevision===current&&snapshot.status==='pending_verified_road_distance'}
 function edDeliverySupplierEdit(id){
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
  const name=prompt('Nombre del proveedor',supplier.name);if(name===null)return;
@@ -1533,7 +1535,7 @@ function edProductOriginSupplierChange(mode,productId){
  if(!selector)return;
  const supplierId=selector.value;
  const items=edDeliveryOriginsRead().filter(p=>edDeliveryOriginEligible(p.id,'proveedor',supplierId));
- const checked=new Set([...target.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value));
+ const checked=new Set([...target.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value).filter(id=>items.some(p=>p.id===id)));
  // Do not silently select a warehouse after switching suppliers.
  const list=target.querySelector('.ed-product-origin-list');
  list.innerHTML=items.map(p=>'<label style="display:block;padding:8px 0"><input type="checkbox" class="ed-product-origin" value="'+esc(p.id)+'" '+(checked.has(p.id)?'checked':'')+'> '+esc(p.name)+' — '+esc(p.municipality)+'</label>').join('')||'<p class="note">No hay almacenes registrados para este proveedor.</p>';
@@ -1816,8 +1818,16 @@ const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(e){return {}}}
 function edProductOriginsSave(productId,ids){
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&(p.type!=='proveedor'||edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))))){alert('Selecciona únicamente almacenes activos y proveedores habilitados.');return false}
- const map=edProductOriginsRead();map[String(productId)]=ids;
- try{localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));edDeliveryContextInvalidate('product_origins');return true}catch(e){alert('No se pudo guardar la asociación local de almacenes.');return false}
+ const map=edProductOriginsRead(),key=String(productId),previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+ map[key]=ids;
+ try{
+  localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));
+  if(edDeliveryContextInvalidate('product_origins')===null){
+   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous)}catch(rollbackError){}
+   alert('Asociación no confirmada: comprueba el almacenamiento local antes de continuar.');return false;
+  }
+  return true
+ }catch(e){alert('No se pudo guardar la asociación local de almacenes.');return false}
 }
 function edDeliveryEffectiveOrigins(productId,type,supplierId){
  const ids=edProductOriginsRead()[String(productId)]||[];
