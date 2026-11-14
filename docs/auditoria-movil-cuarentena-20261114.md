@@ -485,3 +485,13 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Artefacto isolated-product-bundle-atomic ID 14135432429, SHA256 d407a8cabde1e55667e3d026423289b5690b84f65f509460e95bf6a3ad4392ec, no expirado. Logs muestran errores de permisos y FK esperados en pruebas negativas, no fallos CI. Aviso deprecación Node.js 20 para checkout@v4/upload-artifact@v4 no bloqueante.
 - Límites: rol postgres privilegiado únicamente para aserciones negativas de FK; roles LOGIN y contraseñas sintéticas. RLS probada con session_user y función de diagnóstico del laboratorio; no demuestra autenticación de producción, revocación de roles en vivo, integración de catálogos reales, publicación ni todos los fallos posibles de red. La prueba de COMMIT demuestra terminación previa a persistencia, no la ventana de confirmación durable con respuesta perdida.
 - Sin cambios en inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Sexta batería avanzada: revocación, estados concurrentes y replay durable
+- Archivo tests/postgres-product-bundle-integrated-advanced.py; ejecución agregada al workflow PostgreSQL aislado en commit 57ddfab5f5280f8f86b2dd7de6ba6eb919b20db3.
+- Run inicial 43649572768, job 132614804627, observado in_progress; no declarar aprobado sin logs y artefactos.
+- Revocación: conexión de empresa A ya abierta; REVOKE EXECUTE por rol administrativo del laboratorio, denegación esperada para sentencia RPC posterior; GRANT y recuperación en la misma conexión.
+- Estado: proveedor desactivado y almacén desactivado tras commit deben rechazar nuevos borradores. Prueba concurrente de UPDATE de almacén sin commit frente a RPC busca detectar validación de estado obsoleto.
+- Durable: COMMIT completado, respuesta ignorada deliberadamente por cliente, reconexión y replay idempotente con misma clave; conflicto para payload diferente; un solo producto y operación.
+- Riesgo que requiere validación: SELECT sin bloqueo explícito de almacenes/proveedores puede observar la última versión confirmada durante UPDATE concurrente; la carrera debe considerarse fallo si la operación publica borrador con origen que fue desactivado antes de su commit. Corregir únicamente tras observarlo en CI.
+- Límite: el ensayo de respuesta perdida descarta el resultado en el cliente después de COMMIT; no provoca caída real de red después del flush WAL.
+- Exclusivamente sintético, sin modificar inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
