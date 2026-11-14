@@ -291,3 +291,8 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección `7e66e822`: en la rama de validación obligatoria, enfoca el primer campo inválido (nombre, tipo, municipio o dirección) antes del aviso existente; no altera almacenamiento ni reglas de validación.
 - Prueba Chromium `42f39be8`: intenta guardar con nombre vacío, exige foco en `edOriginName` y comprueba que tanto la representación persistida de almacenes como la revisión de cotización permanecen idénticas. Se mantienen las demás pruebas de cuarentena, persistencia, accesibilidad y zoom.
 - Estado: pendiente de ejecución CI con `head_sha` que incluya `42f39be8`; no se atribuye PASS todavía. No se modificaron Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Seguimiento de CI — guardado inválido y revisión de cotizaciones
+- Cuatro consultas del registro automático devolvieron `run_id=43644745405`, `head_sha=58744cd738d4a912cb0917b3c00cd5f8fef5a15e`, `chromium_job_result=success`, anterior a la regresión `42f39be8`.
+- No se atribuye PASS a la prueba nueva `PASS invalid warehouse save focuses field without persistence or quote invalidation` sin ejecución que incluya `42f39be8`.
+- La ausencia de run nuevo en el registro no demuestra fallo del workflow ni autoriza modificaciones. Mantener el código intacto y verificar jobs, logs, seis tests offline y artefactos cuando se publique un `head_sha` apropiado. Solo GitHub, rama aislada, sin Supabase, staging, producción, clientes, pedidos ni despliegues.
