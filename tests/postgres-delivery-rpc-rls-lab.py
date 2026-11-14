@@ -452,4 +452,23 @@ finally:
     if cap_current[1]!=cap_before[1]:
         assert run(admin,u,(cap_current[0],cap_before[1],"Restaurar tarifa sintetica"))==[(cap_current[0]+1,)]
 
+# Maximum route-distance boundary: reject a distance beyond 10000 km
+# without changing route versions/audit, and quote at the exact maximum.
+max_route_before=run(None,"SELECT route_version,distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0]
+max_route_audit_before=run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")[0][0]
+assert_error(admin,mutate,errors.InvalidParameterValue,("route","cart-a",max_route_before[0],Decimal("10000.01")))
+assert run(None,"SELECT route_version,distance_km FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")==[max_route_before]
+assert run(None,"SELECT count(*) FROM ed_rpc_lab.context_audit")==[(max_route_audit_before,)]
+try:
+    assert run(admin,mutate,("route","cart-a",max_route_before[0],Decimal("10000")))==[(max_route_before[0]+1,)]
+    max_route_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+    max_route_rate=run(None,"SELECT rate_cup_per_km,min_fee_cup FROM ed_rpc_lab.settings WHERE singleton=true")[0]
+    max_route_expected=max(int((Decimal("10000")*max_route_rate[0]).to_integral_value(rounding="ROUND_CEILING")),max_route_rate[1])
+    max_route_quote=run(a,q,("route-exact-max","cart-a","customer-a",max_route_rev))
+    assert max_route_quote==[("committed",max_route_expected,max_route_expected,0)],max_route_quote
+finally:
+    max_route_current=run(None,"SELECT route_version FROM ed_rpc_lab.routes WHERE cart_id='cart-a'")[0][0]
+    if max_route_current!=max_route_before[0]:
+        assert run(admin,mutate,("route","cart-a",max_route_current,max_route_before[1]))==[(max_route_current+1,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
