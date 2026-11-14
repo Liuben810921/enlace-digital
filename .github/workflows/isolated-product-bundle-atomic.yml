@@ -6,6 +6,8 @@ on:
       - 'tests/postgres-product-bundle-atomic-lab.sql'
       - 'tests/postgres-product-bundle-atomic-lab.py'
       - 'tests/postgres-product-bundle-adversarial-lab.py'
+      - 'tests/postgres-product-bundle-tenant-lab.sql'
+      - 'tests/postgres-product-bundle-tenant-recovery-lab.py'
       - '.github/workflows/isolated-product-bundle-atomic.yml'
   workflow_dispatch:
 permissions:
@@ -41,6 +43,8 @@ jobs:
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -c 'DROP SCHEMA ed_bundle_lab CASCADE; DROP ROLE ed_bundle_client; DROP ROLE ed_bundle_owner;'
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-product-bundle-atomic-lab.sql
           python3 tests/postgres-product-bundle-adversarial-lab.py 2>&1 | tee -a product-bundle-atomic-results.log
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -X -v ON_ERROR_STOP=1 -f tests/postgres-product-bundle-tenant-lab.sql
+          python3 tests/postgres-product-bundle-tenant-recovery-lab.py 2>&1 | tee -a product-bundle-atomic-results.log
       - name: Upload non-sensitive synthetic evidence
         if: always()
         uses: actions/upload-artifact@v4
