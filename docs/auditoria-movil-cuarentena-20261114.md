@@ -474,3 +474,14 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - CAS e idempotencia: ganador y perdedor concurrentes dentro de la misma empresa, bloqueo hasta commit, perdedor stale_revision, replay con orden canónico, conflicto de payload y revisiones finales; todos los productos permanecen draft/unpublished.
 - Limitaciones: cuentas y contraseñas son exclusivamente sintéticas de PostgreSQL desechable; rol privilegiado usado solo para pruebas negativas FK. La función diagnóstica se crea únicamente en laboratorio. No se prueba una identidad externa real, revocación dinámica de permisos, conexiones con proxy ni todo fallo de red posible.
 - No se ha modificado inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Cierre verificado de quinta batería adversarial — run 43649388325
+- Run 43649388325, job 132614240142: completed/success; PostgreSQL 16 desechable. Cinco baterías ejecutadas con PASS, incluida tests/postgres-product-bundle-integrated-adversarial.py.
+- PASS identity spoofing denied, untrusted session variable ignored, client table privileges denied.
+- PASS FORCE RLS filters actual rows inside technical SECURITY DEFINER function.
+- PASS composite foreign keys reject cross-company supplier, product and warehouse references.
+- PASS concurrent CAS winner, stale loser, replay and idempotency conflict; all drafts unpublished.
+- Baterías previas mantienen PASS de aislamiento multiempresa, permisos mínimos, rollback, concurrencia, idempotencia y terminación real durante trigger diferido de COMMIT con recuperación.
+- Artefacto isolated-product-bundle-atomic ID 14135432429, SHA256 d407a8cabde1e55667e3d026423289b5690b84f65f509460e95bf6a3ad4392ec, no expirado. Logs muestran errores de permisos y FK esperados en pruebas negativas, no fallos CI. Aviso deprecación Node.js 20 para checkout@v4/upload-artifact@v4 no bloqueante.
+- Límites: rol postgres privilegiado únicamente para aserciones negativas de FK; roles LOGIN y contraseñas sintéticas. RLS probada con session_user y función de diagnóstico del laboratorio; no demuestra autenticación de producción, revocación de roles en vivo, integración de catálogos reales, publicación ni todos los fallos posibles de red. La prueba de COMMIT demuestra terminación previa a persistencia, no la ventana de confirmación durable con respuesta perdida.
+- Sin cambios en inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
