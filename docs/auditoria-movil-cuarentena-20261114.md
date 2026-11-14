@@ -139,3 +139,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - El registro usa `secrets.GITHUB_TOKEN` temporal de GitHub Actions, no escribe ni imprime el token. Impide escritura fuera de `plan/maestro-finalizacion-seguridad-20261113`, usa la API Contents con SHA para evitar sobrescrituras ciegas, reintenta conflictos, y marca el commit `[skip ci]` para no iniciar una nueva batería por el registro. Las escrituras hechas con GITHUB_TOKEN tampoco disparan normalmente workflows `push`.
 - El archivo permite al asistente obtener el identificador con `fetch_file` y consultar jobs/logs/artefactos con las herramientas existentes, sin pedir el enlace al usuario. Si el job de registro falla, el método vuelve a requerir diagnóstico puntual; la publicación automática aún debe verificarse en GitHub Actions.
 - Limitaciones: registro del último run, no historial completo; no habilita monitoreo en segundo plano ni avisos automáticos sin una automatización independiente. No modifica Supabase, staging, producción, clientes, pedidos ni despliega.
+
+## Segunda verificación del registro de CI — sin resultado concluyente
+- En la rama aislada, `fetch_file(.github/ci-evidence/latest-chromium-run.json)` devuelve HTTP 404 después del commit `7ea151d3`.
+- El workflow contiene el job `record-run-id`, `needs: chromium-accessibility`, `if: always()`, permiso `contents: write` restringido a ese job y script `scripts/record_chromium_run.py`.
+- `get_commit_combined_status(7ea151d3)` devolvió `statuses: []`; esto no equivale a un resultado de GitHub Actions Checks.
+- El conector disponible permite recuperar jobs/logs/artefactos cuando se conoce el ID, pero no listar ejecuciones `push` recientes. Por tanto no se puede determinar con estas consultas si el registro está pendiente, falló o fue bloqueado por permisos. **Sin evidencia del fallo, no se altera código ni permisos.**
+- Próximo paso de diagnóstico: obtener una vez el ID de ejecución del workflow posterior a `7ea151d3` y consultar los logs del job `record-run-id`. Después, con el registro funcionando, las verificaciones futuras podrán localizar su ID sin intervención manual.
