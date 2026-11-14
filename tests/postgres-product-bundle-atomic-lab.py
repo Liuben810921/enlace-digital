@@ -62,7 +62,7 @@ assert status(loser)=="stale_revision"
 assert status(commit("race-b","p-race-b",4))=="draft"
 assert commit("race-a","p-race-a",3)["replayed"] is True
 print("PASS real two-connection row-lock concurrency, stale loser, retry, unknown commit replay")
-with db() as c:
+with psycopg.connect(DSN) as c:
     assert c.execute("SELECT count(*) FROM ed_bundle_lab.products WHERE published").fetchone()[0]==0
     assert c.execute("SELECT revision FROM ed_bundle_lab.context WHERE id=1").fetchone()[0]==5
     assert c.execute("SELECT count(*) FROM ed_bundle_lab.operations").fetchone()[0]==5
