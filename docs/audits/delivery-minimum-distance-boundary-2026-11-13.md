@@ -12,4 +12,8 @@ En PostgreSQL 16 desechable, con valores vigentes del fixture sintético, se act
 ## Criterio de cierre
 Si GitHub Actions aprueba, cerrar sin cambios SQL; si falla, inspeccionar el fallo y corregir únicamente defectos demostrados.
 
-**Estado: pendiente de CI.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada, CI aprobada y sin modificaciones SQL.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia de cierre
+
+[GitHub Actions #43531876850](https://github.com/Liuben810921/enlace-digital/actions/runs/43531876850) terminó `completed/success` para el commit de pruebas `7795fb7d87ce34cf138f2e64dee249cc9b1a8ae2`. Trabajo `test` (ID `132251317593`) `completed/success`. Se verificaron los límites `min_km - 0.01`, `min_km` y `min_km + 0.01` con restauración del fixture. No se reprodujeron fallos SQL, no se modificó SQL, no hubo merge ni despliegue. La rama no tenía cambios concurrentes antes del cierre.
