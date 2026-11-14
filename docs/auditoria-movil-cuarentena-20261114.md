@@ -74,3 +74,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Artefacto `delivery-chromium-zoom-keyboard` ID `14130764158` (95 881 bytes) guardado. La prueba falló antes de tomar la captura a 200 %.
 - Instrumentación correctiva en `d3ad33a6`: antes de lanzar el error, guardar captura completa y JSON con `scrollWidth`, viewport y hasta 30 elementos que sobrepasan el viewport. Mantener la aserción estricta. El workflow ya sube `chromium-*-quarantine.png` y `ci-evidence/*` en `if: always()`.
 - Pendiente: ejecutar nuevo run, leer `chromium-overflow-320-zoom-2.json` y corregir el elemento exacto; no ocultar el fallo con `overflow-x:hidden` ni relajar el umbral sin justificación.
+
+## Chromium #43640990881 — elemento responsable localizado
+- Job `132588301550`, commit `42bd83b701e4cc3ec205be92c1ee7d1c3ffe56e9`: preflight PASS, instalación Chromium PASS, prueba de navegador FAIL.
+- Diagnóstico del log: `Horizontal overflow at width 320 zoom 2`, `viewport:320`, `documentWidth:393`. Único elemento señalado: `TEXTAREA#edOriginAddress`, `left:46`, `right:393`, `width:347`. Artefacto `14132321278` guardado.
+- Corrección acotada en `index.html`: `#edOriginAddress` recibe `display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box`, evitando que el tamaño intrínseco de textarea exceda el contenedor a zoom 200 %. Commit `a84ee9aa`.
+- La corrección es una hipótesis técnica basada en el elemento medido; queda pendiente confirmación en una nueva ejecución real de Chromium a 320/375/430 px, teclado y recuperación. No se deshabilitó la aserción de overflow.
