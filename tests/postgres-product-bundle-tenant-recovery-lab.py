@@ -57,7 +57,7 @@ def interrupted_writer():
  try:
   c.execute("SET ROLE ed_bundle_client")
   pidbox["pid"]=c.execute("SELECT pg_backend_pid()").fetchone()[0]
-  result=c.execute("SELECT ed_bundle_lab.commit_multi(%s,%s,%s,%s,%s,%s)",("interrupt-real","interrupt-product","s1",["w1","w2"],"proveedor",0)).fetchone()[0]
+  result=c.execute("SELECT ed_bundle_lab.commit_multi(%s,%s,%s,%s,%s,%s)",("interrupt-real","interrupt-product","s1",["w1","w2"],"proveedor",4)).fetchone()[0]
   assert result["status"]=="draft"
   started.set()
   try:
@@ -87,7 +87,7 @@ with psycopg.connect(BASE+" user=postgres password=postgres") as admin:
  admin.commit()
 with psycopg.connect(BASE+" user=postgres password=postgres") as c:
  c.execute("SET ROLE ed_bundle_client")
- result=c.execute("SELECT ed_bundle_lab.commit_multi(%s,%s,%s,%s,%s,%s)",("interrupt-real","interrupt-product","s1",["w2","w1"],"proveedor",0)).fetchone()[0]
+ result=c.execute("SELECT ed_bundle_lab.commit_multi(%s,%s,%s,%s,%s,%s)",("interrupt-real","interrupt-product","s1",["w2","w1"],"proveedor",4)).fetchone()[0]
  assert (result.get("replayed") is True) if rows else (result["status"]=="draft")
  c.commit()
 print("PASS idempotent recovery from real commit interruption")
