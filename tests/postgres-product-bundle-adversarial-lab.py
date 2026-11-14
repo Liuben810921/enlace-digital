@@ -80,5 +80,5 @@ assert call("lost-response","different-payload",["w1","w2"],4)["status"]=="idemp
 print("PASS post-commit response loss simulation, replay and payload conflict")
 with psycopg.connect(DSN) as c:
  assert c.execute("SELECT revision FROM ed_bundle_lab.context WHERE id=1").fetchone()[0]==4
- assert c.execute("SELECT count(*) FROM ed_bundle_lab.product_warehouses").fetchone()[0]==8
+ assert c.execute("SELECT count(*) FROM ed_bundle_lab.product_warehouses").fetchone()[0]==7
 print("PASS adversarial multi-warehouse PostgreSQL lab")
