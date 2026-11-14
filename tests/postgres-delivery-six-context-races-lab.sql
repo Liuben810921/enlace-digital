@@ -29,7 +29,7 @@ CREATE OR REPLACE FUNCTION ed_quote_race.mutate(p_context text,p_field text) RET
 BEGIN
  IF p_field NOT IN ('cart','destination','route','warehouses','assignments','tariff') THEN RAISE EXCEPTION 'invalid_field'; END IF;
  EXECUTE format('UPDATE ed_quote_race.context SET %I=%I+1 WHERE id=$1',p_field||'_version',p_field||'_version') USING p_context;
- IF NOT FOUND THEN RAISE EXCEPTION 'missing_context'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM ed_quote_race.context WHERE id=p_context) THEN RAISE EXCEPTION 'missing_context'; END IF;
  INSERT INTO ed_quote_race.audit(action,field) VALUES('mutate',p_field);
 END $$;
 CREATE OR REPLACE FUNCTION ed_quote_race.confirm(p_id text) RETURNS text LANGUAGE plpgsql AS $$
