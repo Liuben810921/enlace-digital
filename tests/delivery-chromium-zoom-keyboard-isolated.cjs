@@ -34,6 +34,14 @@ const {chromium}=require('playwright');
     assert.equal(await page.getByRole('button',{name,exact:true}).count(),1,'Ambiguous accessible button name: '+name);
    }
    console.log('PASS supplier and warehouse action accessible names');
+   await page.getByRole('button',{name:'Editar punto de salida Almacén sintético'}).click();
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edOriginName','Editing warehouse must focus its first field');
+   assert.equal(await page.locator('#edOriginName').inputValue(),'Almacén sintético');
+   await page.keyboard.press('Tab');
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edOriginType','Tab must advance from name to type');
+   await page.evaluate(()=>document.activeElement.blur());
+   console.log('PASS warehouse editing focus and keyboard order');
+
 
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),2,'Supplier and warehouse edit must be disabled');
@@ -86,6 +94,10 @@ const {chromium}=require('playwright');
    assert.match(await page.evaluate(()=>document.activeElement?.textContent?.trim()||''),/Verificar y desbloquear/,'Tab must return to recovery control after Shift+Tab');
    await page.keyboard.press('Enter');
    assert.equal(await page.evaluate(()=>edDeliveryIsQuarantined()),false,'Keyboard recovery failed');
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'edDeliveryPanelTitle','Recovery must restore keyboard focus to panel heading');
+   assert.equal(await page.locator('#edDeliveryPanelTitle').getAttribute('tabindex'),'-1');
+   console.log('PASS quarantine recovery restores accessible focus');
+
    assert.equal(await page.evaluate(()=>edDeliveryQuoteStillValid(window.__snapshot)),false,'Old quote was not invalidated');
    await page.evaluate(()=>{
     edDeliveryQuarantine();
