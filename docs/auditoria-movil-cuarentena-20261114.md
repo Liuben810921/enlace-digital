@@ -272,3 +272,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Se consultó tres veces el índice automático: permanece en `run_id=43644481430`, `head_sha=3e31675df8b4462247ef01759ade714f18c1fef8`, anterior a la regresión `1817c327`.
 - No hay ejecución posterior confirmada mediante el índice en este seguimiento. No se pueden atribuir resultados de Chromium, seis tests offline, jobs, logs o artefactos a la nueva regresión sin `head_sha` apropiado.
 - Se mantienen intactas las correcciones y pruebas incorporadas; no se modificó código sin fallo demostrado. Pendiente: comprobar registro posterior a `1817c327`, inspeccionar `PASS reset/save/add focus and local persistence` y `PASS failed quarantine recovery remains announced and locked`, y verificar los restantes controles y artefactos.
+
+## Fallo confirmado y corrección mínima — CI #43644563510
+- Registro: `run_id=43644563510`, `head_sha=a32acd69ecdb9523e2e9d35f934f9c35a4608982`, `chromium_job_result=failure`, posterior a `1817c327`.
+- Job Chromium `132599324242` falló en `AssertionError: Supplier and warehouse edit must be disabled`: `actual: 3`, expectativa 2. La prueba anterior había añadido correctamente un proveedor sintético, por lo que la expectativa de dos botones ya no reflejaba el fixture. Logs muestran `PASS reset/save/add focus and local persistence`.
+- Job índice `132599493284` **success**: seis tests offline `ok`, `Ran 6 tests in 0.011s`, `OK`. Artefacto parcial `delivery-chromium-zoom-keyboard` ID `14133850260`, tamaño 3792 bytes, digest `sha256:037a4d3f8c87249794e0137db41a8452512063db293fd55f98eabf749ac9cc17`; no representa el conjunto completo de capturas.
+- Corrección mínima `16e88741`: ajusta a tres las expectativas de botones Editar y Desactivar deshabilitados tras alta de proveedor; no cambia lógica operativa. **Pendiente** ejecución posterior a este commit para validar recuperación fallida, anuncios, zoom, foco y artefactos.
