@@ -40,9 +40,21 @@ const {chromium}=require('playwright');
    assert.equal(await page.evaluate(()=>localStorage.getItem('ed_delivery_associations_quarantine_demo_v1')),'1');
    for(const zoom of [1,2]){
     await page.evaluate(z=>document.body.style.zoom=String(z),zoom);
-    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1);
-    assert.equal(overflow,false,'Horizontal overflow at width '+width+' zoom '+zoom);
+    const overflowDetails=await page.evaluate(()=>{
+     const viewport=window.innerWidth;
+     const documentWidth=document.documentElement.scrollWidth;
+     const offenders=[...document.querySelectorAll('body *')].map(el=>{
+      const r=el.getBoundingClientRect();
+      return {tag:el.tagName,id:el.id,className:String(el.className||'').slice(0,100),text:(el.textContent||'').trim().slice(0,70),left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
+     }).filter(x=>x.right>viewport+1||x.left< -1).slice(0,30);
+     return {viewport,documentWidth,offenders};
+    });
     await page.screenshot({path:'chromium-'+width+'-zoom-'+zoom+'-quarantine.png',fullPage:true});
+    if(overflowDetails.documentWidth>overflowDetails.viewport+1){
+     const diagnostic='Horizontal overflow at width '+width+' zoom '+zoom+': '+JSON.stringify(overflowDetails);
+     fs.writeFileSync('ci-evidence/chromium-overflow-'+width+'-zoom-'+zoom+'.json',JSON.stringify(overflowDetails,null,2));
+     assert.fail(diagnostic);
+    }
    }
    await page.evaluate(()=>document.body.style.zoom='1');
    await page.keyboard.press('Tab');
