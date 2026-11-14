@@ -123,7 +123,6 @@ const {chromium}=require('playwright');
    });
    assert.deepEqual(rollbackFailure,{result:false,changed:true,revisionUnchanged:true,quarantined:true,quoteValid:false},'Failed rollback must quarantine and block stale quote');
    console.log('PASS synthetic rollback failure quarantines and blocks stale quote');
-   await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
    const autoAssignment=await page.evaluate(()=>{
     const originKey='ed_delivery_origins_demo_v1',supplierKey='ed_delivery_suppliers_demo_v1';
     const oldOrigins=localStorage.getItem(originKey),oldSuppliers=localStorage.getItem(supplierKey);
@@ -149,6 +148,8 @@ const {chromium}=require('playwright');
    });
    assert.deepEqual(autoAssignment,{supplier:'sup',initial:['a1'],available:['a1','a2'],own:['own']},'Product origin must default to active supplier warehouse and keep own separate');
    console.log('PASS product form supplier warehouse default and own-origin separation');
+   await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
+
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),3,'All supplier and warehouse edit actions must be disabled');
    assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),3,'All supplier and warehouse toggle actions must be disabled');
    assert.equal(await page.locator('label[for="edOriginAddress"]').count(),1,'Warehouse address must have an explicit label');
