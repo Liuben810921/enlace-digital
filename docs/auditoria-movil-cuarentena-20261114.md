@@ -509,3 +509,14 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección SQL en 4fb772387c7647e2308929d853c68e50e4d0b3c9: PERFORM ... FOR SHARE sobre proveedor y cada almacén elegido (orden canónico) antes de comprobar active; bloqueos se mantienen hasta final de transacción y se enfrentan a UPDATE concurrente. La validación posterior lee estado confirmado después de esperar bloqueos.
 - Nueva ejecución 43649768597, job 132615398065, inicialmente in_progress; verificar resultado antes de cerrar.
 - Límites: el modelo aún no implementa un flujo administrativo versionado para cambios de proveedor/almacén; FOR SHARE protege la operación RPC frente a UPDATE concurrente pero no elimina posibles interbloqueos con flujos administrativos que bloqueen filas en otro orden. No se ha probado pérdida de ACK de red real después de WAL durable.
+
+## Cierre verificado de sexta batería — FOR SHARE y permisos
+- GitHub Actions run 43649768597, job 132615398065: completed/success, PostgreSQL 16 desechable. Artefacto isolated-product-bundle-atomic ID 14135642715, SHA256 cdae9d928bdd4859284ca42afd1a45a431a65427a535b6939cdf23ba77b05c24, no expirado.
+- Logs PASS de seis baterías: permisos y RLS sin BYPASSRLS, CAS e idempotencia, rollback, claves foráneas compuestas, aislamiento multiempresa, denegación de suplantación, y todos los borradores unpublished.
+- Nueva batería PASS active-session REVOKE blocks new RPC statements, GRANT restores access.
+- PASS committed supplier/warehouse deactivation rejects new draft.
+- PASS concurrent warehouse state change rejects stale draft: bloqueo FOR SHARE antes de comprobar active, tras esperar UPDATE concurrente.
+- PASS durable COMMIT with deliberately lost application response, replay exactly once; payload diferente sigue dando conflicto.
+- La terminación real de conexión durante COMMIT de otra batería produjo resultado no persistido y recuperación idempotente; el escenario de respuesta perdida tras COMMIT durable es simulación de aplicación, no caída de red real.
+- Límites: no se probó aún carrera equivalente de desactivación de proveedor mientras la RPC está esperando, ni orden de bloqueo del administrador, ni deadlocks/reintentos con múltiples proveedores/almacenes. La protección se comprobó en laboratorio, no en Supabase/staging/producción. Warning de Node.js 20 en acciones GitHub no bloqueante.
+- No se modificaron inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
