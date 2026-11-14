@@ -5,6 +5,8 @@ on:
     paths:
       - 'tests/fixtures/delivery-warehouse-mobile-demo.html'
       - 'tests/delivery-warehouse-mobile-demo.test.cjs'
+      - 'tests/delivery-quote-context-isolated.cjs'
+      - 'tests/delivery-quote-context-isolated.test.cjs'
       - 'tests/delivery-admin-context-invalidation.test.cjs'
       - 'tests/delivery-warehouse-registry-isolated.cjs'
       - 'tests/delivery-warehouse-registry-isolated.test.cjs'
@@ -79,6 +81,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - run: node tests/delivery-quote-context-isolated.test.cjs
       - run: node tests/delivery-admin-context-invalidation.test.cjs
       - run: node tests/delivery-warehouse-mobile-demo.test.cjs
       - run: node tests/delivery-warehouse-registry-isolated.test.cjs
