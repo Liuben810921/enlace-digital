@@ -12,4 +12,8 @@ En PostgreSQL 16 desechable, la prueba comprueba que una clave de 81 caracteres 
 ## Criterio de cierre
 Si CI pasa, cerrar sin cambios SQL; si falla, revisar logs y corregir únicamente el defecto demostrado.
 
-**Estado: pendiente de GitHub Actions.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+**Estado: auditoría cerrada; CI aprobada y sin modificaciones SQL.** Sin acceso ni modificaciones a Supabase, staging, producción, clientes reales ni pedidos.
+
+## Evidencia de cierre
+
+[GitHub Actions #43535762769](https://github.com/Liuben810921/enlace-digital/actions/runs/43535762769) terminó `completed/success` para el commit de pruebas `dc1cc93ebcdba80eeb110e90abfd12fd6f292cc4`. El trabajo `test` (ID `132264247318`) terminó `completed/success`. Se verificó el rechazo de una clave de 81 caracteres sin persistencia, la aceptación de una clave de 80 caracteres y el replay sin duplicación. No se reprodujo defecto SQL; no se modificó SQL. Cierre exclusivamente documental, sin merge ni despliegue; no se detectaron cambios concurrentes antes del cierre.
