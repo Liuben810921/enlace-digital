@@ -267,3 +267,8 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Regresión `8838ecc7`: Chromium comprueba foco y valor vacío después de limpiar, foco y persistencia del almacén después de guardar, foco y persistencia del proveedor tras registrar.
 - Regresión `1817c327`: tras recuperación fallida por asociaciones inválidas, verifica `role=alert`, botón de recuperación disponible, ambos `fieldset:disabled` y marca de cuarentena persistida.
 - Pendiente CI: localizar run posterior a `1817c327`, verificar logs, seis tests offline y artefactos. No se atribuye PASS sin ejecución. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Seguimiento de CI para persistencia, foco y recuperación fallida
+- Se consultó tres veces el índice automático: permanece en `run_id=43644481430`, `head_sha=3e31675df8b4462247ef01759ade714f18c1fef8`, anterior a la regresión `1817c327`.
+- No hay ejecución posterior confirmada mediante el índice en este seguimiento. No se pueden atribuir resultados de Chromium, seis tests offline, jobs, logs o artefactos a la nueva regresión sin `head_sha` apropiado.
+- Se mantienen intactas las correcciones y pruebas incorporadas; no se modificó código sin fallo demostrado. Pendiente: comprobar registro posterior a `1817c327`, inspeccionar `PASS reset/save/add focus and local persistence` y `PASS failed quarantine recovery remains announced and locked`, y verificar los restantes controles y artefactos.
