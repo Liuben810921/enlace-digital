@@ -94,6 +94,35 @@ const {chromium}=require('playwright');
 
 
 
+   const partialFailure=await page.evaluate(()=>{
+    const key='ed_delivery_origins_demo_v1',rev='ed_delivery_context_revision_demo_v1';
+    const before=localStorage.getItem(key),revision=localStorage.getItem(rev),snapshot=edDeliveryQuoteSnapshot();
+    const original=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(k,v){if(k===key){original.call(this,k,v);throw new Error('synthetic partial write')}return original.call(this,k,v)};
+    let result;
+    try{result=edDeliveryPersistAndInvalidate(key,[{id:'partial'}],'partial_write')}
+    finally{Storage.prototype.setItem=original}
+    const state={result,changed:localStorage.getItem(key)!==before,revisionUnchanged:localStorage.getItem(rev)===revision,quarantined:edDeliveryIsQuarantined(),quoteValid:edDeliveryQuoteStillValid(snapshot)};
+    original.call(localStorage,key,before);localStorage.removeItem('ed_delivery_associations_quarantine_demo_v1');edDeliveryQuarantinedInSession=false;
+    return state;
+   });
+   assert.deepEqual(partialFailure,{result:false,changed:true,revisionUnchanged:true,quarantined:true,quoteValid:false},'Partial storage write must quarantine and invalidate quote usability');
+   console.log('PASS synthetic partial localStorage write quarantines and blocks stale quote');
+   const rollbackFailure=await page.evaluate(()=>{
+    const key='ed_delivery_origins_demo_v1',rev='ed_delivery_context_revision_demo_v1';
+    const before=localStorage.getItem(key),revision=localStorage.getItem(rev),snapshot=edDeliveryQuoteSnapshot();
+    const original=Storage.prototype.setItem;
+    let writes=0;
+    Storage.prototype.setItem=function(k,v){if(k===rev)throw new Error('synthetic revision failure');if(k===key&&++writes===2)throw new Error('synthetic rollback failure');return original.call(this,k,v)};
+    let result;
+    try{result=edDeliveryPersistAndInvalidate(key,[{id:'rollback-failed'}],'rollback_failure')}
+    finally{Storage.prototype.setItem=original}
+    const state={result,changed:localStorage.getItem(key)!==before,revisionUnchanged:localStorage.getItem(rev)===revision,quarantined:edDeliveryIsQuarantined(),quoteValid:edDeliveryQuoteStillValid(snapshot)};
+    original.call(localStorage,key,before);localStorage.removeItem('ed_delivery_associations_quarantine_demo_v1');edDeliveryQuarantinedInSession=false;
+    return state;
+   });
+   assert.deepEqual(rollbackFailure,{result:false,changed:true,revisionUnchanged:true,quarantined:true,quoteValid:false},'Failed rollback must quarantine and block stale quote');
+   console.log('PASS synthetic rollback failure quarantines and blocks stale quote');
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),3,'All supplier and warehouse edit actions must be disabled');
    assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),3,'All supplier and warehouse toggle actions must be disabled');
