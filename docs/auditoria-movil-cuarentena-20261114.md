@@ -431,3 +431,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Alcance: el esquema multiempresa es un segundo prototipo separado del esquema de proveedores y almacenes; no implementa catálogo real, autorización administrativa, control de almacenes por empresa ni cuotas. Se necesita unificar políticas y modelo antes de considerar integración.
 - CI inicial: run 43648650351, job 132611974602, en progreso al registrar. No afirmar PASS sin logs/artefactos.
 - No se ha tocado inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## CI aislamiento y desconexión: fallo CAS y corrección
+- Run 43648650351, job 132611974602: completed/failure, artefacto isolated-product-bundle-atomic ID 14134887486, SHA256 11aa17d4e2aed1edcd42cdea14bb4f676c51ec651746a61f37f35c3cfcae0215, no expirado.
+- Logs: PASS todas las baterías originales y adversariales; PASS authenticated two-tenant isolation, independent revisions and idempotency; PASS simultaneous multiwarehouse commits isolated by tenant. Fallo Python tests/postgres-product-bundle-tenant-recovery-lab.py línea 72 en assert started.wait(8), antes de terminar la prueba de desconexión.
+- Causa comprobable por inspección de las pruebas: la batería adversarial deja la revisión global sintética en 4; el test de interrupción solicitaba CAS 0 y esperaba status=draft. La validación devolvía stale_revision, por lo que el worker no señalaba started. Correcciones en 26f81bef y c0443d2d: CAS esperado 4 y revisión final 4+rows.
+- Nueva ejecución para c0443d2d: run 43648754923, job 132612287966, en progreso al consultar. No declarar PASS de desconexión ni recuperación hasta verificar logs y artefacto de esta ejecución.
+- Límites persistentes: el test usa terminación controlada de backend durante trigger diferido; no simula una pérdida arbitraria de red ni demuestra todas las ventanas entre WAL durable y ACK.
