@@ -1568,6 +1568,7 @@ function edDeliveryOriginTypeChange(){
  const field=document.getElementById('edOriginSupplierField');if(field)field.style.display=supplier?'':'none';
 }
 function edProductOriginSupplierChange(mode,productId){
+ if(edDeliveryIsQuarantined())return;
  const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
  const selector=target?.querySelector('.ed-product-supplier');
  if(!selector)return;
@@ -1876,6 +1877,7 @@ function edProductOriginsSave(productId,ids){
  }
 }
 function edDeliveryEffectiveOrigins(productId,type,supplierId){
+ if(edDeliveryIsQuarantined())return [];
  const ids=edProductOriginsRead()[String(productId)]||[];
  if(!Array.isArray(ids))return [];
  const suppliers=edDeliverySuppliersRead();
@@ -1883,10 +1885,12 @@ function edDeliveryEffectiveOrigins(productId,type,supplierId){
  (type==='propio'||p.supplierId===supplierId&&suppliers.some(s=>s.id===supplierId&&s.active!==false)));
 }
 function edDeliveryOriginEligible(id,type,supplierId){
+ if(edDeliveryIsQuarantined())return false;
  return edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&p.type===type&&
  (type==='propio'||p.supplierId===supplierId&&edDeliverySuppliersRead().some(s=>s.id===supplierId&&s.active!==false)));
 }
 function edProductOriginsPanel(mode,productId){
+ if(edDeliveryIsQuarantined())return '<div class="panel" role="alert" style="padding:12px;margin:12px 0;border:2px solid #b42318"><strong>Asociaciones bloqueadas</strong><p class="note">Revisa Administración de entregas y pulsa Verificar y desbloquear antes de asociar almacenes.</p></div>';
  const type=mode==='edit'?(document.getElementById('editOrigin')?.value||'propio'):(document.getElementById('porigin')?.value||'propio');
  const saved=productId==null?[]:(edProductOriginsRead()[String(productId)]||[]);
  const supplierIds=[...new Set(edDeliveryOriginsRead().filter(p=>saved.includes(p.id)&&p.active!==false&&p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false)).map(p=>p.supplierId))];
@@ -1914,6 +1918,7 @@ function edProductOriginQuickForm(mode){
  '<button type="button" class="primary" onclick="edProductOriginQuickSave('+JSON.stringify(mode).replace(/"/g,'&quot;')+')">Registrar y seleccionar almacén</button>';
 }
 function edProductOriginQuickSave(mode){
+ if(edDeliveryIsQuarantined()){alert('Almacenes bloqueados: verifica y desbloquea primero en Administración de entregas.');return}
  const name=document.getElementById('edQuickOriginName').value.trim(),municipality=document.getElementById('edQuickOriginMunicipality').value,address=document.getElementById('edQuickOriginAddress').value.trim();
  if(!name||!municipality||!address){alert('Completa nombre, municipio y dirección.');return}
  const type=document.getElementById(mode==='edit'?'editOrigin':'porigin').value;
@@ -1931,6 +1936,7 @@ function edProductOriginQuickSave(mode){
  for(const input of target.querySelectorAll('.ed-product-origin'))input.checked=checked.includes(input.value)||input.value===id;
 }
 function edProductOriginsCollect(mode){
+ if(edDeliveryIsQuarantined())return [];
  const target=document.getElementById(mode==='edit'?'edEditProductOrigins':'edNewProductOrigins');
  if(!target)return [];
  const type=document.getElementById(mode==='edit'?'editOrigin':'porigin')?.value||'propio';
