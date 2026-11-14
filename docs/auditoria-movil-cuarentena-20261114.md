@@ -354,3 +354,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - La operación sintética escribe un único valor local para producto + vínculo + revisión; esto NO demuestra atomicidad en backend ni cubre interrupción de proceso entre escrituras. Ante excepción intenta revertir; si falla, activa cuarentena.
 - Integración futura: RPC transaccional autoritativa con claves foráneas, RLS, idempotencia, versiones y recuperación de commit desconocido; producto no publicado hasta confirmar vínculo; migración controlada de históricos. Requiere autorización independiente para Supabase/staging/producción.
 - CI pendiente posterior a 5ee53ab5; verificar logs, seis tests offline y artefactos antes de declarar PASS.
+
+## Cierre CI del prototipo atómico sintético — 14 noviembre 2026
+- Registro automático verificado: run 43647753931, SHA 5ee53ab54816b6fa75c21bce7ac6fc9c9460918f, resultado success. Job chromium-accessibility 132609204202: success; job Record isolated Chromium run identifier 132609353568: success.
+- Logs Chromium: PASS synthetic atomic product bundle draft, idempotency, revision, write rollback and quarantine en anchos 320/375/430 px. PASS de selección automática de proveedor/almacén, cambio de predeterminado, IDs, revisión de cotizaciones, escritura parcial, rollback fallido, cuarentena, recuperación, foco, teclado, zoom 100/200 % y contraste CSS.
+- Seis pruebas offline del registro: 6/6 OK, 0.011 s.
+- Artefacto delivery-chromium-zoom-keyboard ID 14134414434, 1132784 bytes, sha256:dc036fcf831a891c29c2c3573f1eaee6e1b385e3fde0a25565f8ce46e8d06a9c, no expirado. Verificados metadatos, no capturas individuales.
+- Ningún defecto nuevo confirmado en esta ejecución; no se modificó inventario operativo, Supabase, staging, producción, clientes, pedidos ni se desplegó. La operación atómica es exclusivamente sintética y no representa garantía transaccional de la persistencia remota.
