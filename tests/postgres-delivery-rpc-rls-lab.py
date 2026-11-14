@@ -495,4 +495,18 @@ assert min_key_first[0][0]=="committed",min_key_first
 assert run(a,q,("z","cart-a","customer-a",min_key_rev))==[("replayed",*min_key_first[0][1:])]
 assert run(a,"SELECT count(*) FROM ed_rpc_lab.quotes")==[(min_key_before+1,)]
 
+# Same idempotency key across different authenticated actors must remain
+# isolated by (actor_role, operation_key), not collide globally.
+shared_actor_key="actor-scoped-same-key"
+shared_a_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-a'")[0][0]
+shared_b_rev=run(None,"SELECT revision FROM ed_rpc_lab.carts WHERE cart_id='cart-b'")[0][0]
+shared_a=run(a,q,(shared_actor_key,"cart-a","customer-a",shared_a_rev))
+shared_b=run(b,q,(shared_actor_key,"cart-b","customer-b",shared_b_rev))
+assert shared_a[0][0]=="committed" and shared_b[0][0]=="committed",(shared_a,shared_b)
+assert run(a,q,(shared_actor_key,"cart-a","customer-a",shared_a_rev))==[("replayed",*shared_a[0][1:])]
+assert run(b,q,(shared_actor_key,"cart-b","customer-b",shared_b_rev))==[("replayed",*shared_b[0][1:])]
+assert run(None,"SELECT actor_role::text,cart_id FROM ed_rpc_lab.quotes WHERE operation_key=%s ORDER BY actor_role",(shared_actor_key,))==[(a,"cart-a"),(b,"cart-b")]
+assert run(a,"SELECT actor_role::text FROM ed_rpc_lab.quotes WHERE operation_key=%s",(shared_actor_key,))==[(a,)]
+assert run(b,"SELECT actor_role::text FROM ed_rpc_lab.quotes WHERE operation_key=%s",(shared_actor_key,))==[(b,)]
+
 print("PASS disposable PostgreSQL RPC, RLS, grants, manager isolation, admin-only tariff audit, idempotency and concurrency")
