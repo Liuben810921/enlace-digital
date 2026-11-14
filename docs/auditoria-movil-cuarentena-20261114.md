@@ -66,3 +66,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - `npm install playwright@1.56.1`: PASS, dos paquetes instalados. Causa raíz comprobada: el runner `ubuntu-latest` se resolvió a `ubuntu26.04-x64`; Playwright 1.56.1 rechazó `install --with-deps chromium` con `Cannot install dependencies for ubuntu26.04-x64 with Playwright 1.56.1` y `Playwright does not support chromium on ubuntu26.04-x64`.
 - `Run actual extracted delivery module in Chromium`: SKIPPED. `Preserve screenshot evidence`: PASS, artefacto ID `14132055103` con 6 archivos de logs/preflight (sin capturas Chromium).
 - Corrección mínima: fijar `runs-on: ubuntu-24.04` para evitar cambios no controlados de `ubuntu-latest`. Commit `c8e47bc5`. Pendiente comprobar nuevo run y pruebas Chromium reales. No se modificó Supabase, staging, producción ni datos de clientes.
+
+## Ejecución #43640101055 — primer fallo funcional real en Chromium
+- Run `43640101055`, job `132585565545`, commit `829f14350b142d3b45609582fc3edd14652a0025`, rama aislada.
+- `setup-node`, preflight JavaScript/cuarentena y `Install isolated Playwright`: **PASS**. La corrección de `ubuntu-24.04` resolvió el bloqueo de instalación.
+- `Run actual extracted delivery module in Chromium`: **FAIL**, aserción `Horizontal overflow at width 320 zoom 2` (test línea 44). Esto es una prueba sobre el panel aislado con `document.body.style.zoom=2`, no un dictamen de accesibilidad del sitio completo.
+- Artefacto `delivery-chromium-zoom-keyboard` ID `14130764158` (95 881 bytes) guardado. La prueba falló antes de tomar la captura a 200 %.
+- Instrumentación correctiva en `d3ad33a6`: antes de lanzar el error, guardar captura completa y JSON con `scrollWidth`, viewport y hasta 30 elementos que sobrepasan el viewport. Mantener la aserción estricta. El workflow ya sube `chromium-*-quarantine.png` y `ci-evidence/*` en `if: always()`.
+- Pendiente: ejecutar nuevo run, leer `chromium-overflow-320-zoom-2.json` y corregir el elemento exacto; no ocultar el fallo con `overflow-x:hidden` ni relajar el umbral sin justificación.
