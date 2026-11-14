@@ -247,3 +247,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección `dd752ba9`: tras editar un almacén se enfoca `edOriginName`; tras recuperación exitosa se enfoca `h3#edDeliveryPanelTitle[tabindex="-1"]` para orientar al usuario sin introducir una parada adicional en el orden Tab. El foco solo se traslada cuando la recuperación es válida. No se modifica la lógica de bloqueo ni de persistencia.
 - Regresión `786468da`: Chromium comprueba foco inicial y avance Tab desde nombre hasta tipo al editar; tras activar recuperación por teclado comprueba foco en el encabezado y `tabindex=-1`. Se mantienen los ensayos previos de cuarentena, ocho etiquetas, nombres accesibles, zoom, contraste y seis pruebas offline del índice.
 - Estado: **pendiente de CI**. No atribuir PASS antes de obtener run con SHA posterior a `786468da`, inspeccionar jobs, logs y artefactos. Alcance exclusivamente GitHub rama aislada; no Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+## Seguimiento CI de foco y navegación — ejecución de corrección, regresión aún pendiente
+- El índice automático se consultó cuatro veces: `run_id=43644340014`, `head_sha=dd752ba9a1282344654e5e3e6f794f95989c5f52`, `chromium_job_result=success`. Esta ejecución incluye la corrección de foco, pero es anterior a la prueba `786468da`.
+- Jobs de la ejecución: `chromium-accessibility` `132598635723` **success** y `Record isolated Chromium run identifier` `132598761388` **success**.
+- Artefacto `delivery-chromium-zoom-keyboard` ID `14133337989`, tamaño **1 092 453 bytes**, digest `sha256:727f62ae36211acd790689a9a691233ce6250168c38f434bec1118cc1f38fd05`.
+- No se atribuye PASS a `PASS warehouse editing focus and keyboard order` ni `PASS quarantine recovery restores accessible focus` hasta observar un run con `head_sha` posterior o igual a `786468da` y revisar sus logs. No hay defectos nuevos confirmados, por lo que no se altera el código.
