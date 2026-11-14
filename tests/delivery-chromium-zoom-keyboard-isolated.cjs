@@ -124,6 +124,31 @@ const {chromium}=require('playwright');
    assert.deepEqual(rollbackFailure,{result:false,changed:true,revisionUnchanged:true,quarantined:true,quoteValid:false},'Failed rollback must quarantine and block stale quote');
    console.log('PASS synthetic rollback failure quarantines and blocks stale quote');
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
+   const autoAssignment=await page.evaluate(()=>{
+    const originKey='ed_delivery_origins_demo_v1',supplierKey='ed_delivery_suppliers_demo_v1';
+    const oldOrigins=localStorage.getItem(originKey),oldSuppliers=localStorage.getItem(supplierKey);
+    const originalPanel=document.querySelector('#panel').innerHTML;
+    localStorage.setItem(supplierKey,JSON.stringify([{id:'sup',name:'Proveedor A',active:true},{id:'off',name:'Proveedor inactivo',active:false}]));
+    localStorage.setItem(originKey,JSON.stringify([
+      {id:'a1',name:'Almacén principal',type:'proveedor',supplierId:'sup',active:true,defaultForSupplier:true,municipality:'Playa'},
+      {id:'a2',name:'Almacén secundario',type:'proveedor',supplierId:'sup',active:true,municipality:'Playa'},
+      {id:'off1',name:'Inactivo',type:'proveedor',supplierId:'off',active:true,municipality:'Playa'},
+      {id:'own',name:'Propio',type:'propio',active:true,municipality:'Playa'}
+    ]));
+    document.querySelector('#panel').innerHTML='<select id="porigin"><option value="proveedor" selected>Proveedor</option><option value="propio">Propio</option></select><div id="edNewProductOrigins"></div>';
+    edProductOriginsRender('new',null);
+    const supplier=document.querySelector('.ed-product-supplier').value;
+    const initial=[...document.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value);
+    const available=[...document.querySelectorAll('.ed-product-origin')].map(x=>x.value);
+    document.querySelector('#porigin').value='propio';
+    edProductOriginsRender('new',null);
+    const own=[...document.querySelectorAll('.ed-product-origin:checked')].map(x=>x.value);
+    localStorage.setItem(originKey,oldOrigins);localStorage.setItem(supplierKey,oldSuppliers);
+    document.querySelector('#panel').innerHTML=originalPanel;
+    return {supplier,initial,available,own};
+   });
+   assert.deepEqual(autoAssignment,{supplier:'sup',initial:['a1'],available:['a1','a2'],own:['own']},'Product origin must default to active supplier warehouse and keep own separate');
+   console.log('PASS product form supplier warehouse default and own-origin separation');
    assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),3,'All supplier and warehouse edit actions must be disabled');
    assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),3,'All supplier and warehouse toggle actions must be disabled');
    assert.equal(await page.locator('label[for="edOriginAddress"]').count(),1,'Warehouse address must have an explicit label');
