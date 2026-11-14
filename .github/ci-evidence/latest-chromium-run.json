@@ -1,8 +1,8 @@
 {
   "branch": "plan/maestro-finalizacion-seguridad-20261113",
-  "chromium_job_result": "success",
-  "head_sha": "529e134c1bf6b5477cf334ec3f5b1018b7319e53",
+  "chromium_job_result": "failure",
+  "head_sha": "8838ecc721cd943c6c1b90923b57e62dc77ef41f",
   "run_attempt": 1,
-  "run_id": 43644529348,
-  "run_url": "https://github.com/Liuben810921/enlace-digital/actions/runs/43644529348"
+  "run_id": 43644541412,
+  "run_url": "https://github.com/Liuben810921/enlace-digital/actions/runs/43644541412"
 }
