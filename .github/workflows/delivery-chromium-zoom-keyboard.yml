@@ -51,3 +51,17 @@ jobs:
             chromium-*-quarantine.png
             ci-evidence/*
           if-no-files-found: ignore
+  record-run-id:
+    name: Record isolated Chromium run identifier
+    needs: chromium-accessibility
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish non-sensitive run metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHROMIUM_JOB_RESULT: ${{ needs.chromium-accessibility.result }}
+        run: python3 scripts/record_chromium_run.py
