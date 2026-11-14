@@ -80,3 +80,11 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Diagnóstico del log: `Horizontal overflow at width 320 zoom 2`, `viewport:320`, `documentWidth:393`. Único elemento señalado: `TEXTAREA#edOriginAddress`, `left:46`, `right:393`, `width:347`. Artefacto `14132321278` guardado.
 - Corrección acotada en `index.html`: `#edOriginAddress` recibe `display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box`, evitando que el tamaño intrínseco de textarea exceda el contenedor a zoom 200 %. Commit `a84ee9aa`.
 - La corrección es una hipótesis técnica basada en el elemento medido; queda pendiente confirmación en una nueva ejecución real de Chromium a 320/375/430 px, teclado y recuperación. No se deshabilitó la aserción de overflow.
+
+## Chromium #43641205396 — validación final PASS
+- Run `43641205396`, job `132588960796`, commit `c7d1bb6827fa9b5caf655d09eeef3371871bb7c2`, rama aislada: **success** (todos los pasos).
+- Logs: `PASS mobile quarantine warning accurately describes cause and editing actions disabled`; `PASS quarantine blocks mobile selectors and effective dispatch, explicit recovery restores only valid associations and invalidates snapshots`.
+- Navegador Chromium: `PASS Chromium width=320 zoom 100/200%, keyboard, quarantine and invalidation`; igualmente `width=375` y `width=430`. Se verificó ausencia de overflow horizontal, acciones de edición deshabilitadas durante cuarentena, recuperación por teclado, rechazo de asociaciones inválidas y cotizaciones anteriores invalidadas.
+- Artefacto de capturas `delivery-chromium-zoom-keyboard` ID `14131837952` (1 001 546 bytes), SHA-256 `9ecc4340e3c8f976e3610da19a0b126f2bdd715e0cfea0c2379265e535742f2d`, subido correctamente. Capturas conservadas; su inspección visual individual no se realizó en esta revisión.
+- Advertencia no bloqueante en logs: Node.js 20 de acciones `checkout@v4`, `setup-node@v4`, `upload-artifact@v4` forzado a Node.js 24; planificar actualización de acciones en mantenimiento separado.
+- Alcance: módulo extraído y datos sintéticos en Chromium; no prueba integral de sitio desplegado ni autorización para staging/producción.
