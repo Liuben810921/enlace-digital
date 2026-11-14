@@ -310,3 +310,5 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Prueba `838ef087`: Chromium verifica foco de latitud 91°, longitud faltante y proveedor no seleccionado; comprueba que los datos locales y revisión de cotizaciones permanecen iguales tras los tres rechazos.
 - Revisión de código de `edDeliveryPersistAndInvalidate`: guarda valor previo, intenta escritura, invalida revisión solo tras escritura, revierte si falla invalidación y activa cuarentena si no puede confirmar rollback. No se ha confirmado defecto adicional en esta inspección; falta batería reproducible de fallos simulados de localStorage.
 - Pendiente: ejecutar nueva regresión Chromium y seis tests offline; verificar jobs, logs, artefactos mediante registro automático. Sin Supabase, staging, producción, clientes, pedidos ni despliegues.
+
+- Prueba adicional `f9381a7f`: simula excepción de `Storage.prototype.setItem` exclusivamente para la clave de revisión; exige resultado falso, rollback de almacenes, revisión intacta y ausencia de cuarentena cuando el rollback sí funciona. Pendiente de CI; no se afirma PASS.
