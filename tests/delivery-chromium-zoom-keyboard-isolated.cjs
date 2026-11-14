@@ -57,8 +57,8 @@ const {chromium}=require('playwright');
 
 
    await page.evaluate(()=>{edDeliveryQuarantine();document.querySelector('#panel').innerHTML=edDeliveryOriginsPanel()});
-   assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),2,'Supplier and warehouse edit must be disabled');
-   assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),2,'Toggle actions must be disabled');
+   assert.equal(await page.locator('button:has-text("Editar"):disabled').count(),3,'All supplier and warehouse edit actions must be disabled');
+   assert.equal(await page.locator('button:has-text("Desactivar"):disabled').count(),3,'All supplier and warehouse toggle actions must be disabled');
    assert.equal(await page.locator('label[for="edOriginAddress"]').count(),1,'Warehouse address must have an explicit label');
    assert.equal(await page.locator('#edOriginAddress').evaluate(el=>el.labels?.[0]?.textContent?.trim()),'Dirección de salida','Warehouse address label must be programmatically associated');
    for(const id of ['edOriginName','edOriginType','edOriginSupplier','edOriginMunicipality','edOriginAddress','edOriginOsmAnd','edOriginLat','edOriginLng']){
