@@ -215,3 +215,10 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Corrección `6108c4b5`: se añaden asociaciones `for` a `edOriginName`, `edOriginType`, `edOriginSupplier`, `edOriginMunicipality`, `edOriginOsmAnd`, `edOriginLat` y `edOriginLng`. Sin alteraciones de la lógica de guardado ni la cuarentena.
 - Regresión `a02a89e6`: el test Chromium existente verifica en DOM real `element.labels` y `for` para los siete campos y `edOriginAddress`, con el formulario bloqueado por cuarentena, en cada ancho 320/375/430 px. Emite `PASS warehouse form explicit labels for 8 controls`.
 - Estado: cambio y prueba incorporados a la rama aislada. **Pendiente** confirmar ejecución CI posterior a `a02a89e6` mediante el registro automático, jobs, logs y artefactos. No atribuir PASS antes de esa ejecución.
+
+## Cierre de regresión de ocho etiquetas accesibles — PASS #43644019357
+- El índice automático publicó `run_id=43644019357`, `head_sha=a02a89e67c190008a7188099128562860836460a`, `chromium_job_result=success`. La ejecución incluye la prueba nueva de ocho controles.
+- Job Chromium `132597659903`: **success** en todos los pasos. Los logs muestran tres veces `PASS warehouse form explicit labels for 8 controls` (320, 375, 430 px); también `PASS Chromium width=320/375/430 zoom 100/200%, keyboard, quarantine and invalidation` y `PASS real CSS text contrast and keyboard focus on 320/375/430px`.
+- Job índice `132597836087`: **success**. Los seis tests offline reportan `ok`, resumen `Ran 6 tests in 0.007s` / `OK`; publicación de metadatos exitosa en intento 1.
+- Artefacto `delivery-chromium-zoom-keyboard`, ID `14133212739`, tamaño **1 092 449 bytes**, digest `sha256:f47c6cbdb217cf692e3a97564993f41da4cdada4450a70d0ed1f05b16dfd8d03`. Se verificó publicación y metadata, no inspección individual de capturas.
+- Conclusión: las siete asociaciones nuevas y la octava ya existente superan la regresión en Chromium real. Sin defectos confirmados que corregir. Solo rama aislada; sin Supabase, staging, producción, clientes, pedidos ni despliegues.
