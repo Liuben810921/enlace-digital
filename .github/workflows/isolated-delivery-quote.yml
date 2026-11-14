@@ -1,8 +1,10 @@
 name: isolated-delivery-quote
 on:
   push:
-    branches: [audit/delivery-map-readonly-20261113]
+    branches: [audit/delivery-map-readonly-20261113, plan/maestro-finalizacion-seguridad-20261113]
     paths:
+      - 'tests/delivery-warehouse-registry-isolated.cjs'
+      - 'tests/delivery-warehouse-registry-isolated.test.cjs'
       - 'tests/delivery-quote-isolated.cjs'
       - 'tests/delivery-quote-isolated.test.cjs'
       - 'tests/delivery-origins-ui.test.cjs'
@@ -74,6 +76,7 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      - run: node tests/delivery-warehouse-registry-isolated.test.cjs
       - run: node tests/delivery-quote-isolated.test.cjs
       - run: node tests/delivery-origins-ui.test.cjs
       - run: node tests/delivery-dispatch-isolated.test.cjs
