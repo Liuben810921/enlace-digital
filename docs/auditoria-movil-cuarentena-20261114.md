@@ -408,3 +408,9 @@ Ejecutar pruebas Chromium reales para zoom 200%, teclado y árbol de accesibilid
 - Workflow reinicializa esquema y roles sintéticos entre la batería base y la adversarial; ambas usan únicamente PostgreSQL 16 desechable. No se conecta a Supabase ni a datos reales.
 - Ejecución nueva identificada: run 43648339615 para SHA 22e2dad1707396004ea2568910012242595444ec, job 132611039237 en progreso al consultar. No afirmar PASS antes de revisar logs y artefactos.
 - Pendientes de una futura integración: aislamiento multiempresa, autorizaciones por usuario, auditoría de permisos completos, bloqueo/desconexión durante COMMIT, publicación, compensaciones y múltiples almacenes con reglas de cotización. No se modificó inventario operativo ni servicios.
+
+## Corrección verificada por diagnóstico de CI adversarial
+- Run 43648339615, job 132611039237: completed/failure. Log de psql indica error de sintaxis en tests/postgres-product-bundle-atomic-lab.sql línea 76, cerca de '$' al declarar commit_multi. La batería no alcanzó las aserciones Python ni produjo artefacto.
+- Causa confirmada: delimitadores dollar-quote de la nueva función escritos como AS $ y END $; en vez de AS $$ y END $$;. Corrección limitada al SQL en commit 3dd8687ce2c4b454eccaf4954c089b9fbe3a8fec.
+- Nuevo run PostgreSQL 43648443974, job 132611351116, observado en progreso. No se declara PASS ni se atribuyen logs/artefactos hasta finalizar.
+- El resto de la configuración permanece aislado; no se tocó inventario operativo, Supabase, staging, producción, clientes, pedidos ni despliegues.
