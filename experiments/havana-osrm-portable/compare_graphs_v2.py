@@ -17,7 +17,7 @@ def validate(raw):
  keys(d,('cases','snap_limit_m'))
  limit=d['snap_limit_m']; cases=d['cases']
  if not num(limit) or type(cases)!=list or not 1<=len(cases)<=10000: raise ValueError('limits')
- seen=set(); ce=[]; ee=[]; diffs=[]; eligible=0; compared=0
+ seen=set(); ce=[]; ee=[]; diffs=[]; eligible=0; compared=0; outside=0; outside_disagreements=0
  bs={x:0 for x in sorted(CODES)}; cs={x:0 for x in sorted(CODES)}
  for c in cases:
   keys(c,('id','in_coverage','baseline','candidate'))
@@ -32,7 +32,10 @@ def validate(raw):
     if not num(r['distance_m']): raise ValueError('distance')
    elif r['distance_m'] is not None: raise ValueError('non-ok distance')
   a=c['baseline']; b=c['candidate']; bs[a['code']]+=1; cs[b['code']]+=1
-  if not c['in_coverage']: continue
+  if not c['in_coverage']:
+   outside+=1
+   if a['code']!=b['code']: outside_disagreements+=1
+   continue
   if a['code']!='Ok': ce.append([ident,'baseline_unavailable']); continue
   eligible+=1
   if b['code']!='Ok': ce.append([ident,'candidate_unavailable']); continue
@@ -42,15 +45,19 @@ def validate(raw):
     if v>limit:
      ce.append([ident,side+'_snap_'+('origin' if i==0 else 'destination')]); bad=True
   if bad: continue
-  compared+=1; delta=b['distance_m']-a['distance_m']; diffs.append(delta)
+  compared+=1; delta=b['distance_m']-a['distance_m']
+  if not math.isfinite(delta): raise ValueError('numeric overflow')
+  diffs.append(delta)
   if a['distance_m']==0:
    if delta!=0: ee.append([ident,'zero_baseline_mismatch'])
   elif abs(delta)>100 or abs(delta)/a['distance_m']>0.02: ee.append([ident,'distance_drift'])
  if not eligible: ce.append(['global','no_eligible_routes'])
  if not compared: ee.append(['global','no_comparable_routes'])
- pos=math.fsum(v for v in diffs if v>0); neg=-math.fsum(v for v in diffs if v<0)
+ try:
+  pos=math.fsum(v for v in diffs if v>0); neg=-math.fsum(v for v in diffs if v<0); net=math.fsum(diffs)
+ except OverflowError as exc: raise ValueError('numeric overflow') from exc
  if pos>neg: ee.append(['global','positive_net_distance_bias'])
- return {'accepted':not ce and not ee,'coverage_audit':{'passed':not ce,'errors':ce,'baseline_status':bs,'candidate_status':cs,'eligible':eligible},'route_equivalence':{'passed':not ee,'errors':ee,'compared':compared,'increased':sum(v>0 for v in diffs),'decreased':sum(v<0 for v in diffs),'unchanged':sum(v==0 for v in diffs),'positive_delta_m':pos,'negative_delta_m':neg,'net_delta_m':math.fsum(diffs)}}
+ return {'accepted':not ce and not ee,'coverage_audit':{'passed':not ce,'errors':ce,'baseline_status':bs,'candidate_status':cs,'eligible':eligible,'outside_unverified':outside,'outside_status_disagreements':outside_disagreements},'route_equivalence':{'passed':not ee,'errors':ee,'compared':compared,'increased':sum(v>0 for v in diffs),'decreased':sum(v<0 for v in diffs),'unchanged':sum(v==0 for v in diffs),'positive_delta_m':pos,'negative_delta_m':neg,'net_delta_m':net}}
 if __name__=='__main__':
  try:
   result=validate(Path(sys.argv[1]).read_bytes());print(json.dumps(result,sort_keys=True));sys.exit(0 if result['accepted'] else 1)
