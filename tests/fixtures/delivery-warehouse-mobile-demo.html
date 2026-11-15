@@ -35,6 +35,8 @@ small,.note{color:#b5c8d5}article{border-top:1px solid #36556a;padding:12px 0}.g
 <svg id="roadMapPlaceholder" role="img" aria-label="Esquema de puntos públicos ficticios. Sin mapa vial ni rutas verificadas" viewBox="0 0 360 220" style="width:100%;max-height:300px;border:1px dashed #66859b;border-radius:10px;background:#071a2c"></svg>
 <p id="mapSelectionStatus" role="status" aria-live="polite">Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.</p>
 <button type="button" id="mapReset">Limpiar selección</button>
+<button type="button" id="mapSyntheticRoute" disabled>Mostrar geometría sintética validada</button>
+<p class="note" id="mapRouteLegend">La línea solo aparecerá para la muestra offline etiquetada y validada. No representa calles de La Habana.</p>
 </section>
 <section><h2>Vista previa ficticia de mensajería</h2><p id="deliveryPreview" role="status">Tarifa pendiente de confirmar: no hay rutas viales verificadas ni servicio de mapas conectado.</p></section>
 <p id="status" role="status" aria-live="polite"></p>
@@ -86,11 +88,37 @@ const PUBLIC_POINTS=[
  {id:'public_c',label:'Punto público C (ficticio)',lat:23.08,lng:-82.31},
  {id:'public_d',label:'Punto público D (ficticio)',lat:23.12,lng:-82.28}
 ];
+// Embedded offline fixture is synthetic. Never accept arbitrary browser data as a trusted backend.
+const OFFLINE_ROUTE_FIXTURE=Object.freeze({
+ label:'SINTÉTICA · NO VIAL',originId:'public_a',destinationId:'public_b',
+ cartographyVersion:'synthetic-offline-v1',measuredAtMs:1000,trustedBackend:true,
+ response:{code:'Ok',routes:[{distance:4800,geometry:{type:'LineString',coordinates:[[-82.40,23.10],[-82.39,23.115],[-82.37,23.12],[-82.35,23.14]]}}]}
+});
+let showSyntheticRoute=false;
 const NS=['http:','','www.w3.org','2000','svg'].join('/');
 const makeSvg=(tag,attrs)=>{const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el};
+function validatedSyntheticPath(){
+ const a=$('mapOrigin').value,b=$('mapDestination').value,f=OFFLINE_ROUTE_FIXTURE;
+ if(!showSyntheticRoute||a!==f.originId||b!==f.destinationId||f.label!=='SINTÉTICA · NO VIAL'||f.cartographyVersion!=='synthetic-offline-v1'||f.trustedBackend!==true||f.measuredAtMs!==1000)return null;
+ const r=f.response?.routes?.[0],c=r?.geometry?.coordinates;
+ if(f.response.code!=='Ok'||r.geometry.type!=='LineString'||!Array.isArray(c)||c.length<2||c.length>20000||!Number.isFinite(r.distance)||r.distance<0||!c.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite)&&Math.abs(p[0])<=180&&Math.abs(p[1])<=90))return null;
+ const xs=c.map(p=>p[0]),ys=c.map(p=>p[1]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ if(minX===maxX&&minY===maxY)return null;
+ const scale=Math.min(324/(maxX-minX||1e-10),184/(maxY-minY||1e-10));
+ const ox=(360-(maxX-minX)*scale)/2,oy=(220-(maxY-minY)*scale)/2;
+ return c.map(([lng,lat],i)=>(i?'L':'M')+(ox+(lng-minX)*scale).toFixed(2)+' '+(220-oy-(lat-minY)*scale).toFixed(2)).join(' ');
+}
 function renderMap(){
  const svg=$('roadMapPlaceholder');svg.replaceChildren();
  const title=makeSvg('text',{x:12,y:22,fill:'#cde6f5','font-size':12});title.textContent='Puntos de referencia · esquema, sin cartografía';svg.appendChild(title);
+ const path=validatedSyntheticPath();
+ if(path){
+  const line=makeSvg('path',{d:path,fill:'none',stroke:'#ffcb4a','stroke-width':4,'stroke-linecap':'round','stroke-linejoin':'round','stroke-dasharray':'7 5','aria-label':'Geometría sintética de laboratorio, no ruta real'});
+  svg.appendChild(line);
+  const warning=makeSvg('text',{x:12,y:207,fill:'#ffcb4a','font-size':11});warning.textContent='SIMULACIÓN · NO VIAL · SIN COTIZACIÓN';svg.appendChild(warning);
+ }
+ $('mapSyntheticRoute').disabled=$('mapOrigin').value!=='public_a'||$('mapDestination').value!=='public_b';
+ if(!path)showSyntheticRoute=false;
  for(const p of PUBLIC_POINTS){
   const x=28+(p.lng+82.42)/.16*300,y=195-(p.lat-23.06)/.10*145;
   const selected=p.id===$('mapOrigin').value||p.id===$('mapDestination').value;
@@ -102,13 +130,14 @@ function renderMap(){
   const label=makeSvg('text',{x:x+12,y:y+4,fill:'#f2f7ff','font-size':11});label.textContent=p.id.replace('public_','').toUpperCase();svg.appendChild(label);
  }
  const a=$('mapOrigin').value,b=$('mapDestination').value;
- $('mapSelectionStatus').textContent=a&&b&&a!==b?'Origen y destino ficticios seleccionados. Sin ruta vial verificada: tarifa pendiente de confirmar.':a===b&&a?'Origen y destino deben ser distintos. Tarifa pendiente de confirmar.':'Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.';
+ $('mapSelectionStatus').textContent=path?'Geometría SINTÉTICA validada solo en este laboratorio. No es una ruta vial real. Tarifa pendiente de confirmar.':a&&b&&a!==b?'Origen y destino ficticios seleccionados. Sin ruta vial verificada: tarifa pendiente de confirmar.':a===b&&a?'Origen y destino deben ser distintos. Tarifa pendiente de confirmar.':'Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.';
  $('deliveryPreview').textContent='Tarifa pendiente de confirmar: no hay rutas viales verificadas ni servicio de mapas conectado.';
 }
 for(const key of ['mapOrigin','mapDestination']){
  $(key).innerHTML='<option value="">Seleccionar</option>'+PUBLIC_POINTS.map(p=>'<option value="'+p.id+'">'+p.label+'</option>').join('');
- $(key).addEventListener('change',renderMap);
+ $(key).addEventListener('change',()=>{showSyntheticRoute=false;renderMap()});
 }
-$('mapReset').addEventListener('click',()=>{$('mapOrigin').value='';$('mapDestination').value='';renderMap()});
+$('mapReset').addEventListener('click',()=>{$('mapOrigin').value='';$('mapDestination').value='';showSyntheticRoute=false;renderMap()});
+$('mapSyntheticRoute').addEventListener('click',()=>{showSyntheticRoute=true;renderMap()});
 $('warehouseSupplier').disabled=true;render();
 </script></body></html>
