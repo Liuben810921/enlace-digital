@@ -95,7 +95,7 @@ def run(root):
     original_data = target.read_bytes()
     original_open = module.os.open
     def racing_open(path, flags, *args, **kwargs):
-        if Path(path) == target:
+        if path == target.name and kwargs.get("dir_fd") is not None:
             target.unlink()
             target.symlink_to(root / LOCK)
         return original_open(path, flags, *args, **kwargs)
@@ -119,7 +119,7 @@ def run(root):
     original_open = module.os.open
     swapped = [False]
     def parent_swap_open(path, flags, *args, **kwargs):
-        if Path(path) == target and not swapped[0]:
+        if path == target.name and kwargs.get("dir_fd") is not None and not swapped[0]:
             swapped[0] = True
             parent.rename(moved)
             parent.mkdir()
@@ -138,6 +138,8 @@ def run(root):
         if swapped[0]:
             shutil.rmtree(parent)
             moved.rename(parent)
+    # An anchored directory descriptor may legitimately read the original
+    # identical bytes after a parent rename; it must never follow the replacement.
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
