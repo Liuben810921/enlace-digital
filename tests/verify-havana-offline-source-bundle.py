@@ -12,6 +12,11 @@ EXPECTED = {
     "tests/havana-offline-cartography-manifest-isolated.test.cjs": "af3bbcb60ff67237ed3691b45a30046cd52322e1",
     "tests/fixtures/havana-offline-cartography-manifest.json": "cf9f67c507d2619ee5979a39db0caef3e6ae7145",
 }
+SHA256 = {
+    "tests/havana-offline-cartography-manifest-isolated.cjs": "f53625ccd634311c4858303dfe03280702b694dc8f110f5766a5598969599c40",
+    "tests/havana-offline-cartography-manifest-isolated.test.cjs": "27bea12aa0b192c99c86f647fd4fc7a70f04dc7d407ea9e4f2995ccd7cf97cfc",
+    "tests/fixtures/havana-offline-cartography-manifest.json": "092dfeac27878b4dc01d49222e21b352400c0327bce98745dd05139326546435",
+}
 SOURCE_COMMIT = "1ce20519fea72c6f4d723cc82dab0b0fbf33a793"
 LOCK = "tests/fixtures/havana-offline-source-bundle-lock.json"
 MAX_BYTES = 128 * 1024
@@ -78,17 +83,17 @@ def verify(root):
         fail("invalid_file_list")
     seen = set()
     for item in files:
-        if not isinstance(item, dict) or set(item) != {"path", "gitBlobSha1"}:
+        if not isinstance(item, dict) or set(item) != {"path", "gitBlobSha1", "sha256"}:
             fail("invalid_file_entry")
         name, expected = item["path"], item["gitBlobSha1"]
-        if not isinstance(name, str) or name not in EXPECTED or name in seen or expected != EXPECTED[name]:
+        if not isinstance(name, str) or name not in EXPECTED or name in seen or expected != EXPECTED[name] or item["sha256"] != SHA256[name]:
             fail("unexpected_path_or_digest")
         seen.add(name)
     if seen != set(EXPECTED):
         fail("missing_file")
     for name, digest in EXPECTED.items():
         data = read_regular(root, name)
-        if git_blob_sha(data) != digest:
+        if git_blob_sha(data) != digest or hashlib.sha256(data).hexdigest() != SHA256[name]:
             fail("hash_mismatch:" + name)
     return len(EXPECTED)
 
