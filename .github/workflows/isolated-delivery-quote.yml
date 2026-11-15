@@ -21,6 +21,8 @@ on:
       - 'tests/delivery-effective-origins-integration.test.cjs'
       - 'tests/delivery-effective-origins-ui.test.cjs'
       - 'tests/delivery-admin-context-invalidation.test.cjs'
+      - 'tests/delivery-end-to-end-readiness-isolated.cjs'
+      - 'tests/delivery-end-to-end-readiness-isolated.test.cjs'
       - 'tests/delivery-warehouse-registry-isolated.cjs'
       - 'tests/delivery-warehouse-registry-isolated.test.cjs'
       - 'tests/delivery-quote-isolated.cjs'
@@ -112,6 +114,7 @@ jobs:
       - run: node tests/delivery-admin-context-invalidation.test.cjs
       - run: node tests/delivery-warehouse-mobile-demo.test.cjs
       - run: node tests/delivery-warehouse-registry-isolated.test.cjs
+      - run: node tests/delivery-end-to-end-readiness-isolated.test.cjs
       - run: node tests/delivery-quote-isolated.test.cjs
       - run: node tests/delivery-origins-ui.test.cjs
       - run: node tests/delivery-dispatch-isolated.test.cjs
