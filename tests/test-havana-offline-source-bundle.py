@@ -59,6 +59,35 @@ def run(root):
             raise RuntimeError("accepted malformed lock: " + label)
         finally:
             lockpath.write_bytes(original)
+    for relative in module.EXPECTED:
+        target = root / relative
+        original_data = target.read_bytes()
+        target.unlink()
+        target.symlink_to(root / LOCK)
+        try:
+            verify(root)
+        except (OSError, ValueError, TypeError, UnicodeError):
+            count += 1
+        else:
+            raise RuntimeError("accepted symlink leaf: " + relative)
+        finally:
+            target.unlink()
+            target.write_bytes(original_data)
+    # Replace a parent directory with a symlink to an identical copy.
+    fixtures = root / "tests/fixtures"
+    alternate = root / "fixtures-copy"
+    shutil.copytree(fixtures, alternate)
+    shutil.rmtree(fixtures)
+    fixtures.symlink_to(alternate, target_is_directory=True)
+    try:
+        verify(root)
+    except (OSError, ValueError, TypeError, UnicodeError):
+        count += 1
+    else:
+        raise RuntimeError("accepted symlink parent")
+    finally:
+        fixtures.unlink()
+        shutil.move(str(alternate), str(fixtures))
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
