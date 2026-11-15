@@ -4,6 +4,7 @@ import copy
 import json
 from pathlib import Path
 import tempfile
+import shutil
 import importlib.util
 spec = importlib.util.spec_from_file_location("offline_bundle", Path(__file__).with_name("verify-havana-offline-source-bundle.py"))
 module = importlib.util.module_from_spec(spec)
@@ -64,4 +65,11 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
         raise SystemExit("usage: tests/test-havana-offline-source-bundle.py BUNDLE_DIRECTORY")
-    run(Path(sys.argv[1]))
+    with tempfile.TemporaryDirectory(prefix="ed-offline-bundle-") as tmp:
+        source = Path(sys.argv[1])
+        destination = Path(tmp)
+        for relative in [module.LOCK, *module.EXPECTED]:
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source / relative, target)
+        run(destination)
