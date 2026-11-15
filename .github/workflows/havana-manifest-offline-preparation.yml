@@ -1,0 +1,26 @@
+# Preparation-only workflow. Deliberately non-executable.
+# No push, pull_request, schedule, or workflow_dispatch event.
+# A later, separately authorized change must provide an event and remove the guard.
+name: Havana manifest offline CI - BLOCKED
+on: {}
+permissions: {}
+jobs:
+  manifest-offline:
+    if: ${{ false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    env:
+      CI_NETWORK_FORBIDDEN: 'true'
+      ED_CARTOGRAPHY_ASSETS_READY: 'false'
+      ED_ROUTE_READY: 'false'
+      ED_COMMERCIAL_QUOTE_ENABLED: 'false'
+    steps:
+      # Not runnable as authored: no checkout and no repository source on runner.
+      # Adding actions/checkout would require a network fetch, which violates a
+      # literal zero-network requirement and requires separate approval.
+      - name: Block execution until source acquisition and cost review
+        shell: bash
+        run: |
+          echo 'BLOCKED: offline source provenance, runner and billing review required'
+          exit 1
