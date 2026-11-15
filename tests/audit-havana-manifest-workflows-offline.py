@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Offline, fail-closed YAML audit; requires locally preinstalled PyYAML."""
-import sys,re
+import sys,re,hashlib
 from pathlib import Path
 import yaml
 class Loader(yaml.SafeLoader):pass
+Loader.yaml_implicit_resolvers={k:list(v) for k,v in yaml.SafeLoader.yaml_implicit_resolvers.items()}
 for k,v in list(Loader.yaml_implicit_resolvers.items()):
  Loader.yaml_implicit_resolvers[k]=[(t,r) for t,r in v if t!='tag:yaml.org,2002:bool']
 Loader.add_implicit_resolver('tag:yaml.org,2002:bool',re.compile(r'^(true|false)$',re.I),list('tTfF'))
@@ -19,8 +20,12 @@ FILES=['havana-manifest-offline-preparation.yml','havana-manifest-offline-candid
 SHA='886bcfc55cd482613025ffe9befe22d9462c1a58'
 FLAGS={'ED_CARTOGRAPHY_ASSETS_READY':'false','ED_ROUTE_READY':'false','ED_COMMERCIAL_QUOTE_ENABLED':'false'}
 def check(raw,candidate):
- try:d=yaml.load(raw,Loader=Loader)
- except (yaml.YAMLError,ValueError):return False
+ if not isinstance(raw,str) or len(raw.encode('utf-8'))>32768:return False
+ try:
+  tokens=list(yaml.scan(raw))
+  if any(isinstance(t,(yaml.tokens.AnchorToken,yaml.tokens.AliasToken,yaml.tokens.TagToken)) for t in tokens):return False
+  d=yaml.load(raw,Loader=Loader)
+ except (yaml.YAMLError,ValueError,TypeError,RecursionError,OverflowError,UnicodeError):return False
  if not isinstance(d,dict) or set(d)!={'name','on','permissions','jobs'} or d['on']!={} or d['permissions']!={}:return False
  jobs=d['jobs']
  key='manifest-node-offline' if candidate else 'manifest-offline'
@@ -39,7 +44,6 @@ def check(raw,candidate):
  if not candidate:return steps[0]['run'].strip()=="echo 'BLOCKED: offline source provenance, runner and billing review required'\nexit 1"
  a,b=(s['run'] for s in steps)
  # Fail closed on full shell content using fixed SHA-256 values established by offline review.
- import hashlib
  return hashlib.sha256(a.encode()).hexdigest()==BOOTSTRAP_SHA and hashlib.sha256(b.encode()).hexdigest()==ISOLATED_SHA and SHA in a
 # Digests are set after independently checking exact workflow content offline.
 BOOTSTRAP_SHA='043cb738b79aa6a9a75437e316f9ca77b1084241b4e17519d86c7c3d69d91dc8'
@@ -70,6 +74,18 @@ def main(root):
   before,after=change
   assert before in raw,name
   assert not check(raw.replace(before,after,1),True),name
+  count+=1
+ for attack in [
+  'on: &x {}\\npermissions: *x',
+  'on: !unsafe {}',
+  'on: {}\\njobs: &cycle {a: *cycle}',
+  'on: {}\\n? [bad, key]\\n: value',
+  'on: {}\\non: {push: null}',
+  'on: {}\\npermissions: {}\\npermissions: {contents: write}',
+  'on: {}\\n---\\non: {push: null}',
+  'on: {}\\nname: !!python/object/apply:os.system [echo unsafe]',
+ ]:
+  assert not check(attack,True),attack
   count+=1
  assert not check('on: [',True);count+=1
  print('PASS',count,'adversarial mutations')
