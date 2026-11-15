@@ -37,12 +37,12 @@ function validateOfflineManifest(m){
 // Parse JSON structure to reject duplicate keys, including escaped-equivalent and nested keys.
 function rejectDuplicateJsonKeys(raw){
  let i=0;
- function ws(){while(i<raw.length && /[ \\t\\r\\n]/.test(raw[i]))i++;}
- function str(){const start=i++;let escaped=false;while(i<raw.length){const c=raw[i++];if(escaped){escaped=false;continue;}if(c==='\\\\'){escaped=true;continue;}if(c==='"')return JSON.parse(raw.slice(start,i));}throw Error('invalid_json');}
+ function ws(){while(i<raw.length && /[ \t\r\n]/.test(raw[i]))i++;}
+ function str(){const start=i++;let escaped=false;while(i<raw.length){const c=raw[i++];if(escaped){escaped=false;continue;}if(c==='\\'){escaped=true;continue;}if(c==='"')return JSON.parse(raw.slice(start,i));}throw Error('invalid_json');}
  function value(){ws();const c=raw[i];if(c==='"'){str();return;}
   if(c==='{'){i++;const keys=new Set();ws();if(raw[i]==='}'){i++;return;}while(i<raw.length){ws();if(raw[i]!=='"')throw Error('invalid_json');const k=str();if(keys.has(k))throw Error('duplicate_json_key');keys.add(k);ws();if(raw[i++]!==':')throw Error('invalid_json');value();ws();if(raw[i]==='}'){i++;return;}if(raw[i++]!==',')throw Error('invalid_json');}throw Error('invalid_json');}
   if(c==='['){i++;ws();if(raw[i]===']'){i++;return;}while(i<raw.length){value();ws();if(raw[i]===']'){i++;return;}if(raw[i++]!==',')throw Error('invalid_json');}throw Error('invalid_json');}
-  const match=/^(?:true|false|null|-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)/.exec(raw.slice(i));if(!match)throw Error('invalid_json');i+=match[0].length;
+  const match=/^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(raw.slice(i));if(!match)throw Error('invalid_json');i+=match[0].length;
  }
  value();ws();if(i!==raw.length)throw Error('invalid_json');
 }
