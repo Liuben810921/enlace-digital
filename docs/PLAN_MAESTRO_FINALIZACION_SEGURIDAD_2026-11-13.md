@@ -143,3 +143,29 @@ Cada funcionalidad se considera **Terminada** solo si: (a) tiene requisitos y ca
 - Prototipo móvil aislado `tests/fixtures/delivery-warehouse-mobile-demo.html`: dirección de referencia obligatoria para nuevos almacenes, dirección visible y editable, bandera `addressVerified:false` tras cambios; vista previa explícita `Tarifa pendiente de confirmar`. No utiliza red ni verifica mapas; la tarifa no se calcula desde datos de clientes.
 - Los proveedores del prototipo solo tienen nombre/estado; sus direcciones se gestionan por almacén. No se han creado registros reales ni integrado persistencia.
 - Pendiente: confirmar CI para el commit que contiene la modificación móvil, comprobar el nuevo test de contrato aislado, y luego definir con el Owner el proveedor cartográfico y referencias reales de La Habana antes de validar distancias.
+
+## 13. Cierre de aceptación aislada y preparación cartográfica — 14/15-11-2026
+
+### Evidencia de aceptación
+- GitHub Actions [#43657928031](https://github.com/Liuben810921/enlace-digital/actions/runs/43657928031), commit `ebb72551a47e676cc1fcb43f741c19504afa2091`: **completed/success**.
+- Job funcional `132640542598`: **success**. Logs: PASS de CRUD y asociaciones proveedor/almacén, direcciones/coordenadas ficticias, invalidez de cotización al cambiar contexto, ruta pendiente sin validación, reglas de tarifa, pruebas PostgreSQL 16 efímero, RLS y carreras. Mensajes ERROR de PostgreSQL para denegación de permisos y contextos obsoletos corresponden a casos adversariales esperados, no a fallo del job.
+- Job visual `132640542301`: **success**. Chromium 320, 375 y 430 px: PASS de selector proveedor, almacén efectivo, asociaciones, cuarentena, invalidación, recuperación y capturas. Artefacto `delivery-mobile-visual-320-375-430` ID `14139011554`, digest `sha256:b74f96ffadf76c7f364276f2ecab3ed8781cd46aeaef7a2e13b5fb696e0ba711`.
+- Cierre: **ACEPTADO exclusivamente el prototipo aislado y sus contratos**, sin declarar verificada cartografía real, direcciones operativas, persistencia de servidor, mapa de la tienda ni checkout conectado. El fixture móvil de dirección y aviso de tarifa pendiente fue añadido en commit posterior `01034f68`; su workflow previo #43657870190 pasó, pero la ejecución #43657928031 valida el commit `ebb72551` que ya lo incluye.
+- Advertencias no bloqueantes de GitHub Actions: Node.js 20 deprecado en `actions/checkout@v4` y `actions/upload-artifact@v4`. No reabrir baterías por esta advertencia aislada.
+
+### Preparación de mapa vial real, sin conectar servicios
+**Requisitos obligatorios:** cobertura vial de La Habana, WGS84, rutas automóvil y sentido de circulación, distancias en metros, rutas sin disponibilidad, validación de origen efectivo y destino de referencia, trazabilidad de versión de cartografía, caducidad y límites de uso, protección de datos y fallo seguro `Tarifa pendiente de confirmar`. Nunca estimar distancia vial por línea recta ni confiar en campos `verifiedByServer` suministrados por navegador.
+
+**Alternativas para decisión posterior:**
+1. **OSRM autohospedado con extracto de OpenStreetMap**: motor compatible con el adaptador offline actual; exige alojamiento, actualizaciones de datos, evaluación de cobertura y costes.
+2. **Valhalla autohospedado**: rutas con mayor flexibilidad de perfiles; exige nuevo adaptador, infraestructura y validación.
+3. **Proveedor gestionado de rutas** con API de automóvil: menor operación de infraestructura, pero cuotas, precio, privacidad, términos y cobertura de Cuba deben verificarse antes de elegir. No se ha consultado proveedor externo.
+
+**Secuencia mínima de aceptación real (requiere autorizaciones separadas):**
+A. Owner define almacenes de prueba y destinos públicos de referencia, sin domicilios privados.
+B. Elegir proveedor y permitir consulta externa en entorno aislado; comprobar rutas reales, sentidos y errores con muestra representativa de La Habana.
+C. Aprobar reglas comerciales de origen efectivo y almacén de referencia para cobro, tarifas especiales y tratamiento de rutas sin disponibilidad.
+D. Diseñar frontera de backend autoritativa, seguridad y persistencia de proveedores, almacenes, coordenadas y rutas.
+E. Con autorización explícita, integrar en staging ficticio y probar en móvil desde administración hasta vista previa de checkout; mantener pedidos, pagos y correos desactivados.
+
+**Estado final:** laboratorio aislado aprobado; **NO-GO** para mapa real, cotización comercial y checkout hasta completar B–E. No se ha accedido a mapas externos, Supabase, staging ni producción.
