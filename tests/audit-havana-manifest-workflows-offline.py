@@ -57,14 +57,14 @@ def main(root):
   assert not check(yaml.safe_dump(d,sort_keys=False),True);count+=1
  for name,change in [
   ('job condition',('if: ${{ false }}','if: ${{ true }}')),
-  ('new service',('    steps:','    services: {postgres: {image: postgres:16}}\\n    steps:')),
-  ('extra step',('    steps:','    steps:\\n      - uses: actions/checkout@v4')),
-  ('extra environment',("      GIT_TERMINAL_PROMPT: '0'","      GIT_TERMINAL_PROMPT: '0'\\n      GITHUB_TOKEN: secret")),
-  ('artifact',('    steps:','    steps:\\n      - uses: actions/upload-artifact@v4')),
+  ('new service',('    steps:','    services: {postgres: {image: postgres:16}}\n    steps:')),
+  ('extra step',('    steps:','    steps:\n      - uses: actions/checkout@v4')),
+  ('extra environment',("      GIT_TERMINAL_PROMPT: '0'","      GIT_TERMINAL_PROMPT: '0'\n      GITHUB_TOKEN: secret")),
+  ('artifact',('    steps:','    steps:\n      - uses: actions/upload-artifact@v4')),
   ('network isolation removal',('unshare --user --map-root-user --net --fork','bash')),
   ('source tampering',('github.com/Liuben810921','example.invalid/Liuben810921')),
   ('sha tampering', (SHA,'0'*40)),
-  ('unexpected job',('jobs:','jobs:\\n  other: {}')),
+  ('unexpected job',('jobs:','jobs:\n  other: {}')),
   ('dangerous permissions',('permissions: {}','permissions: {contents: write}')),
  ]:
   before,after=change
