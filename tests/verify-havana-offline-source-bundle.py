@@ -2,7 +2,6 @@
 """Offline, read-only verification of an explicitly supplied source bundle; never fetches."""
 import hashlib
 import json
-import os
 from pathlib import Path
 import stat
 import sys
@@ -20,7 +19,7 @@ def fail(message):
     raise ValueError(message)
 
 def git_blob_sha(data):
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\\0" + data).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data).hexdigest()
 
 def read_regular(root, relative):
     path = root / relative
