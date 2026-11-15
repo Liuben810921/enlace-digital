@@ -139,13 +139,14 @@ def run(root):
     # and read. This must fail closed, without relying on assert under -O.
     target = root / next(iter(module.EXPECTED))
     original_data = target.read_bytes()
-    original_fstat = module.os.fstat
+    original_dup = module.os.dup
     mutated = [False]
-    def racing_fstat(fd):
-        result = original_fstat(fd)
-        if not mutated[0] and result.st_size == len(original_data):
+    def racing_dup(fd):
+        result = original_dup(fd)
+        metadata = module.os.fstat(fd)
+        if not mutated[0] and metadata.st_size == len(original_data):
             # Only mutate the selected source inode, not an unrelated descriptor.
-            if (result.st_dev, result.st_ino) == (target.stat().st_dev, target.stat().st_ino):
+            if (metadata.st_dev, metadata.st_ino) == (target.stat().st_dev, target.stat().st_ino):
                 mutated[0] = True
                 with target.open("r+b") as writer:
                     writer.seek(0)
@@ -153,7 +154,7 @@ def run(root):
                     writer.flush()
                     module.os.fsync(writer.fileno())
         return result
-    module.os.fstat = racing_fstat
+    module.os.dup = racing_dup
     try:
         try:
             verify(root)
@@ -163,7 +164,7 @@ def run(root):
         else:
             raise RuntimeError("accepted in-place inode rewrite")
     finally:
-        module.os.fstat = original_fstat
+        module.os.dup = original_dup
         target.write_bytes(original_data)
     print("PASS offline bundle adversarial:", count)
 
