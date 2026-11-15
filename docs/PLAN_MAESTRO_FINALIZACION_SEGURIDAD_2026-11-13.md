@@ -136,3 +136,10 @@ Cada funcionalidad se considera **Terminada** solo si: (a) tiene requisitos y ca
 - La elección del almacén más lejano para referencia comercial no sustituye la selección de origen efectivo de despacho; la política de cobro y su relación con el origen efectivo requieren revisión al integrar.
 - Próximos bloqueantes: (1) validar el modelo y direcciones de proveedores/almacenes en backend, (2) elegir y autorizar proveedor/cartografía de rutas para La Habana y validar trayectos, (3) completar administración y mapa móvil, (4) conectar cotización a checkout ficticio en entorno autorizado, (5) pruebas integrales sin pedidos reales.
 - CI aislado activado mediante `.github/workflows/isolated-delivery-quote.yml`; no confundir ejecución en curso con aprobación.
+
+## 12. Continuidad de entregas — corrección de CI y prototipo móvil
+- Ejecución #43657078487: job 132637873878 **failure** por `TypeError: document.getElementById(...)?.focus is not a function` en fixture DOM de `delivery-admin-context-invalidation.test.cjs`; job 132637874065 **success**, artefacto visual ID 14138881478, SHA256 aded367d925c0f31cb920854167cacaf792b434a20831f9bc701ebe548986b92. No atribuir el fallo a PostgreSQL ni al cálculo de rutas: se detuvo antes en mock de foco.
+- Corrección aislada: fixture DOM incluye `focus()` como función; debe verificarse en nueva ejecución.
+- Prototipo móvil aislado `tests/fixtures/delivery-warehouse-mobile-demo.html`: dirección de referencia obligatoria para nuevos almacenes, dirección visible y editable, bandera `addressVerified:false` tras cambios; vista previa explícita `Tarifa pendiente de confirmar`. No utiliza red ni verifica mapas; la tarifa no se calcula desde datos de clientes.
+- Los proveedores del prototipo solo tienen nombre/estado; sus direcciones se gestionan por almacén. No se han creado registros reales ni integrado persistencia.
+- Pendiente: confirmar CI para el commit que contiene la modificación móvil, comprobar el nuevo test de contrato aislado, y luego definir con el Owner el proveedor cartográfico y referencias reales de La Habana antes de validar distancias.
