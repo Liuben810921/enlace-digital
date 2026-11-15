@@ -32,6 +32,8 @@ on:
       - 'tests/delivery-dispatch-isolated.test.cjs'
       - 'tests/havana-public-route-batch-isolated.cjs'
       - 'tests/havana-public-route-batch-isolated.test.cjs'
+      - 'tests/delivery-osrm-geometry-isolated.cjs'
+      - 'tests/delivery-osrm-geometry-isolated.test.cjs'
       - 'tests/delivery-osrm-integration-contract-isolated.cjs'
       - 'tests/delivery-osrm-integration-contract-isolated.test.cjs'
       - 'tests/delivery-route-adapter-isolated.cjs'
@@ -124,6 +126,7 @@ jobs:
       - run: node tests/delivery-dispatch-isolated.test.cjs
       - run: node tests/delivery-route-adapter-isolated.test.cjs
       - run: node tests/delivery-osrm-integration-contract-isolated.test.cjs
+      - run: node tests/delivery-osrm-geometry-isolated.test.cjs
       - run: node tests/havana-public-route-batch-isolated.test.cjs
       - run: node tests/delivery-route-cache-isolated.test.cjs
       - run: node tests/delivery-route-validation-isolated.test.cjs
