@@ -166,7 +166,6 @@ def run(root):
     finally:
         module.os.dup = original_dup
         target.write_bytes(original_data)
-    # Root ancestor symlink: reject even if the final root component is real.
     ancestor = root / "ancestor-link"
     ancestor.symlink_to(root / "tests", target_is_directory=True)
     try:
@@ -179,7 +178,6 @@ def run(root):
     finally:
         ancestor.unlink()
 
-    # Ensure failure paths close every opened descriptor (Linux /proc only).
     fd_directory = Path("/proc/self/fd")
     if fd_directory.is_dir():
         before = len(list(fd_directory.iterdir()))
