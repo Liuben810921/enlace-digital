@@ -4,7 +4,11 @@ import copy
 import json
 from pathlib import Path
 import tempfile
-from verify_havana_offline_source_bundle import verify, EXPECTED, LOCK
+import importlib.util
+spec = importlib.util.spec_from_file_location("offline_bundle", Path(__file__).with_name("verify-havana-offline-source-bundle.py"))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+verify, LOCK = module.verify, module.LOCK
 
 def require(condition, label):
     if not condition:
