@@ -8,7 +8,7 @@ for(const action of ['supplier-edit','supplier-toggle','warehouse-edit','warehou
 for(const id of ['roadMapPlaceholder','mapOrigin','mapDestination','mapReset','mapSelectionStatus','deliveryPreview'])assert.match(html,new RegExp('id="'+id+'"'));
 assert.match(html,/PUBLIC_POINTS=/);
 assert.match(html,/createElementNS/);
-assert.match(html,/addEventListener\\('keydown'/);
+assert.ok(html.includes("addEventListener('keydown'"));
 assert.match(html,/Tarifa pendiente de confirmar/);
 assert.match(html,/NO un mapa vial ni una ruta real/);
 assert.match(html,/localStorage\.setItem\(KEY/);
