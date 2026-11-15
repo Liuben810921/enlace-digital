@@ -25,3 +25,18 @@ Archivo: `.github/workflows/havana-manifest-offline-candidate.yml`.
 - Solo tras cumplir lo anterior, pedir autorización independiente para cambiar disparadores y ejecutar. No habilitar automáticamente.
 
 Estado: `assetReady=false`, `routeReady=false`, `quoteReady=false`. Ningún acceso a Supabase, staging, producción, clientes, pedidos o inventario.
+
+## Auditoría adversarial posterior (2026-11-14)
+**Corrección demostrable:** el candidato original ejecutaba `git checkout` antes de crear el namespace de red. Una ruta de checkout puede invocar filtros `smudge` configurados mediante atributos Git; la mera desactivación de hooks no evita esos filtros. Se reemplazó el checkout por extracción explícita de tres blobs con `git show FETCH_HEAD:ruta`, verificación `git cat-file -t` y modo `100644` con `git ls-tree`. No se invocan hooks, submódulos ni filtros de checkout.
+
+**Revisión de estructura YAML y shell (estática):** el archivo conserva `on: {}`, `if: ${{ false }}`, runner estándar `ubuntu-24.04`, `permissions: {}`, cinco minutos, sin `uses`, servicios, contenedores, dependencias, cachés, artefactos o secretos. Los bucles `for ... do ... done` y las comprobaciones `test` son sintaxis Bash convencional. No se dispone de prueba del parser de GitHub Actions sobre este commit, ni de una ejecución de las secuencias shell en el runner; **no se afirma CI PASS**.
+
+**Procedencia:** URL pública del repositorio literal; comprobación de `GITHUB_REPOSITORY`, rama, SHA esperado, `FETCH_HEAD`, tipos y modos. El SHA fijado deliberadamente en `886bcfc55cd482613025ffe9befe22d9462c1a58` no coincide con el commit actual; el job está bloqueado incluso si se habilitase el disparador accidentalmente. No hay checkout de archivos adicionales. `git show` no prueba que los contenidos sean seguros: el código Node ejecutado deberá revisarse y fijarse por hash antes de habilitar.
+
+**Red:** `unshare --user --map-root-user --net --fork` crea un namespace de red para las pruebas, o falla cerrado si no está permitido. No hay evidencia de que funcione en `ubuntu-24.04` de GitHub-hosted. Antes de `unshare`, `git fetch` requiere red; Git y el runner pueden conectar a otros destinos por infraestructura, DNS, proxy o configuración. No existe una política firewall demostrada de egress exclusivo a GitHub. La variable `GIT_CONFIG_NOSYSTEM` y `GIT_CONFIG_GLOBAL=/dev/null` reducen herencia de configuración, pero no constituyen un firewall.
+
+**Permisos:** `permissions: {}` impide conceder scopes al `GITHUB_TOKEN` en el job; la ausencia de `uses` y variables secretas reduce superficie. El runner hospedado mantiene sus propios permisos de sistema y acceso de red previo al namespace; no asumir sandbox absoluto.
+
+**Costos:** runner estándar para repositorio público es elegible para uso gratuito según política general de GitHub, pero no hay verificación específica de facturación, cuota, almacenamiento o tráfico de la cuenta. Como no se activó, no hay minutos de ejecución de este workflow. No afirmar costo cero futuro garantizado.
+
+**Bloqueantes restantes:** control efectivo de egress durante bootstrap, soporte real de namespace sin privilegios, obtención de SHA mediante fetch directo, validación de sintaxis por GitHub y confirmación de costos de la cuenta. Mantener CI inactivo; no iniciar pruebas sin autorización específica.
