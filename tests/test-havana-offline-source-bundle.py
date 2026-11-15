@@ -46,7 +46,7 @@ def run(root):
         finally:
             lockpath.write_bytes(original)
     for label, payload in [
-        ("duplicate JSON key", original[:-2] + b',"status":"ready"}'),
+        ("duplicate JSON key", original.rstrip()[:-1] + b',"status":"ready"}'),
         ("malformed JSON", b"{"),
         ("oversized", b" " * (128 * 1024 + 1)),
     ]:
@@ -88,6 +88,28 @@ def run(root):
     finally:
         fixtures.unlink()
         shutil.move(str(alternate), str(fixtures))
+
+    # Deterministic race: replace the first file between lstat and os.open.
+    target = root / next(iter(module.EXPECTED))
+    original_data = target.read_bytes()
+    original_open = module.os.open
+    def racing_open(path, flags, *args, **kwargs):
+        if Path(path) == target:
+            target.unlink()
+            target.symlink_to(root / LOCK)
+        return original_open(path, flags, *args, **kwargs)
+    module.os.open = racing_open
+    try:
+        try:
+            verify(root)
+        except (OSError, ValueError, TypeError, UnicodeError):
+            count += 1
+        else:
+            raise RuntimeError("accepted TOCTOU leaf swap")
+    finally:
+        module.os.open = original_open
+        target.unlink()
+        target.write_bytes(original_data)
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
