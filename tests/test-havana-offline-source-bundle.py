@@ -30,6 +30,7 @@ def run(root):
         ("remove file", lambda x: x["files"].pop()),
         ("duplicate file", lambda x: x["files"].append(copy.deepcopy(x["files"][0]))),
         ("change digest", lambda x: x["files"][0].update(gitBlobSha1="0"*40)),
+        ("change sha256", lambda x: x["files"][0].update(sha256="0"*64)),
         ("path traversal", lambda x: x["files"][0].update(path="../unsafe")),
         ("add field", lambda x: x.update(extra="unsafe")),
     ]
@@ -110,6 +111,33 @@ def run(root):
         module.os.open = original_open
         target.unlink()
         target.write_bytes(original_data)
+
+    # Deterministic parent-directory swap before opening a source file.
+    target = root / "tests/fixtures/havana-offline-cartography-manifest.json"
+    parent = target.parent
+    moved = root / "fixtures-original"
+    original_open = module.os.open
+    swapped = [False]
+    def parent_swap_open(path, flags, *args, **kwargs):
+        if Path(path) == target and not swapped[0]:
+            swapped[0] = True
+            parent.rename(moved)
+            parent.mkdir()
+            target.write_bytes(b"tampered")
+        return original_open(path, flags, *args, **kwargs)
+    module.os.open = parent_swap_open
+    try:
+        try:
+            verify(root)
+        except (OSError, ValueError, TypeError, UnicodeError):
+            count += 1
+        else:
+            raise RuntimeError("accepted TOCTOU parent replacement with tampered source")
+    finally:
+        module.os.open = original_open
+        if swapped[0]:
+            shutil.rmtree(parent)
+            moved.rename(parent)
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
