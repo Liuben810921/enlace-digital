@@ -3,20 +3,23 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const REQUIRED_NULL=['sourceUrl','sourceSha256','downloadedAt','coverageBounds','format','tilesDirectory','styleFile'];
+const REQUIRED_KEYS=['schemaVersion','status','region','provider','license','attribution',...REQUIRED_NULL,'offlineOnly','networkRequestsAllowed','commercialQuoteEnabled','routeGeometrySource','preflight'];
 const REQUIRED_FLAGS={offlineOnly:true,networkRequestsAllowed:false,commercialQuoteEnabled:false};
 function validateOfflineManifest(m){
  const errors=[];
  if(!m||typeof m!=='object'||Array.isArray(m))return {ok:false,errors:['manifest_not_object']};
+ if(Object.keys(m).some(key=>!REQUIRED_KEYS.includes(key))||REQUIRED_KEYS.some(key=>!Object.hasOwn(m,key)))errors.push('unexpected_or_missing_keys');
+ if(Object.getPrototypeOf(m)!==Object.prototype&&Object.getPrototypeOf(m)!==null)errors.push('unexpected_prototype');
  if(m.schemaVersion!==1)errors.push('schema_version');
  if(m.status!=='blocked_no_assets_downloaded')errors.push('status_not_blocked');
  if(m.region!=='La Habana, Cuba')errors.push('region');
  if(m.provider!=='OpenStreetMap contributors')errors.push('provider');
- if(typeof m.license!=='string'||!m.license.includes('ODbL'))errors.push('license');
+ if(typeof m.license!=='string'||!/^ODbL 1\\.0 \\(verify exact source and derivative obligations before publishing\\)$/.test(m.license))errors.push('license');
  if(m.attribution!=='© OpenStreetMap contributors')errors.push('attribution');
  for(const key of REQUIRED_NULL)if(!Object.hasOwn(m,key)||m[key]!==null)errors.push('asset_field_'+key);
  for(const [key,value] of Object.entries(REQUIRED_FLAGS))if(m[key]!==value)errors.push('unsafe_flag_'+key);
- if(typeof m.routeGeometrySource!=='string'||!m.routeGeometrySource.includes('synthetic fixtures not eligible'))errors.push('route_provenance');
- if(!Array.isArray(m.preflight)||m.preflight.length<6||!m.preflight.every(x=>typeof x==='string'&&x.length>10))errors.push('preflight');
+ if(typeof m.routeGeometrySource!=='string'||m.routeGeometrySource!=='trusted OSRM backend required; synthetic fixtures not eligible')errors.push('route_provenance');
+ if(!Array.isArray(m.preflight)||m.preflight.length!==6||!m.preflight.every(x=>typeof x==='string'&&x.length>10&&x.length<=180&&!/https?:|\\/\\/|<script|fetch\\(/i.test(x)))errors.push('preflight');
  return {ok:errors.length===0,errors,assetReady:false,routeReady:false,quoteReady:false};
 }
 function validateManifestFile(filename){
