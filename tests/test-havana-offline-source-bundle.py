@@ -191,6 +191,67 @@ def run(root):
         after = len(list(fd_directory.iterdir()))
         require(before == after, "descriptor cleanup on failures")
         count += 1
+    # Root replacement after its directory fd has been opened must retain the original inode.
+    original_open = module.os.open
+    moved_root = root.with_name(root.name + "-root-original")
+    root_swapped = [False]
+    def root_swap_open(path, flags, *args, **kwargs):
+        fd = original_open(path, flags, *args, **kwargs)
+        if path == root.name and kwargs.get("dir_fd") is not None and not root_swapped[0]:
+            root_swapped[0] = True
+            root.rename(moved_root)
+            root.mkdir()
+            (root / "tests").mkdir()
+        return fd
+    module.os.open = root_swap_open
+    try:
+        require(module.read_regular(root, module.LOCK) == (moved_root / module.LOCK).read_bytes() and root_swapped[0], "root swap retained anchored inode")
+        count += 1
+    finally:
+        module.os.open = original_open
+        if root_swapped[0]:
+            shutil.rmtree(root)
+            moved_root.rename(root)
+
+    # Write on the already-opened inode while its read is in progress; reject changed metadata.
+    target = root / next(iter(module.EXPECTED))
+    original_data = target.read_bytes()
+    original_fdopen = module.os.fdopen
+    wrote_during_read = [False]
+    class RacingReader:
+        def __init__(self, handle):
+            self.handle = handle
+        def __enter__(self):
+            self.handle.__enter__()
+            return self
+        def __exit__(self, *args):
+            return self.handle.__exit__(*args)
+        def read(self, *args):
+            if not wrote_during_read[0]:
+                wrote_during_read[0] = True
+                with target.open("r+b") as writer:
+                    writer.seek(0)
+                    writer.write(bytes([original_data[0] ^ 1]))
+                    writer.flush()
+                    module.os.fsync(writer.fileno())
+            return self.handle.read(*args)
+    def racing_fdopen(fd, *args, **kwargs):
+        handle = original_fdopen(fd, *args, **kwargs)
+        if not wrote_during_read[0] and module.os.fstat(handle.fileno()).st_ino == target.stat().st_ino:
+            return RacingReader(handle)
+        return handle
+    module.os.fdopen = racing_fdopen
+    try:
+        try:
+            verify(root)
+        except (OSError, ValueError, TypeError, UnicodeError):
+            require(wrote_during_read[0], "write during read hook executed")
+            count += 1
+        else:
+            raise RuntimeError("accepted write during read")
+    finally:
+        module.os.fdopen = original_fdopen
+        target.write_bytes(original_data)
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
