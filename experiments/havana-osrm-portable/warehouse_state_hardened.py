@@ -1,6 +1,17 @@
 """Offline synthetic state: private data, validated copy-on-write, CAS versions."""
 from copy import deepcopy
+from decimal import Decimal, InvalidOperation
 from warehouse_assignment_v2 import allocate, valid_versions, KEYS
+
+
+def _valid_distance(value):
+    if type(value) not in (str, int, float):
+        return False
+    try:
+        distance = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return False
+    return distance.is_finite() and 0 <= distance <= 1000000
 
 
 def _valid(kind, value):
@@ -9,7 +20,7 @@ def _valid(kind, value):
     if kind == 'warehouses':
         return type(value) is dict and 0 < len(value) <= 20 and all(type(w) is str and 0 < len(w) <= 80 and type(s) is dict and len(s) <= 1000 and all(type(k) is str and 0 < len(k) <= 80 and type(v) is int and 0 <= v <= 1000000 for k, v in s.items()) for w, s in value.items())
     if kind == 'routes':
-        return type(value) is dict and len(value) <= 20 and all(type(k) is str and 0 < len(k) <= 80 and type(v) in (str, int, float) for k, v in value.items())
+        return type(value) is dict and len(value) <= 20 and all(type(k) is str and 0 < len(k) <= 80 and _valid_distance(v) for k, v in value.items())
     if kind == 'address':
         return value is None or (type(value) is str and 0 < len(value) <= 300)
     return False
