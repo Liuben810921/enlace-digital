@@ -4,6 +4,9 @@ on:
     branches: [audit/delivery-map-readonly-20261113, plan/maestro-finalizacion-seguridad-20261113]
     paths:
       - 'tests/fixtures/delivery-warehouse-mobile-demo.html'
+      - 'tests/fixtures/havana-offline-cartography-manifest.json'
+      - 'tests/havana-offline-cartography-manifest-isolated.cjs'
+      - 'tests/havana-offline-cartography-manifest-isolated.test.cjs'
       - 'tests/delivery-warehouse-mobile-demo.test.cjs'
       - 'tests/delivery-quote-concurrency-isolated.cjs'
       - 'tests/delivery-quote-concurrency-isolated.test.cjs'
@@ -119,6 +122,7 @@ jobs:
       - run: node tests/delivery-effective-origins-ui.test.cjs
       - run: node tests/delivery-admin-context-invalidation.test.cjs
       - run: node tests/delivery-warehouse-mobile-demo.test.cjs
+      - run: node tests/havana-offline-cartography-manifest-isolated.test.cjs
       - run: node tests/delivery-warehouse-registry-isolated.test.cjs
       - run: node tests/delivery-end-to-end-readiness-isolated.test.cjs
       - run: node tests/delivery-quote-isolated.test.cjs
