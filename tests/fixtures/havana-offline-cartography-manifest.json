@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked_no_assets_downloaded",
+  "region": "La Habana, Cuba",
+  "provider": "OpenStreetMap contributors",
+  "license": "ODbL 1.0 (verify exact source and derivative obligations before publishing)",
+  "attribution": "© OpenStreetMap contributors",
+  "sourceUrl": null,
+  "sourceSha256": null,
+  "downloadedAt": null,
+  "coverageBounds": null,
+  "format": null,
+  "tilesDirectory": null,
+  "styleFile": null,
+  "offlineOnly": true,
+  "networkRequestsAllowed": false,
+  "commercialQuoteEnabled": false,
+  "routeGeometrySource": "trusted OSRM backend required; synthetic fixtures not eligible",
+  "preflight": [
+    "Confirm zero cost and legal redistribution terms",
+    "Verify actual coverage and map version",
+    "Generate local tiles and style without external tile requests",
+    "Preserve attribution visibly in mobile map",
+    "Validate manifest hashes and coverage before enabling tiles",
+    "Keep route provenance and commercial fees fail-closed"
+  ]
+}
