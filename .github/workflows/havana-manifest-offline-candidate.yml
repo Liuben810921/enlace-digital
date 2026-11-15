@@ -37,8 +37,23 @@ jobs:
           git remote add origin https://github.com/Liuben810921/enlace-digital.git
           git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
           test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
-          git -c core.hooksPath=/dev/null checkout --detach -q FETCH_HEAD
-          test -f tests/havana-offline-cartography-manifest-isolated.test.cjs
+          # Extract only reviewed blobs; no checkout, hooks, smudge filters, submodules or LFS.
+          mkdir -p tests/fixtures
+          for file in \
+            tests/havana-offline-cartography-manifest-isolated.cjs \
+            tests/havana-offline-cartography-manifest-isolated.test.cjs \
+            tests/fixtures/havana-offline-cartography-manifest.json; do
+            test "$(git cat-file -t "FETCH_HEAD:$file")" = blob
+            git show "FETCH_HEAD:$file" > "$file"
+            test -s "$file"
+          done
+          # Reject executable or unusual source modes; require regular blobs.
+          for file in \
+            tests/havana-offline-cartography-manifest-isolated.cjs \
+            tests/havana-offline-cartography-manifest-isolated.test.cjs \
+            tests/fixtures/havana-offline-cartography-manifest.json; do
+            git ls-tree FETCH_HEAD -- "$file" | grep -Eq '^100644 blob [0-9a-f]{40}[[:space:]]'
+          done
       - name: Execute Node tests only in isolated network namespace (candidate; disabled)
         shell: bash
         run: |
