@@ -27,6 +27,8 @@ def check(raw,candidate):
   d=yaml.load(raw,Loader=Loader)
  except (yaml.YAMLError,ValueError,TypeError,RecursionError,OverflowError,UnicodeError):return False
  if not isinstance(d,dict) or set(d)!={'name','on','permissions','jobs'} or d['on']!={} or d['permissions']!={}:return False
+ expected_title='Havana manifest offline CI candidate - DISABLED' if candidate else 'Havana manifest offline CI - BLOCKED'
+ if d['name']!=expected_title:return False
  jobs=d['jobs']
  key='manifest-node-offline' if candidate else 'manifest-offline'
  if not isinstance(jobs,dict) or set(jobs)!={key}:return False
@@ -80,14 +82,14 @@ def main(root):
   assert not check(raw.replace(before,after,1),True),name
   count+=1
  for attack in [
-  'on: &x {}\\npermissions: *x',
+  'on: &x {}\npermissions: *x',
   'on: !unsafe {}',
-  'on: {}\\njobs: &cycle {a: *cycle}',
-  'on: {}\\n? [bad, key]\\n: value',
-  'on: {}\\non: {push: null}',
-  'on: {}\\npermissions: {}\\npermissions: {contents: write}',
-  'on: {}\\n---\\non: {push: null}',
-  'on: {}\\nname: !!python/object/apply:os.system [echo unsafe]',
+  'on: {}\njobs: &cycle {a: *cycle}',
+  'on: {}\n? [bad, key]\n: value',
+  'on: {}\non: {push: null}',
+  'on: {}\npermissions: {}\npermissions: {contents: write}',
+  'on: {}\n---\non: {push: null}',
+  'on: {}\nname: !!python/object/apply:os.system [echo unsafe]',
  ]:
   assert not check(attack,True),attack
   count+=1
