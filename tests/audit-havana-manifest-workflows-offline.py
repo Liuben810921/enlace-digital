@@ -63,11 +63,11 @@ def main(root):
  raw=originals[FILES[1]];count=0
  preparation=originals[FILES[0]]
  for label,before,after in [
-  ('prep trigger','on: {}','on:\\n  workflow_dispatch:'),
+  ('prep trigger','on: {}','on:\n  workflow_dispatch:'),
   ('prep guard','if: ${{ false }}','if: ${{ true }}'),
   ('prep permissions','permissions: {}','permissions: {contents: write}'),
   ('prep shell','exit 1','exit 0'),
-  ('prep extra step','    steps:','    steps:\\n      - uses: actions/checkout@v4'),
+  ('prep extra step','    steps:','    steps:\n      - uses: actions/checkout@v4'),
   ('prep timeout','timeout-minutes: 2','timeout-minutes: 60'),
   ('prep name','name: Havana manifest offline CI - BLOCKED','name: unsafe'),
  ]:
@@ -76,7 +76,7 @@ def main(root):
   count+=1
  for label,malicious in [
   ('unpaired surrogate','on: "\\ud800"'),
-  ('oversized','on: {}\\n#'+'x'*32768),
+  ('oversized','on: {}\n#'+'x'*32768),
   ('non-string',None),
   ('bytes',b'on: {}'),
  ]:
