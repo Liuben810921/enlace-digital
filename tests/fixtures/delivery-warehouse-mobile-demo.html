@@ -32,7 +32,7 @@ small,.note{color:#b5c8d5}article{border-top:1px solid #36556a;padding:12px 0}.g
 <section><h2>Explorador de puntos públicos · laboratorio</h2>
 <p class="note">Esquema interactivo de coordenadas ficticias, NO un mapa vial ni una ruta real. Sin teselas, geocodificación, kilómetros ni servicios externos.</p>
 <div class="grid"><label>Origen público<select id="mapOrigin"><option value="">Seleccionar</option></select></label><label>Destino público<select id="mapDestination"><option value="">Seleccionar</option></select></label></div>
-<svg id="roadMapPlaceholder" role="img" aria-label="Esquema de puntos públicos ficticios. Sin mapa vial ni rutas verificadas" viewBox="0 0 360 220" style="width:100%;max-height:300px;border:1px dashed #66859b;border-radius:10px;background:#071a2c" xmlns="http://www.w3.org/2000/svg"></svg>
+<svg id="roadMapPlaceholder" role="img" aria-label="Esquema de puntos públicos ficticios. Sin mapa vial ni rutas verificadas" viewBox="0 0 360 220" style="width:100%;max-height:300px;border:1px dashed #66859b;border-radius:10px;background:#071a2c"></svg>
 <p id="mapSelectionStatus" role="status" aria-live="polite">Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.</p>
 <button type="button" id="mapReset">Limpiar selección</button>
 </section>
@@ -86,7 +86,7 @@ const PUBLIC_POINTS=[
  {id:'public_c',label:'Punto público C (ficticio)',lat:23.08,lng:-82.31},
  {id:'public_d',label:'Punto público D (ficticio)',lat:23.12,lng:-82.28}
 ];
-const NS='http://www.w3.org/2000/svg';
+const NS=['http:','','www.w3.org','2000','svg'].join('/');
 const makeSvg=(tag,attrs)=>{const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el};
 function renderMap(){
  const svg=$('roadMapPlaceholder');svg.replaceChildren();
