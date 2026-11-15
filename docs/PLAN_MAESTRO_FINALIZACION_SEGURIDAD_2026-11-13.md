@@ -108,3 +108,18 @@ Cada funcionalidad se considera **Terminada** solo si: (a) tiene requisitos y ca
 - [GitHub Actions #43538679607](https://github.com/Liuben810921/enlace-digital/actions/runs/43538679607) — laboratorio PostgreSQL/Node `completed/success`, commit `74207b4c0e2682bad4aa3e6c9e0ea5d30ba7a43e`.
 
 **Límite de certificación:** este plan se fundamenta en lectura del repositorio y evidencias históricas de CI; no certifica el estado actual de Supabase, staging, producción ni la disponibilidad de proveedores de rutas.
+
+## 10. Decisión ejecutiva 14-11-2026 — velocidad con calidad y pruebas proporcionales
+
+**Prioridad comercial:** existe un grupo de gestores esperando la puesta en marcha. El objetivo es terminar correctamente lo antes posible, sin sacrificar seguridad, privacidad, integridad de dinero ni confiabilidad. No se autoriza activar pedidos ni servicios.
+
+**Reglas permanentes de ejecución:**
+1. Conservar decisiones de producto, UX, roles, registro, destinatarios, pagos y entregas previamente aprobadas; evitar reabrirlas sin un defecto reproducible, cambio legal o nueva instrucción del Owner.
+2. Una batería de aceptación suficiente por funcionalidad y regresión enfocada en cambios. Una prueba adicional necesita identificar riesgo no cubierto, impacto y criterio de salida; si no altera una decisión de implementación o seguridad, omitirla.
+3. Cerrar el laboratorio de variantes de COMMIT tras once baterías aprobadas; conservar evidencias y limitaciones sin equiparar laboratorio con staging ni producción. No continuar microvariantes de pérdida de ACK sin hallazgo concreto.
+4. Priorizar ruta crítica P1 identidad/registro → P2 gestor/comisiones → P3 entregas → P4 checkout ficticio → P5 staging autorizado → P6 GO/NO-GO. Trabajar en paralelo solo si reduce tiempo sin crear riesgos de integración.
+5. Cada entrega debe registrar estado verificable: diseñado, implementado en rama, CI aprobado, integrado en staging, certificado y habilitado. No presentar una fase como terminada antes de su integración real.
+6. Mantener rama aislada y datos sintéticos hasta autorizaciones independientes. Evitar tocar Supabase, staging, producción, clientes, pedidos, inventario operativo o despliegues.
+7. Registrar decisiones en este plan maestro para continuidad entre chats; no depender exclusivamente de memoria conversacional.
+
+**Próxima acción útil:** desarrollar D1 orientado a habilitar gestores: identidad y permisos de cliente/gestor/supervisor/admin, estados y conciliación de comisiones, contrato de API y panel móvil aislado. Evitar nuevas pruebas de COMMIT; verificar únicamente aceptación funcional, permisos y regresiones relevantes. Preparar matriz corta de dependencias y criterios de aceptación para autorizar integración posterior.
