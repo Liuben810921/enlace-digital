@@ -1,0 +1,53 @@
+# DESIGN ONLY. DO NOT ENABLE. No automatic/manual triggers and permanent job guard.
+# Network only for public source retrieval from github.com, then fail-closed network namespace.
+name: Havana manifest offline CI candidate - DISABLED
+on: {}
+permissions: {}
+jobs:
+  manifest-node-offline:
+    if: ${{ false }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      GIT_TERMINAL_PROMPT: '0'
+      GIT_CONFIG_NOSYSTEM: '1'
+      GIT_CONFIG_GLOBAL: '/dev/null'
+      ED_CARTOGRAPHY_ASSETS_READY: 'false'
+      ED_ROUTE_READY: 'false'
+      ED_COMMERCIAL_QUOTE_ENABLED: 'false'
+    steps:
+      - name: Obtain public repository source from GitHub only (candidate; disabled)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'Liuben810921/enlace-digital'
+          test "$GITHUB_REF_NAME" = 'plan/havana-osrm-benchmark-offline-20261114'
+          test "$GITHUB_SHA" = '886bcfc55cd482613025ffe9befe22d9462c1a58' || {
+            echo 'BLOCKED: immutable SHA must be reviewed and updated before activation'
+            exit 1
+          }
+          export GIT_CONFIG_COUNT=2
+          export GIT_CONFIG_KEY_0=credential.helper
+          export GIT_CONFIG_VALUE_0=
+          export GIT_CONFIG_KEY_1=http.followRedirects
+          export GIT_CONFIG_VALUE_1=false
+          git init -q "$RUNNER_TEMP/ed-manifest-source"
+          cd "$RUNNER_TEMP/ed-manifest-source"
+          git remote add origin https://github.com/Liuben810921/enlace-digital.git
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          git -c core.hooksPath=/dev/null checkout --detach -q FETCH_HEAD
+          test -f tests/havana-offline-cartography-manifest-isolated.test.cjs
+      - name: Execute Node tests only in isolated network namespace (candidate; disabled)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/ed-manifest-source"
+          # No fallback: if the hosted runner disallows unprivileged network namespaces,
+          # abort instead of running the test with network access.
+          unshare --user --map-root-user --net --fork -- bash -euo pipefail -c '
+            ip link set lo up 2>/dev/null || true
+            node tests/havana-offline-cartography-manifest-isolated.test.cjs
+            node tests/havana-offline-cartography-manifest-isolated.cjs
+          '
