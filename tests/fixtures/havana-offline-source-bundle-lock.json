@@ -7,15 +7,18 @@
   "files": [
     {
       "path": "tests/havana-offline-cartography-manifest-isolated.cjs",
-      "gitBlobSha1": "c8503cb7a67c5d4517ef21ba34881a412fbddc6c"
+      "gitBlobSha1": "c8503cb7a67c5d4517ef21ba34881a412fbddc6c",
+      "sha256": "f53625ccd634311c4858303dfe03280702b694dc8f110f5766a5598969599c40"
     },
     {
       "path": "tests/havana-offline-cartography-manifest-isolated.test.cjs",
-      "gitBlobSha1": "af3bbcb60ff67237ed3691b45a30046cd52322e1"
+      "gitBlobSha1": "af3bbcb60ff67237ed3691b45a30046cd52322e1",
+      "sha256": "27bea12aa0b192c99c86f647fd4fc7a70f04dc7d407ea9e4f2995ccd7cf97cfc"
     },
     {
       "path": "tests/fixtures/havana-offline-cartography-manifest.json",
-      "gitBlobSha1": "cf9f67c507d2619ee5979a39db0caef3e6ae7145"
+      "gitBlobSha1": "cf9f67c507d2619ee5979a39db0caef3e6ae7145",
+      "sha256": "092dfeac27878b4dc01d49222e21b352400c0327bce98745dd05139326546435"
     }
   ]
 }
