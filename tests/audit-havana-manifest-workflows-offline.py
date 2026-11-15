@@ -50,17 +50,19 @@ def check(raw,candidate):
 # Digests are set after independently checking exact workflow content offline.
 BOOTSTRAP_SHA='043cb738b79aa6a9a75437e316f9ca77b1084241b4e17519d86c7c3d69d91dc8'
 ISOLATED_SHA='f1e1808e44f82205346c804bc63e232ff304aef09282dc178a367e44e1f29240'
+def require(condition,*detail):
+ if not condition:raise RuntimeError("offline audit failed: "+str(detail))
 def main(root):
  originals={f:(root/f).read_text() for f in FILES}
  for f,raw in originals.items():
-  assert check(raw,f.endswith('candidate.yml')),f
+  require(check(raw,f.endswith('candidate.yml')),f)
   print('PASS baseline',f)
  raw=originals[FILES[1]];count=0
  for a,b in [('on: {}','on:\n  push:'),('on: {}','on:\n  workflow_dispatch:'),('permissions: {}','permissions: write'),('runs-on: ubuntu-24.04','runs-on: self-hosted'),('timeout-minutes: 5','timeout-minutes: 60'),('on: {}','on: {}\non: {}')]:
-  assert a in raw and not check(raw.replace(a,b,1),True);count+=1
+  require(a in raw and not check(raw.replace(a,b,1),True));count+=1
  for injected in ['curl https://invalid.example','sudo apt install x','git checkout HEAD','npm install x','echo upload-artifact','node -e "require(\\\"https\\\")"']:
   d=yaml.load(raw,Loader=Loader);d['jobs']['manifest-node-offline']['steps'][0]['run']+=injected+'\n'
-  assert not check(yaml.safe_dump(d,sort_keys=False),True);count+=1
+  require(not check(yaml.safe_dump(d,sort_keys=False),True));count+=1
  for name,change in [
   ('job condition',('if: ${{ false }}','if: ${{ true }}')),
   ('new service',('    steps:','    services: {postgres: {image: postgres:16}}\n    steps:')),
@@ -78,8 +80,8 @@ def main(root):
   ('untrusted dependency',('git init -q','npm install && git init -q')),
  ]:
   before,after=change
-  assert before in raw,name
-  assert not check(raw.replace(before,after,1),True),name
+  require(before in raw,name)
+  require(not check(raw.replace(before,after,1),True),name)
   count+=1
  for attack in [
   'on: &x {}\npermissions: *x',
@@ -91,8 +93,8 @@ def main(root):
   'on: {}\n---\non: {push: null}',
   'on: {}\nname: !!python/object/apply:os.system [echo unsafe]',
  ]:
-  assert not check(attack,True),attack
+  require(not check(attack,True),attack)
   count+=1
- assert not check('on: [',True);count+=1
+ require(not check('on: [',True));count+=1
  print('PASS',count,'adversarial mutations')
 if __name__=='__main__':main(Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]/'.github/workflows')
