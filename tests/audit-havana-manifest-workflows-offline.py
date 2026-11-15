@@ -34,6 +34,8 @@ def check(raw,candidate):
  steps=j['steps']
  if not isinstance(steps,list) or len(steps)!=(2 if candidate else 1):return False
  if any(not isinstance(s,dict) or set(s)!={'name','shell','run'} or s['shell']!='bash' or not isinstance(s['run'],str) for s in steps):return False
+ expected_names=['Obtain public repository source from GitHub only (candidate; disabled)','Execute Node tests only in isolated network namespace (candidate; disabled)'] if candidate else ['Block execution until source acquisition and cost review']
+ if [step['name'] for step in steps]!=expected_names:return False
  if not candidate:return steps[0]['run'].strip()=="echo 'BLOCKED: offline source provenance, runner and billing review required'\nexit 1"
  a,b=(s['run'] for s in steps)
  # Fail closed on full shell content using fixed SHA-256 values established by offline review.
@@ -53,6 +55,22 @@ def main(root):
  for injected in ['curl https://invalid.example','sudo apt install x','git checkout HEAD','npm install x','echo upload-artifact','node -e "require(\\\"https\\\")"']:
   d=yaml.load(raw,Loader=Loader);d['jobs']['manifest-node-offline']['steps'][0]['run']+=injected+'\n'
   assert not check(yaml.safe_dump(d,sort_keys=False),True);count+=1
+ for name,change in [
+  ('job condition',('if: ${{ false }}','if: ${{ true }}')),
+  ('new service',('    steps:','    services: {postgres: {image: postgres:16}}\\n    steps:')),
+  ('extra step',('    steps:','    steps:\\n      - uses: actions/checkout@v4')),
+  ('extra environment',("      GIT_TERMINAL_PROMPT: '0'","      GIT_TERMINAL_PROMPT: '0'\\n      GITHUB_TOKEN: secret")),
+  ('artifact',('    steps:','    steps:\\n      - uses: actions/upload-artifact@v4')),
+  ('network isolation removal',('unshare --user --map-root-user --net --fork','bash')),
+  ('source tampering',('github.com/Liuben810921','example.invalid/Liuben810921')),
+  ('sha tampering', (SHA,'0'*40)),
+  ('unexpected job',('jobs:','jobs:\\n  other: {}')),
+  ('dangerous permissions',('permissions: {}','permissions: {contents: write}')),
+ ]:
+  before,after=change
+  assert before in raw,name
+  assert not check(raw.replace(before,after,1),True),name
+  count+=1
  assert not check('on: [',True);count+=1
  print('PASS',count,'adversarial mutations')
 if __name__=='__main__':main(Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]/'.github/workflows')
