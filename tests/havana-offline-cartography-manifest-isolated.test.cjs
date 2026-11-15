@@ -26,7 +26,7 @@ const denied=result=>{assert.equal(result.ok,false);assert.equal(result.assetRea
 const raw=fs.readFileSync(file,'utf8');
 for(const bad of [
  raw.replace('"schemaVersion": 1,','"schemaVersion": 1, "schemaVersion": 1,'),
- raw.replace('"schemaVersion": 1,','"schemaVersion": 1, "schema\\\\u0056ersion": 1,'),
+ raw.replace('"schemaVersion": 1,','"schemaVersion": 1, "schema\\u0056ersion": 1,'),
  raw.replace('"preflight": [','"preflight": [{"a":1,"a":2},'),
  raw+'garbage','{','[1,2',' '.repeat(MAX_MANIFEST_BYTES+1)
 ])denied(validateManifestRaw(bad));
