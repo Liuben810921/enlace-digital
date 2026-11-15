@@ -19,6 +19,7 @@ def quote(warehouses, route_distances_km, *, rate_cup_km='200', minimum_km='3', 
         distances = {w:number(route_distances_km[w]) for w in warehouses}
         rate, floor = number(rate_cup_km), number(minimum_km)
         if rate == 0 or floor == 0: raise ValueError('invalid rate or minimum')
+        # Conservative charging policy: longest valid route across listed warehouses.
         warehouse = max(warehouses, key=lambda w:(distances[w], w))
         distance = distances[warehouse]
         if special_fee_cup is not None:
