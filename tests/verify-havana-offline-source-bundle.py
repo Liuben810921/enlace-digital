@@ -2,6 +2,7 @@
 """Offline, read-only verification of an explicitly supplied source bundle; never fetches."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import stat
 import sys
@@ -22,17 +23,38 @@ def git_blob_sha(data):
     return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data).hexdigest()
 
 def read_regular(root, relative):
-    path = root / relative
-    st = path.lstat()
-    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+    # Reject symlinked root, intermediate directories and leaf, and changes
+    # between pre-open and post-read metadata. This is not a full atomic
+    # snapshot against a hostile writer; keep the bundle immutable.
+    base = Path(root).absolute()
+    parts = Path(relative).parts
+    current = base
+    for current in [base, *(base.joinpath(*parts[:i]) for i in range(1, len(parts)))]:
+        st = current.lstat()
+        if not stat.S_ISDIR(st.st_mode):
+            fail("unsafe_parent:" + relative)
+    path = base.joinpath(*parts)
+    before = path.lstat()
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
         fail("non_regular_or_hardlinked:" + relative)
-    if st.st_size > MAX_BYTES:
+    if before.st_size > MAX_BYTES:
         fail("oversized:" + relative)
-    with path.open("rb") as handle:
-        data = handle.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        fail("oversized:" + relative)
-    return data
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    fd = os.open(path, flags)
+    try:
+        opened = os.fstat(fd)
+        if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+            fail("changed_before_open:" + relative)
+        with os.fdopen(fd, "rb", closefd=False) as handle:
+            data = handle.read(MAX_BYTES + 1)
+        after = os.fstat(fd)
+        if len(data) > MAX_BYTES or len(data) != opened.st_size:
+            fail("oversized_or_changed:" + relative)
+        if (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            fail("changed_during_read:" + relative)
+        return data
+    finally:
+        os.close(fd)
 
 def verify(root):
     root = Path(root)
