@@ -158,8 +158,9 @@ def run(root):
     try:
         try:
             verify(root)
-        except (OSError, ValueError, TypeError, UnicodeError):
+        except ValueError as error:
             require(mutated[0], "in-place write hook executed")
+            require(str(error).startswith("changed_during_read:"), "in-place write rejected for correct reason")
             count += 1
         else:
             raise RuntimeError("accepted in-place inode rewrite")
@@ -244,8 +245,9 @@ def run(root):
     try:
         try:
             verify(root)
-        except (OSError, ValueError, TypeError, UnicodeError):
+        except ValueError as error:
             require(wrote_during_read[0], "write during read hook executed")
+            require(str(error).startswith("changed_during_read:"), "write during read rejected for correct reason")
             count += 1
         else:
             raise RuntimeError("accepted write during read")
