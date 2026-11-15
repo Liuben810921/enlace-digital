@@ -13,6 +13,10 @@ def evaluate(manifest_raw, corpus_raw):
         'equivalence': {'passed': False, 'errors': []},
     }
     try:
+        # Reject oversized combined input before JSON decoding or digest allocation.
+        if (type(manifest_raw) is not bytes or type(corpus_raw) is not bytes
+                or len(manifest_raw) + len(corpus_raw) > 4_000_000):
+            raise ValueError("combined input size or type")
         integrity = validate_manifest(manifest_raw, corpus_raw)
         if not integrity['integrity_verified'] or not integrity['synthetic_coverage_counts_verified']:
             raise ValueError('integrity not verified')
