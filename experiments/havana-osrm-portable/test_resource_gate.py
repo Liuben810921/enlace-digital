@@ -28,7 +28,7 @@ class ResourceGateTests(unittest.TestCase):
         x=evaluate(b'{"a":'+b'9'*100000+b'}',b'{}')
         self.assertFalse(x['accepted_for_synthetic_review'])
     def test_surrogate_manifest(self):
-        x=evaluate(b'{"a":"\ud800"}',b'{}')
+        x=evaluate(b'{"a":"\\ud800"}',b'{}')
         self.assertFalse(x['accepted_for_synthetic_review'])
     def test_invalid_utf8(self):
         x=evaluate(b'\xff',b'{}')
