@@ -36,12 +36,14 @@ def read_regular(root, relative):
     file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
     descriptors = []
     try:
-        base = Path(root).absolute()
-        # Reject a symlinked root before opening; the descriptor is thereafter anchored.
-        if not stat.S_ISDIR(base.lstat().st_mode):
-            fail("unsafe_root")
-        fd = os.open(base, directory_flags)
+        base = Path(os.path.abspath(root))
+        # Walk from the filesystem root using descriptor-relative opens: O_NOFOLLOW
+        # on a complete path only protects its final component, not ancestors.
+        fd = os.open(os.sep, directory_flags)
         descriptors.append(fd)
+        for component in base.parts[1:]:
+            fd = os.open(component, directory_flags, dir_fd=fd)
+            descriptors.append(fd)
         for component in parts[:-1]:
             fd = os.open(component, directory_flags, dir_fd=fd)
             descriptors.append(fd)
