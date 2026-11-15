@@ -36,6 +36,9 @@ class State:
         return dict(data={k:({w:v.copy() for w,v in x.items()} if k=='warehouses' else x.copy() if type(x) is dict else x) for k,x in self.data.items()},versions=self.versions.copy())
     def change(self,kind,value,expected):
         if kind not in KEYS or not valid_versions(expected) or expected!=self.versions or self.versions[kind]>=2**63-1:return False
+        if kind in ('basket','routes') and type(value) is not dict:return False
+        if kind=='warehouses' and (type(value) is not dict or any(type(w) is not str or type(v) is not dict for w,v in value.items())):return False
+        if kind=='address' and value is not None and type(value) is not str:return False
         self.data[kind]=({w:v.copy() for w,v in value.items()} if kind=='warehouses' and type(value) is dict else value.copy() if type(value) is dict else value)
         self.versions[kind]+=1
         return True
