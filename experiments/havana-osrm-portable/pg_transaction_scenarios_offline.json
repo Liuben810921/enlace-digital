@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "status": "SPECIFICATION_NOT_EXECUTED",
+  "commercial_quote_enabled": false,
+  "dimensions": [
+    "basket",
+    "address",
+    "routes",
+    "warehouses"
+  ],
+  "isolation_levels": [
+    "READ COMMITTED",
+    "SERIALIZABLE"
+  ],
+  "scenarios": [
+    {
+      "id": "BASKET_STALE",
+      "dimension": "basket",
+      "connections": [
+        "T1",
+        "T2"
+      ],
+      "steps": [
+        "T1_BEGIN",
+        "T1_READ_VERSION_VECTOR",
+        "T2_BEGIN",
+        "T2_CAS_UPDATE_BASKET",
+        "T2_COMMIT",
+        "T1_QUOTE_CAS_REJECT",
+        "T1_ROLLBACK"
+      ],
+      "expect": "REJECT_STALE"
+    },
+    {
+      "id": "ADDRESS_STALE",
+      "dimension": "address",
+      "connections": [
+        "T1",
+        "T2"
+      ],
+      "steps": [
+        "T1_BEGIN",
+        "T1_READ_VERSION_VECTOR",
+        "T2_BEGIN",
+        "T2_CAS_UPDATE_ADDRESS",
+        "T2_COMMIT",
+        "T1_QUOTE_CAS_REJECT",
+        "T1_ROLLBACK"
+      ],
+      "expect": "REJECT_STALE"
+    },
+    {
+      "id": "ROUTES_STALE",
+      "dimension": "routes",
+      "connections": [
+        "T1",
+        "T2"
+      ],
+      "steps": [
+        "T1_BEGIN",
+        "T1_READ_VERSION_VECTOR",
+        "T2_BEGIN",
+        "T2_CAS_UPDATE_ROUTES",
+        "T2_COMMIT",
+        "T1_QUOTE_CAS_REJECT",
+        "T1_ROLLBACK"
+      ],
+      "expect": "REJECT_STALE"
+    },
+    {
+      "id": "WAREHOUSES_STALE",
+      "dimension": "warehouses",
+      "connections": [
+        "T1",
+        "T2"
+      ],
+      "steps": [
+        "T1_BEGIN",
+        "T1_READ_VERSION_VECTOR",
+        "T2_BEGIN",
+        "T2_CAS_UPDATE_WAREHOUSES",
+        "T2_COMMIT",
+        "T1_QUOTE_CAS_REJECT",
+        "T1_ROLLBACK"
+      ],
+      "expect": "REJECT_STALE"
+    },
+    {
+      "id": "DUAL_WRITER",
+      "steps": [
+        "T1_READ",
+        "T2_READ",
+        "T1_CAS_COMMIT",
+        "T2_CAS_REJECT"
+      ],
+      "expect": "ONE_WRITER"
+    },
+    {
+      "id": "IDEMPOTENT_RETRY",
+      "steps": [
+        "T1_KEY_COMMIT",
+        "T2_SAME_KEY_SAME_PAYLOAD"
+      ],
+      "expect": "SAME_RESULT_ONCE"
+    },
+    {
+      "id": "IDEMPOTENT_CONFLICT",
+      "steps": [
+        "T1_KEY_COMMIT",
+        "T2_SAME_KEY_DIFFERENT_PAYLOAD"
+      ],
+      "expect": "CONFLICT_NO_WRITE"
+    },
+    {
+      "id": "RLS_CROSS_TENANT",
+      "steps": [
+        "T1_SET_TENANT_A",
+        "T1_READ_TENANT_B",
+        "T1_ROLLBACK"
+      ],
+      "expect": "DENY"
+    },
+    {
+      "id": "SERIALIZATION_RETRY",
+      "steps": [
+        "T1_BEGIN",
+        "T2_BEGIN",
+        "T1_READ",
+        "T2_READ",
+        "T1_COMMIT",
+        "T2_RETRY"
+      ],
+      "expect": "HANDLE_40001"
+    },
+    {
+      "id": "DEADLOCK_RETRY",
+      "steps": [
+        "T1_LOCK_A",
+        "T2_LOCK_B",
+        "T1_WAIT_B",
+        "T2_WAIT_A",
+        "VICTIM_ROLLBACK"
+      ],
+      "expect": "HANDLE_40P01"
+    },
+    {
+      "id": "UNKNOWN_COMMIT",
+      "steps": [
+        "T1_COMMIT_CONNECTION_LOST",
+        "T2_LOOKUP_IDEMPOTENCY_KEY",
+        "T2_RECONCILE"
+      ],
+      "expect": "NO_DUPLICATE"
+    }
+  ]
+}
