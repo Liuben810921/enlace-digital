@@ -20,7 +20,10 @@ FILES=['havana-manifest-offline-preparation.yml','havana-manifest-offline-candid
 SHA='886bcfc55cd482613025ffe9befe22d9462c1a58'
 FLAGS={'ED_CARTOGRAPHY_ASSETS_READY':'false','ED_ROUTE_READY':'false','ED_COMMERCIAL_QUOTE_ENABLED':'false'}
 def check(raw,candidate):
- if not isinstance(raw,str) or len(raw.encode('utf-8'))>32768:return False
+ if not isinstance(raw,str):return False
+ try:
+  if len(raw.encode('utf-8'))>32768:return False
+ except UnicodeError:return False
  try:
   tokens=list(yaml.scan(raw))
   if any(isinstance(t,(yaml.tokens.AnchorToken,yaml.tokens.AliasToken,yaml.tokens.TagToken)) for t in tokens):return False
@@ -43,7 +46,7 @@ def check(raw,candidate):
  if any(not isinstance(s,dict) or set(s)!={'name','shell','run'} or s['shell']!='bash' or not isinstance(s['run'],str) for s in steps):return False
  expected_names=['Obtain public repository source from GitHub only (candidate; disabled)','Execute Node tests only in isolated network namespace (candidate; disabled)'] if candidate else ['Block execution until source acquisition and cost review']
  if [step['name'] for step in steps]!=expected_names:return False
- if not candidate:return steps[0]['run'].strip()=="echo 'BLOCKED: offline source provenance, runner and billing review required'\nexit 1"
+ if not candidate:return steps[0]['run']=="echo 'BLOCKED: offline source provenance, runner and billing review required'\nexit 1\n"
  a,b=(s['run'] for s in steps)
  # Fail closed on full shell content using fixed SHA-256 values established by offline review.
  return hashlib.sha256(a.encode()).hexdigest()==BOOTSTRAP_SHA and hashlib.sha256(b.encode()).hexdigest()==ISOLATED_SHA and SHA in a
@@ -58,6 +61,27 @@ def main(root):
   require(check(raw,f.endswith('candidate.yml')),f)
   print('PASS baseline',f)
  raw=originals[FILES[1]];count=0
+ preparation=originals[FILES[0]]
+ for label,before,after in [
+  ('prep trigger','on: {}','on:\\n  workflow_dispatch:'),
+  ('prep guard','if: ${{ false }}','if: ${{ true }}'),
+  ('prep permissions','permissions: {}','permissions: {contents: write}'),
+  ('prep shell','exit 1','exit 0'),
+  ('prep extra step','    steps:','    steps:\\n      - uses: actions/checkout@v4'),
+  ('prep timeout','timeout-minutes: 2','timeout-minutes: 60'),
+  ('prep name','name: Havana manifest offline CI - BLOCKED','name: unsafe'),
+ ]:
+  require(before in preparation,label)
+  require(not check(preparation.replace(before,after,1),False),label)
+  count+=1
+ for label,malicious in [
+  ('unpaired surrogate','on: "\\ud800"'),
+  ('oversized','on: {}\\n#'+'x'*32768),
+  ('non-string',None),
+  ('bytes',b'on: {}'),
+ ]:
+  require(not check(malicious,True),label)
+  count+=1
  for a,b in [('on: {}','on:\n  push:'),('on: {}','on:\n  workflow_dispatch:'),('permissions: {}','permissions: write'),('runs-on: ubuntu-24.04','runs-on: self-hosted'),('timeout-minutes: 5','timeout-minutes: 60'),('on: {}','on: {}\non: {}')]:
   require(a in raw and not check(raw.replace(a,b,1),True));count+=1
  for injected in ['curl https://invalid.example','sudo apt install x','git checkout HEAD','npm install x','echo upload-artifact','node -e "require(\\\"https\\\")"']:
