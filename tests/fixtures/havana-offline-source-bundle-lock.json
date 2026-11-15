@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked_offline_review_only",
+  "sourceCommit": "1ce20519fea72c6f4d723cc82dab0b0fbf33a793",
+  "networkAllowed": false,
+  "executionAllowed": false,
+  "files": [
+    {
+      "path": "tests/havana-offline-cartography-manifest-isolated.cjs",
+      "gitBlobSha1": "c8503cb7a67c5d4517ef21ba34881a412fbddc6c"
+    },
+    {
+      "path": "tests/havana-offline-cartography-manifest-isolated.test.cjs",
+      "gitBlobSha1": "af3bbcb60ff67237ed3691b45a30046cd52322e1"
+    },
+    {
+      "path": "tests/fixtures/havana-offline-cartography-manifest.json",
+      "gitBlobSha1": "cf9f67c507d2619ee5979a39db0caef3e6ae7145"
+    }
+  ]
+}
