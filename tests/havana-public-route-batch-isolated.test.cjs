@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {validatePublicRouteBatch}=require('./havana-public-route-batch-isolated.cjs');
+const point=(id,lat,lng)=>({id,lat,lng,verified:true,publicReference:true});
+const a=point('public_a',23.12,-82.36),b=point('public_b',23.10,-82.34);
+const routes=Array.from({length:8},(_,i)=>({id:'public_route_'+i,publicReference:true,origin:i%2?a:b,destination:i%2?b:a,osmandKm:4.1,envelope:{trustedBackend:true,originId:i%2?a.id:b.id,destinationId:i%2?b.id:a.id,cartographyVersion:'offline-fixture-v1',measuredAtMs:1000,response:{code:'Ok',routes:[{distance:4200}]}}}));
+const check=(r=routes,nowMs=1500)=>validatePublicRouteBatch({routes:r,cartographyVersion:'offline-fixture-v1',nowMs,maxAgeMs:1000});
+assert.equal(check().approved,true);
+assert.equal(check(routes.slice(0,7)).reason,'route_count_out_of_range');
+assert.equal(check([...routes,routes[0]]).reason,'duplicate_or_invalid_id');
+assert.equal(check(routes.map((r,i)=>i===0?{...r,publicReference:false}:r)).reason,'non_public_location');
+assert.equal(check(routes.map((r,i)=>i===0?{...r,envelope:{...r.envelope,cartographyVersion:'old'}}:r)).approved,false);
+assert.equal(check(routes,2000).feeStatus,'pending_confirmation');
+assert.equal(check(routes.map((r,i)=>i===0?{...r,osmandKm:10}:r)).approved,false);
+console.log('PASS 8-12 public route offline batch, OsmAnd comparison, invalidation, privacy and no-route pending');
