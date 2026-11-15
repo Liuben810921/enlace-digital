@@ -70,6 +70,10 @@ def main(root):
   ('sha tampering', (SHA,'0'*40)),
   ('unexpected job',('jobs:','jobs:\n  other: {}')),
   ('dangerous permissions',('permissions: {}','permissions: {contents: write}')),
+  ('name expression',('name: Havana manifest offline CI candidate - DISABLED','name: ${{ secrets.SECRET }}')),
+  ('network bootstrap redirect',('export GIT_CONFIG_VALUE_1=false','export GIT_CONFIG_VALUE_1=true')),
+  ('bypass network isolation',('unshare --user --map-root-user --net --fork','bash')),
+  ('untrusted dependency',('git init -q','npm install && git init -q')),
  ]:
   before,after=change
   assert before in raw,name
