@@ -5,7 +5,7 @@ const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=
 for(const script of scripts)new vm.Script(script);
 const source=scripts.join('\n'),start=source.indexOf("const ED_DELIVERY_ORIGINS_KEY="),end=source.indexOf("function deliveryBarrios(){",start);
 assert(start>=0&&end>start);
-const store=new Map(),elements={};const el=id=>elements[id]||(elements[id]={value:'',textContent:'',style:{},scrollIntoView(){}});
+const store=new Map(),elements={};const el=id=>elements[id]||(elements[id]={value:'',textContent:'',style:{},scrollIntoView(){},focus(){}});
 const ctx={localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},document:{getElementById:el},municipios:['Playa'],esc:s=>String(s).replaceAll('<','&lt;'),alert:s=>{ctx.alertMessage=s},prompt:()=>ctx.nextName,adminTab:t=>{ctx.lastTab=t},Date,Math,Number,JSON};
 vm.createContext(ctx);vm.runInContext(source.slice(start,end),ctx);
 const call=x=>vm.runInContext(x,ctx);
