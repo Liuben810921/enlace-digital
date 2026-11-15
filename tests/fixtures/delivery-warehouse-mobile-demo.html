@@ -29,7 +29,13 @@ small,.note{color:#b5c8d5}article{border-top:1px solid #36556a;padding:12px 0}.g
 <section><h2>Asociar producto ficticio a almacenes</h2>
 <form id="assignmentForm"><label>ID de producto de prueba<input id="productId" pattern="[a-zA-Z0-9_-]{1,64}" required></label>
 <div id="originChoices"></div><button>Guardar asociación</button></form><p id="assignmentResult" role="status"></p></section>
-<section><h2>Mapa vial · pendiente de conexión</h2><div id="roadMapPlaceholder" role="status" aria-live="polite" style="min-height:120px;border:1px dashed #66859b;border-radius:10px;padding:16px;background:#071a2c"><strong>Sin cartografía conectada</strong><p class="note">Las coordenadas son referencias de prueba, no posiciones verificadas. No se dibujan rutas ni se calculan kilómetros sin respuesta vial confiable.</p></div></section>
+<section><h2>Explorador de puntos públicos · laboratorio</h2>
+<p class="note">Esquema interactivo de coordenadas ficticias, NO un mapa vial ni una ruta real. Sin teselas, geocodificación, kilómetros ni servicios externos.</p>
+<div class="grid"><label>Origen público<select id="mapOrigin"><option value="">Seleccionar</option></select></label><label>Destino público<select id="mapDestination"><option value="">Seleccionar</option></select></label></div>
+<svg id="roadMapPlaceholder" role="img" aria-label="Esquema de puntos públicos ficticios. Sin mapa vial ni rutas verificadas" viewBox="0 0 360 220" style="width:100%;max-height:300px;border:1px dashed #66859b;border-radius:10px;background:#071a2c" xmlns="http://www.w3.org/2000/svg"></svg>
+<p id="mapSelectionStatus" role="status" aria-live="polite">Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.</p>
+<button type="button" id="mapReset">Limpiar selección</button>
+</section>
 <section><h2>Vista previa ficticia de mensajería</h2><p id="deliveryPreview" role="status">Tarifa pendiente de confirmar: no hay rutas viales verificadas ni servicio de mapas conectado.</p></section>
 <p id="status" role="status" aria-live="polite"></p>
 </main><script>
@@ -47,6 +53,7 @@ function render(){
  $('suppliers').innerHTML=state.suppliers.map(s=>'<article><strong>'+esc(s.name)+'</strong> · '+(s.active?'Activo':'Inactivo')+' <button data-action="supplier-edit" data-id="'+esc(s.id)+'">Editar</button><button data-action="supplier-toggle" data-id="'+esc(s.id)+'">'+(s.active?'Desactivar':'Activar')+'</button></article>').join('')||'<p class="note">Aún no hay proveedores.</p>';
  $('warehouseSupplier').innerHTML='<option value="">Sin proveedor</option>'+state.suppliers.filter(s=>s.active).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
  $('warehouses').innerHTML=state.warehouses.map(w=>'<article><strong>'+esc(w.name)+'</strong> · '+(w.type==='propio'?'Propio':'Proveedor')+' · '+(w.active?'Activo':'Inactivo')+'<p class="note">'+esc(w.address||'Dirección pendiente')+' · '+esc(w.lat)+', '+esc(w.lng)+' · versión '+w.version+'</p><button data-action="warehouse-edit" data-id="'+esc(w.id)+'">Editar</button><button data-action="warehouse-toggle" data-id="'+esc(w.id)+'">'+(w.active?'Desactivar':'Activar')+'</button></article>').join('')||'<p class="note">Aún no hay almacenes.</p>';
+ renderMap();
  $('originChoices').innerHTML=state.warehouses.filter(w=>w.active&&(w.type==='propio'||state.suppliers.some(s=>s.id===w.supplierId&&s.active))).map(w=>'<label><input type="checkbox" class="origin" value="'+esc(w.id)+'"> '+esc(w.name)+'</label>').join('')||'<p class="note">Primero agrega almacenes activos.</p>';
 }
 $('supplierForm').addEventListener('submit',e=>{e.preventDefault();const name=$('supplierName').value.trim();if(!name)return;state.suppliers.push({id:uid(),name,active:true});$('supplierForm').reset();save();status('Proveedor agregado en laboratorio')});
@@ -72,5 +79,36 @@ document.addEventListener('click',e=>{
  else {w.active=!w.active;w.version++;save();status('Estado de almacén actualizado; recotización requerida')}
 });
 $('assignmentForm').addEventListener('submit',e=>{e.preventDefault();const productId=$('productId').value.trim(),originIds=[...document.querySelectorAll('.origin:checked')].map(x=>x.value);if(!originIds.length)return status('Selecciona al menos un almacén');state.assignments=state.assignments.filter(a=>a.productId!==productId);state.assignments.push({productId,originIds,revision:state.revision+1});save();$('assignmentResult').textContent='Asociación guardada solo en este navegador';status('Producto asociado')});
+// Points are intentionally synthetic, not geographic landmarks or real warehouses.
+const PUBLIC_POINTS=[
+ {id:'public_a',label:'Punto público A (ficticio)',lat:23.10,lng:-82.40},
+ {id:'public_b',label:'Punto público B (ficticio)',lat:23.14,lng:-82.35},
+ {id:'public_c',label:'Punto público C (ficticio)',lat:23.08,lng:-82.31},
+ {id:'public_d',label:'Punto público D (ficticio)',lat:23.12,lng:-82.28}
+];
+const NS='http://www.w3.org/2000/svg';
+const makeSvg=(tag,attrs)=>{const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el};
+function renderMap(){
+ const svg=$('roadMapPlaceholder');svg.replaceChildren();
+ const title=makeSvg('text',{x:12,y:22,fill:'#cde6f5','font-size':12});title.textContent='Puntos de referencia · esquema, sin cartografía';svg.appendChild(title);
+ for(const p of PUBLIC_POINTS){
+  const x=28+(p.lng+82.42)/.16*300,y=195-(p.lat-23.06)/.10*145;
+  const selected=p.id===$('mapOrigin').value||p.id===$('mapDestination').value;
+  const circle=makeSvg('circle',{cx:x,cy:y,r:selected?10:8,fill:selected?'#ffcb4a':'#54c3da',stroke:'#081c31','stroke-width':2,tabindex:0,role:'button','aria-label':'Seleccionar '+p.label});
+  const choose=()=>{const target=$('mapOrigin').value?'mapDestination':'mapOrigin';$(target).value=p.id;renderMap()};
+  circle.addEventListener('click',choose);
+  circle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}});
+  svg.appendChild(circle);
+  const label=makeSvg('text',{x:x+12,y:y+4,fill:'#f2f7ff','font-size':11});label.textContent=p.id.replace('public_','').toUpperCase();svg.appendChild(label);
+ }
+ const a=$('mapOrigin').value,b=$('mapDestination').value;
+ $('mapSelectionStatus').textContent=a&&b&&a!==b?'Origen y destino ficticios seleccionados. Sin ruta vial verificada: tarifa pendiente de confirmar.':a===b&&a?'Origen y destino deben ser distintos. Tarifa pendiente de confirmar.':'Selecciona dos puntos públicos de prueba. Ruta y tarifa pendientes de confirmar.';
+ $('deliveryPreview').textContent='Tarifa pendiente de confirmar: no hay rutas viales verificadas ni servicio de mapas conectado.';
+}
+for(const key of ['mapOrigin','mapDestination']){
+ $(key).innerHTML='<option value="">Seleccionar</option>'+PUBLIC_POINTS.map(p=>'<option value="'+p.id+'">'+p.label+'</option>').join('');
+ $(key).addEventListener('change',renderMap);
+}
+$('mapReset').addEventListener('click',()=>{$('mapOrigin').value='';$('mapDestination').value='';renderMap()});
 $('warehouseSupplier').disabled=true;render();
 </script></body></html>
