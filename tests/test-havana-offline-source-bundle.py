@@ -112,7 +112,8 @@ def run(root):
         target.unlink()
         target.write_bytes(original_data)
 
-    # Deterministic parent-directory swap before opening a source file.
+    # Parent replacement after the directory descriptor is opened must NOT
+    # redirect the read to the newly substituted directory.
     target = root / "tests/fixtures/havana-offline-cartography-manifest.json"
     parent = target.parent
     moved = root / "fixtures-original"
@@ -127,19 +128,13 @@ def run(root):
         return original_open(path, flags, *args, **kwargs)
     module.os.open = parent_swap_open
     try:
-        try:
-            verify(root)
-        except (OSError, ValueError, TypeError, UnicodeError):
-            count += 1
-        else:
-            raise RuntimeError("accepted TOCTOU parent replacement with tampered source")
+        require(verify(root) == 3 and swapped[0], "anchored parent replacement")
+        count += 1
     finally:
         module.os.open = original_open
         if swapped[0]:
             shutil.rmtree(parent)
             moved.rename(parent)
-    # An anchored directory descriptor may legitimately read the original
-    # identical bytes after a parent rename; it must never follow the replacement.
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
