@@ -123,3 +123,16 @@ Cada funcionalidad se considera **Terminada** solo si: (a) tiene requisitos y ca
 7. Registrar decisiones en este plan maestro para continuidad entre chats; no depender exclusivamente de memoria conversacional.
 
 **Próxima acción útil:** desarrollar D1 orientado a habilitar gestores: identidad y permisos de cliente/gestor/supervisor/admin, estados y conciliación de comisiones, contrato de API y panel móvil aislado. Evitar nuevas pruebas de COMMIT; verificar únicamente aceptación funcional, permisos y regresiones relevantes. Preparar matriz corta de dependencias y criterios de aceptación para autorizar integración posterior.
+
+## 11. Repriorización de entregas — revisión del 14-11-2026
+**Decisión del Owner:** antes de avanzar con gestores, verificar e implementar el sistema de entregas (proveedores, almacenes, direcciones, coordenadas, mapa, rutas y enlace con checkout). El laboratorio de transacciones aprobado no sustituye una prueba de mapa real ni persistencia.
+
+**Avance aislado comprobable en GitHub:**
+- El registro puro de almacenes admite dirección de referencia y bandera de verificación; una edición de dirección o coordenadas invalida la verificación anterior.
+- Nuevo módulo `tests/delivery-end-to-end-readiness-isolated.cjs` reúne productos, almacenes elegibles, direcciones, coordenadas, respuestas viales simuladas, origen más lejano elegible para referencia de cobro y tarifa sintética; ante ruta, dirección o proveedor inválido devuelve indisponibilidad en lugar de inventar kilómetros.
+- Nuevo test `tests/delivery-end-to-end-readiness-isolated.test.cjs` cubre la aceptación de ese contrato y su bloqueo seguro. El checkout operativo no está conectado.
+- Los indicadores `addressVerified` y `verifiedByServer` son únicamente fixtures de laboratorio: **no son prueba criptográfica ni validación real de servidor**, por lo que no deben confiarse a entradas del cliente.
+- Sin mapa vial real, proveedor de geocodificación, coordenadas verificadas de almacenes, persistencia autoritativa ni servicio externo de rutas. No introducir direcciones de proveedores reales hasta autorización; se requieren referencias y validación del Owner.
+- La elección del almacén más lejano para referencia comercial no sustituye la selección de origen efectivo de despacho; la política de cobro y su relación con el origen efectivo requieren revisión al integrar.
+- Próximos bloqueantes: (1) validar el modelo y direcciones de proveedores/almacenes en backend, (2) elegir y autorizar proveedor/cartografía de rutas para La Habana y validar trayectos, (3) completar administración y mapa móvil, (4) conectar cotización a checkout ficticio en entorno autorizado, (5) pruebas integrales sin pedidos reales.
+- CI aislado activado mediante `.github/workflows/isolated-delivery-quote.yml`; no confundir ejecución en curso con aprobación.
