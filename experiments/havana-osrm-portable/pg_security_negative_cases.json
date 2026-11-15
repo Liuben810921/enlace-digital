@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "status": "OFFLINE_ONLY_NOT_EXECUTED_IN_POSTGRESQL",
+  "commercial_quote_enabled": false,
+  "cases": [
+    {
+      "id": "RLS_FORGED_GUC",
+      "area": "identity",
+      "attack": "app changes tenant GUC to victim",
+      "expected": "DENY_UNTRUSTED_IDENTITY",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "RLS_MISSING_IDENTITY",
+      "area": "identity",
+      "attack": "no authenticated tenant",
+      "expected": "DENY_DEFAULT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "RLS_INVALID_UUID",
+      "area": "identity",
+      "attack": "malformed tenant UUID",
+      "expected": "REJECT_INVALID_CONTEXT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "RLS_CROSS_TENANT_READ",
+      "area": "identity",
+      "attack": "tenant A reads tenant B",
+      "expected": "DENY_CROSS_TENANT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "RLS_CROSS_TENANT_WRITE",
+      "area": "identity",
+      "attack": "tenant A writes tenant B",
+      "expected": "DENY_CROSS_TENANT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "ROLE_NOT_PROVISIONED",
+      "area": "roles",
+      "attack": "app role does not exist",
+      "expected": "BLOCK_DEPLOYMENT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "ROLE_BYPASSRLS",
+      "area": "roles",
+      "attack": "app or owner has BYPASSRLS",
+      "expected": "BLOCK_DEPLOYMENT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "ROLE_PUBLIC_TABLE_GRANT",
+      "area": "roles",
+      "attack": "PUBLIC has table DML",
+      "expected": "BLOCK_DEPLOYMENT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "ROLE_DEFINER_SEARCH_PATH",
+      "area": "roles",
+      "attack": "definer function has mutable search_path",
+      "expected": "BLOCK_DEPLOYMENT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_BASKET_STALE",
+      "area": "cas",
+      "attack": "basket version changes after read",
+      "expected": "REJECT_STALE",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_ADDRESS_STALE",
+      "area": "cas",
+      "attack": "address version changes after read",
+      "expected": "REJECT_STALE",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_ROUTES_STALE",
+      "area": "cas",
+      "attack": "routes version changes after read",
+      "expected": "REJECT_STALE",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_WAREHOUSES_STALE",
+      "area": "cas",
+      "attack": "warehouses version changes after read",
+      "expected": "REJECT_STALE",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_DUAL_WRITER",
+      "area": "cas",
+      "attack": "two connections write from same version",
+      "expected": "ONE_WRITER_ONLY",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "CAS_VERSION_OVERFLOW",
+      "area": "cas",
+      "attack": "increment beyond bigint boundary",
+      "expected": "REJECT_OVERFLOW",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_SAME_KEY_SAME_PAYLOAD",
+      "area": "idempotency",
+      "attack": "two concurrent identical requests",
+      "expected": "REPLAY_SAME_RESULT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_SAME_KEY_DIFFERENT_PAYLOAD",
+      "area": "idempotency",
+      "attack": "same key conflicting hash",
+      "expected": "REJECT_CONFLICT",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_REJECTED_NO_QUOTE",
+      "area": "idempotency",
+      "attack": "rejected outcome references nonexistent quote",
+      "expected": "BLOCK_SCHEMA_REVIEW",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_UNKNOWN_COMMIT",
+      "area": "idempotency",
+      "attack": "connection lost after COMMIT sent",
+      "expected": "RECONCILE_BEFORE_RETRY",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_40001",
+      "area": "idempotency",
+      "attack": "serialization failure",
+      "expected": "ROLLBACK_RETRY_BOUNDED",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_40P01",
+      "area": "idempotency",
+      "attack": "deadlock victim",
+      "expected": "ROLLBACK_RETRY_BOUNDED",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    },
+    {
+      "id": "IDEM_KEY_EXPIRY",
+      "area": "idempotency",
+      "attack": "reuse expired operation key",
+      "expected": "BLOCK_UNDEFINED_REUSE",
+      "required": "Document and verify safe rejection, no cross-tenant access and no partial commercial side effects before deployment"
+    }
+  ]
+}
