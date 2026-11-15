@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {readOsrmGeometry,geometryToSvgPath}=require('./delivery-osrm-geometry-isolated.cjs');
+const sample={code:'Ok',routes:[{distance:4800,geometry:{type:'LineString',coordinates:[[-82.4,23.1],[-82.38,23.11],[-82.36,23.12]]}}]};
+const parsed=readOsrmGeometry(sample);
+assert.equal(parsed.ok,true);assert.equal(parsed.distanceMeters,4800);
+const svg=geometryToSvgPath(parsed);assert.equal(svg.ok,true);assert.match(svg.path,/^M[\d.]+ [\d.]+ L/);
+assert.equal(readOsrmGeometry({code:'NoRoute',routes:[]}).feeStatus,'pending_confirmation');
+assert.equal(readOsrmGeometry({code:'Ok',routes:[{distance:3,geometry:{type:'LineString',coordinates:[[-181,23],[-82,23]]}}]}).ok,false);
+assert.equal(readOsrmGeometry({code:'Ok',routes:[{distance:3,geometry:{type:'LineString',coordinates:[[-82,23]]}}]}).ok,false);
+assert.equal(readOsrmGeometry({code:'Ok',routes:[{distance:-1,geometry:sample.routes[0].geometry}]}).ok,false);
+assert.equal(geometryToSvgPath({ok:false}).ok,false);
+console.log('PASS offline OSRM GeoJSON geometry validation, SVG path, malformed routes and pending tariff');
