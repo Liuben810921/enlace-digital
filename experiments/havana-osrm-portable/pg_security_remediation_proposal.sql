@@ -1,0 +1,22 @@
+-- NON-EXECUTABLE DESIGN NOTES ONLY. All SQL-like statements are comments.
+-- BLOCKER 1 IDENTITY: trusted server must derive tenant from verified auth.
+-- REJECT: client-supplied tenant_id, SET ed.tenant_id, unsigned JWT claims.
+-- DESIGN: authenticated gateway maps session to tenant; DB caller cannot alter mapping.
+-- RLS: FORCE ROW LEVEL SECURITY, USING and WITH CHECK for every tenant table.
+-- BLOCKER 2 ROLES: owner NOLOGIN NOBYPASSRLS; app NOBYPASSRLS.
+-- REJECT: SUPERUSER, BYPASSRLS, PUBLIC DML, ownership by app, dynamic search_path.
+-- DESIGN: REVOKE ALL FROM PUBLIC; grant EXECUTE on allowlisted RPC only.
+-- BLOCKER 3 CAS: single row versions (basket_v,address_v,routes_v,warehouses_v).
+-- DESIGN: UPDATE versions SET routes_v=routes_v+1 WHERE all_versions_match RETURNING routes_v;
+-- REQUIRE: exactly one row updated, otherwise ROLLBACK; reject bigint overflow.
+-- REQUIRE: every dimension writer uses same lock/CAS; quote commits with FOR UPDATE.
+-- BLOCKER 4 IDEMPOTENCY: UNIQUE(tenant_id,operation_id), canonical payload hash.
+-- DESIGN: INSERT ... ON CONFLICT DO NOTHING; then SELECT ... FOR UPDATE and compare hash.
+-- REQUIRE: same key+hash replay prior result, different hash reject; atomic with quote.
+-- REQUIRE: rejected outcome has nullable quote_id or separate rejection record.
+-- REQUIRE: unknown COMMIT resolved by lookup before retry; 40001/40P01 rollback+retry.
+-- BLOCKER 5 RPC: SECURITY DEFINER only with trusted non-bypass owner and fixed search_path.
+-- REQUIRE: schema-qualified relations, no dynamic SQL, minimal EXECUTE grants.
+-- REQUIRE: deny cross-tenant SELECT INSERT UPDATE DELETE including RPC path.
+-- REQUIRE: commercial_quote_enabled=false, commercial_approval=false.
+-- NO CREATE, ALTER, INSERT, UPDATE, DELETE OR EXECUTABLE SQL IN THIS FILE.
