@@ -169,3 +169,19 @@ D. Diseñar frontera de backend autoritativa, seguridad y persistencia de provee
 E. Con autorización explícita, integrar en staging ficticio y probar en móvil desde administración hasta vista previa de checkout; mantener pedidos, pagos y correos desactivados.
 
 **Estado final:** laboratorio aislado aprobado; **NO-GO** para mapa real, cotización comercial y checkout hasta completar B–E. No se ha accedido a mapas externos, Supabase, staging ni producción.
+
+## 14. Preparación OSRM offline, mapa móvil y autorización futura
+
+**Implementación en rama aislada:** `tests/delivery-osrm-integration-contract-isolated.cjs` reutiliza `delivery-route-adapter-isolated.cjs`. Exige cobertura declarada La Habana, identificadores de origen/destino, coordenadas WGS84 válidas, marcas de ubicación verificada en fixture y versión de cartografía; transforma a orden OSRM [longitud,latitud]. Acepta distancias de respuestas OSRM ficticias solo con procedencia declarada por backend, vínculo a origen/destino y versión, marca temporal no futura y TTL limitado. Fallo o discrepancia → `pending_confirmation`; nunca publica una tarifa comercial. La bandera `trustedBackend` es **simulación contractual**, NO prueba de autenticidad: en implementación real debe imponerse exclusivamente desde backend, jamás aceptarse del navegador.
+
+**Prueba mínima nueva:** `tests/delivery-osrm-integration-contract-isolated.test.cjs`: orden de coordenadas, ruta válida, cobertura, origen sin verificar, coordenada inválida, suplantación de destino, versión obsoleta, procedencia, TTL y respuesta sin ruta/distancia inválida. Integrada al workflow `isolated-delivery-quote`.
+
+**Mapa móvil aislado:** `tests/fixtures/delivery-warehouse-mobile-demo.html` muestra un estado accesible de cartografía no conectada y conserva aviso de tarifa pendiente. No presenta un mapa inventado ni rutas falsas.
+
+**Autorización independiente requerida para validación vial real:**
+1. Permitir únicamente consultas de cartografía/rutas externas desde un laboratorio aislado y con puntos públicos ficticios en La Habana (no domicilios privados).
+2. Aprobar proveedor elegido (p. ej. instancia OSRM controlada, servicio de rutas o dataset OSM offline), términos de uso, costes/cuotas, política de privacidad y versión del extracto cartográfico.
+3. Autorizar explícitamente si se necesita descargar datos OSM, alojar un motor o activar una clave API; por defecto **no** se ha hecho ninguna de esas operaciones.
+4. Mantener separadas las autorizaciones para backend real, Supabase, staging y despliegue. Sin ellas no existe certificación de rutas reales.
+
+**Criterio de salida:** comparar una muestra pequeña y representativa de trayectos públicos de La Habana (centro/periferia, sentidos, ruta imposible), evaluar tolerancias con el módulo existente, comprobar visualización móvil y fallback. No repetir baterías de transacciones ya aprobadas.
