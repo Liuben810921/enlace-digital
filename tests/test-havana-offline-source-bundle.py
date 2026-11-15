@@ -166,6 +166,33 @@ def run(root):
     finally:
         module.os.dup = original_dup
         target.write_bytes(original_data)
+    # Root ancestor symlink: reject even if the final root component is real.
+    ancestor = root / "ancestor-link"
+    ancestor.symlink_to(root / "tests", target_is_directory=True)
+    try:
+        try:
+            module.read_regular(ancestor / "fixtures", "havana-offline-cartography-manifest.json")
+        except (OSError, ValueError, TypeError, UnicodeError):
+            count += 1
+        else:
+            raise RuntimeError("accepted symlink in root ancestor")
+    finally:
+        ancestor.unlink()
+
+    # Ensure failure paths close every opened descriptor (Linux /proc only).
+    fd_directory = Path("/proc/self/fd")
+    if fd_directory.is_dir():
+        before = len(list(fd_directory.iterdir()))
+        for _ in range(80):
+            try:
+                module.read_regular(root, "tests/fixtures/nonexistent-file")
+            except (OSError, ValueError, TypeError, UnicodeError):
+                pass
+            else:
+                raise RuntimeError("accepted missing file")
+        after = len(list(fd_directory.iterdir()))
+        require(before == after, "descriptor cleanup on failures")
+        count += 1
     print("PASS offline bundle adversarial:", count)
 
 if __name__ == "__main__":
