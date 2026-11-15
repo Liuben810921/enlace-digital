@@ -59,5 +59,47 @@ const fs=require('node:fs'),path=require('node:path');
    await page.close();
    console.log('PASS Chromium '+width+'px: supplier, effective warehouse, association, quarantine, quote invalidation, recovery, screenshots');
   }
+  // Dedicated offline SVG fixture: one interaction sequence, not a duplicate of 3-width delivery suite.
+  {
+   const page=await browser.newPage({viewport:{width:375,height:860},deviceScaleFactor:1});
+   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+   await page.goto('file://'+path.resolve('tests/fixtures/delivery-warehouse-mobile-demo.html'),{waitUntil:'load'});
+   assert.deepEqual(errors,[],'SVG fixture initial script errors');
+   const route=page.locator('#roadMapPlaceholder path');
+   assert.equal(await route.count(),0,'no line before synthetic authorization');
+   assert.equal(await page.locator('#mapSyntheticRoute').isDisabled(),true);
+   await page.locator('#mapOrigin').selectOption('public_a');
+   await page.locator('#mapDestination').selectOption('public_b');
+   assert.equal(await page.locator('#mapSyntheticRoute').isEnabled(),true);
+   await page.locator('#mapSyntheticRoute').focus();
+   await page.keyboard.press('Enter');
+   assert.equal(await route.count(),1,'synthetic route drawn only after explicit activation');
+   assert.match(await page.locator('#mapSelectionStatus').innerText(),/SINTÉTICA/);
+   assert.match(await page.locator('#deliveryPreview').innerText(),/Tarifa pendiente de confirmar/);
+   assert.equal(await page.locator('#roadMapPlaceholder').getAttribute('role'),'img');
+   assert.match(await page.locator('#roadMapPlaceholder').getAttribute('aria-label'),/Sin mapa vial/);
+   await page.screenshot({path:path.join(output,'delivery-svg-synthetic-375.png'),fullPage:true});
+   await page.locator('#mapDestination').selectOption('public_c');
+   assert.equal(await route.count(),0,'selection change clears synthetic geometry');
+   assert.equal(await page.locator('#mapSyntheticRoute').isDisabled(),true);
+   await page.locator('#mapReset').focus();await page.keyboard.press('Enter');
+   assert.equal(await page.locator('#mapOrigin').inputValue(),'');
+   assert.equal(await page.locator('#mapDestination').inputValue(),'');
+   const marker=page.locator('#roadMapPlaceholder circle').first();
+   await marker.focus();await page.keyboard.press('Enter');
+   assert.equal(await page.locator('#mapOrigin').inputValue(),'public_a','SVG point keyboard Enter selects origin');
+   await page.locator('#roadMapPlaceholder circle').nth(1).focus();await page.keyboard.press('Space');
+   assert.equal(await page.locator('#mapDestination').inputValue(),'public_b','SVG point keyboard Space selects destination');
+   await page.setViewportSize({width:750,height:860});
+   await page.evaluate(()=>{document.body.style.zoom='2'});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1),false,'SVG at 200% zoom has no horizontal overflow');
+   await page.locator('#mapSyntheticRoute').focus();await page.keyboard.press('Enter');
+   assert.equal(await route.count(),1,'keyboard activation still works at zoom 200%');
+   assert.match(await page.locator('#deliveryPreview').innerText(),/Tarifa pendiente de confirmar/);
+   await page.screenshot({path:path.join(output,'delivery-svg-synthetic-zoom200.png'),fullPage:true});
+   assert.deepEqual(errors,[],'SVG fixture no browser errors');
+   await page.close();
+   console.log('PASS Chromium isolated SVG: select, keyboard, clear, synthetic route, accessible status, zoom 200%, pending tariff');
+  }
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
