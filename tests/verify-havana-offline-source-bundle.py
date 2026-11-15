@@ -28,38 +28,42 @@ def git_blob_sha(data):
     return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data).hexdigest()
 
 def read_regular(root, relative):
-    # Reject symlinked root, intermediate directories and leaf, and changes
-    # between pre-open and post-read metadata. This is not a full atomic
-    # snapshot against a hostile writer; keep the bundle immutable.
-    base = Path(root).absolute()
+    """Read only beneath an anchored root fd; reject symlinks at every level."""
     parts = Path(relative).parts
-    current = base
-    for current in [base, *(base.joinpath(*parts[:i]) for i in range(1, len(parts)))]:
-        st = current.lstat()
-        if not stat.S_ISDIR(st.st_mode):
-            fail("unsafe_parent:" + relative)
-    path = base.joinpath(*parts)
-    before = path.lstat()
-    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
-        fail("non_regular_or_hardlinked:" + relative)
-    if before.st_size > MAX_BYTES:
-        fail("oversized:" + relative)
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-    fd = os.open(path, flags)
+    if not parts or any(p in ("", ".", "..") for p in parts) or Path(relative).is_absolute():
+        fail("unsafe_path:" + relative)
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+    descriptors = []
     try:
-        opened = os.fstat(fd)
-        if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1 or (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
-            fail("changed_before_open:" + relative)
-        with os.fdopen(fd, "rb", closefd=False) as handle:
+        base = Path(root).absolute()
+        # Reject a symlinked root before opening; the descriptor is thereafter anchored.
+        if not stat.S_ISDIR(base.lstat().st_mode):
+            fail("unsafe_root")
+        fd = os.open(base, directory_flags)
+        descriptors.append(fd)
+        for component in parts[:-1]:
+            fd = os.open(component, directory_flags, dir_fd=fd)
+            descriptors.append(fd)
+        fd = os.open(parts[-1], file_flags, dir_fd=fd)
+        descriptors.append(fd)
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            fail("non_regular_or_hardlinked:" + relative)
+        if before.st_size > MAX_BYTES:
+            fail("oversized:" + relative)
+        with os.fdopen(os.dup(fd), "rb") as handle:
             data = handle.read(MAX_BYTES + 1)
         after = os.fstat(fd)
-        if len(data) > MAX_BYTES or len(data) != opened.st_size:
+        if len(data) > MAX_BYTES or len(data) != before.st_size:
             fail("oversized_or_changed:" + relative)
-        if (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns, opened.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if any(getattr(before, field) != getattr(after, field) for field in fields):
             fail("changed_during_read:" + relative)
         return data
     finally:
-        os.close(fd)
+        for fd in reversed(descriptors):
+            os.close(fd)
 
 def verify(root):
     root = Path(root)
