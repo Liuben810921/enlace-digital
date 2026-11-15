@@ -9,7 +9,7 @@ def evaluate(manifest_raw, corpus_raw):
         'commercial_quote_enabled': False,
         'commercial_approval': False,
         'integrity': {'passed': False, 'error': None},
-        'coverage': {'passed': False, 'errors': [], 'geographic_verified': False},
+        'coverage': {'passed': False, 'errors': [], 'geographic_verified': False, 'outside_unverified': None},
         'equivalence': {'passed': False, 'errors': []},
     }
     try:
@@ -34,6 +34,7 @@ def evaluate(manifest_raw, corpus_raw):
         }
         result['accepted_for_synthetic_review'] = (
             comparison['accepted'] and result['coverage']['passed'] and result['equivalence']['passed']
+            and result['coverage']['outside_unverified'] == 0
         )
     except (ValueError, TypeError, OverflowError, UnicodeError, RecursionError) as exc:
         result['coverage']['errors'] = [['global', 'comparison_invalid', type(exc).__name__]]
