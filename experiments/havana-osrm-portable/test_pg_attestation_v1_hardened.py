@@ -8,10 +8,13 @@ from datetime import datetime, timezone
 import test_pg_attestation_v1_published as published
 check = published.check
 
+EXPECTED_KEYS = frozenset(('version','candidate_commit','matrix_blob','manifest_blob','matrix_sha256','manifest_sha256','issued_at','expires_at','author_id','reviewers','revocation_id','signature_scheme','signatures'))
+EXPECTED_REVIEW = frozenset(('reviewer_id','role','decision'))
+
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z', re.ASCII)
 
 
-def hardened_check(raw, matrix, manifest, now, revoked=None, external_verifier=None):
+def _hardened_check_impl(raw, matrix, manifest, now, revoked=None, external_verifier=None):
     if not isinstance(raw, bytes) or not isinstance(matrix, bytes) or not isinstance(manifest, bytes):
         return 'INVALID_INPUT'
     if type(now) is not datetime or now.tzinfo is None or now.utcoffset() is None:
@@ -86,6 +89,16 @@ def hardened_check(raw, matrix, manifest, now, revoked=None, external_verifier=N
     # The independent checks above establish the diagnostic reasons.
     # Never accept a reason supplied solely by the replaceable dependency.
     return 'DENY_NO_EXTERNAL_TRUST'
+
+
+def hardened_check(raw, matrix, manifest, now, revoked=None, external_verifier=None):
+    """Fail closed if imported helpers or parsers raise an ordinary exception."""
+    try:
+        if published.KEYS != EXPECTED_KEYS or published.REVIEW != EXPECTED_REVIEW:
+            return 'DENY_NO_EXTERNAL_TRUST'
+        return _hardened_check_impl(raw, matrix, manifest, now, revoked, external_verifier)
+    except Exception:
+        return 'DENY_NO_EXTERNAL_TRUST'
 
 
 class HardenedAdversarial(unittest.TestCase):
