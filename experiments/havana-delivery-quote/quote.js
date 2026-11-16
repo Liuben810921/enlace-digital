@@ -25,4 +25,5 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
   if(!Number.isSafeInteger(feeCup))return pending('FEE_OVERFLOW');
   return {status:'COTIZACION_SIMULADA',reason:null,feeCup,originId:farthest.originId,billableKm,roadKm:farthest.km,contextRevision};
 }
-module.exports={quoteDelivery};
+if(typeof module!=='undefined'&&module.exports)module.exports={quoteDelivery};
+if(typeof window!=='undefined')window.EDOfflineQuote=Object.freeze({quoteDelivery});
