@@ -744,7 +744,7 @@ body:has(#overlay:not(.hidden)) .float-cart{display:none!important}
 #modal.modal:has(#edDeliverySave) #edDeliverySave{max-width:100%;white-space:normal;min-height:48px}
 
 </style><dialog id="aboutDialog" class="about-dialog"><button class="about-close" type="button" aria-label="Cerrar ventana" onclick="document.getElementById(&quot;aboutDialog&quot;).close()">✕</button><section class="philosophy" id="nuestra-filosofia" aria-labelledby="filosofia-titulo"><div class="philosophy-intro"><span class="philosophy-eyebrow">QUIÉNES SOMOS · NUESTRA FILOSOFÍA</span><h2 id="filosofia-titulo">La confianza es nuestra primera conexión.</h2><p>En ENLACE DIGITAL creemos que una buena relación comercial comienza con algo fundamental: <strong>la confianza.</strong></p><p>Nuestra filosofía nace de años de experiencia atendiendo personalmente a nuestros clientes, construyendo relaciones basadas en la honestidad, el respeto y la profesionalidad.</p><p>Creemos en hablar con claridad, ofrecer información verdadera y ayudar a cada persona a encontrar lo que realmente necesita.</p><p>Para nosotros, vender un producto o prestar un servicio no es simplemente completar una operación. Es establecer una conexión que puede convertirse en una relación de confianza duradera.</p><p>Hoy acercamos tecnología, productos y soluciones a nuestros clientes. Mañana seguiremos ampliando nuestras posibilidades, pero manteniendo siempre los mismos principios.</p><strong class="philosophy-signature">Todo comienza con una conexión.</strong></div><div class="philosophy-values"><div><span>01</span><strong>Honestidad</strong><small>Información clara y verdadera, siempre.</small></div><div><span>02</span><strong>Confianza</strong><small>Relaciones que perduran más allá de una compra.</small></div><div><span>03</span><strong>Compromiso</strong><small>Atención profesional antes y después de cada venta.</small></div></div></section></dialog><div class="category-drawer" id="categoryDrawer" onclick="if(event.target===this)closeCategories()"><div class="category-panel"><div class="category-head"><div><h2>Todos los departamentos</h2><p style="color:#667b84;margin:7px 0 0">Encuentra rápidamente lo que necesitas</p></div><button class="category-close" onclick="closeCategories()" aria-label="Cerrar departamentos">✕</button></div><div class="category-grid-modal" id="categoryGridModal"></div></div></div><div id="overlay" class="modalback hidden" onclick="if(event.target===this)closeModal()"><div id="modal" class="modal"></div></div>
-<script>
+<script src="experiments/havana-delivery-quote/quote.js"></script><script>
 
 const ED_URL='https://ubrvuplslconfxwpfzxj.supabase.co',ED_KEY='sb_publishable_HofeIvey6J9qHynCjYNUQw_A6sfXTR5',ED_AUTH_KEY='ed_admin_session_v1';
 let edSession=null,edLastCategories='',edSaving=Promise.resolve(),edReady=false,edAdminAuthorized=false,edAdminRole=null;
@@ -2350,24 +2350,26 @@ function edDeliveryQuoteDemoPanel(){
 }
 function edDeliveryQuoteDemo(synthetic){
  const result=document.getElementById('edQuoteDemoResult');
- if(!result)return;
+ if(!result)return false;
  const pending=reason=>{result.textContent='PENDIENTE · '+reason;return false};
- if(edDeliveryIsQuarantined())return pending('Asociaciones bloqueadas.');
- const dest=document.getElementById('edQuoteDemoDestination')?.value;
- const rate=Number(document.getElementById('edQuoteDemoRate')?.value);
- if(!dest)return pending('Selecciona un destino de referencia.');
- if(!Number.isFinite(rate)||rate<=0)return pending('Tarifa ficticia inválida.');
+ const destinationId=document.getElementById('edQuoteDemoDestination')?.value||'';
+ const rateInput=document.getElementById('edQuoteDemoRate')?.value;
+ const rateCupPerKm=rateInput===''?NaN:Number(rateInput);
+ if(!destinationId||!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('Selecciona un destino de referencia.');
+ const revision=edDeliveryContextRevision();
+ const origins=edDeliveryOriginsRead();
  const suppliers=edDeliverySuppliersRead();
- const origins=edDeliveryOriginsRead().filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
- if(!origins.length)return pending('No hay almacenes activos elegibles.');
- if(!synthetic)return pending('Faltan distancias viales verificadas. No hay cotización operativa.');
- // Synthetic-only fixture; never persist or label these distances as verified.
- const routes=origins.map((o,i)=>({id:o.id,km:2+i*3}));
- const farthest=routes.reduce((a,b)=>b.km>a.km?b:a);
- const km=Math.max(3,farthest.km),fee=Math.ceil(km*rate);
- if(!Number.isSafeInteger(fee))return pending('Importe ficticio fuera de rango.');
- const origin=origins.find(o=>o.id===farthest.id);
- result.textContent='SIMULACIÓN FICTICIA · '+origin.name+' · '+farthest.km+' km inventados para prueba · mínimo 3 km · '+fee+' CUP de ejemplo. NO ES TARIFA REAL.';
+ const activeSuppliers=new Set(suppliers.filter(s=>s.active!==false).map(s=>s.id));
+ const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&activeSuppliers.has(o.supplierId)));
+ // These ephemeral fixtures are NEVER road measurements. They exist solely for demonstration.
+ const routes=synthetic?eligible.map((o,i)=>({originId:o.id,destinationId,km:2+i*3,status:'verified',contextRevision:revision})):[];
+ const contract=window.EDOfflineQuote?.quoteDelivery;
+ if(typeof contract!=='function')return pending('Contrato offline no disponible; no se puede simular.');
+ const quote=contract({origins,suppliers,routes,destinationId,rateCupPerKm,contextRevision:revision,quarantined:edDeliveryIsQuarantined()});
+ if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
+ if(!synthetic)return pending('No hay distancias viales verificadas.');
+ const origin=eligible.find(o=>o.id===quote.originId);
+ result.textContent='SIMULACIÓN FICTICIA · '+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
  return true;
 }
 
