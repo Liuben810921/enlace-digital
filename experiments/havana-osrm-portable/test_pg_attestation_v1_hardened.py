@@ -1,5 +1,7 @@
 """Fail-closed offline wrapper; never grants authorization."""
 import json
+import hashlib
+from test_pg_security_strict_boundary import git_blob
 import re
 import unittest
 from datetime import datetime, timezone
@@ -43,6 +45,36 @@ def hardened_check(raw, matrix, manifest, now, revoked=None, external_verifier=N
         v=d.get(key)
         if type(v) is not str or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', v):
             return 'TIME'
+    # Independent diagnostic oracles: a replaced dependency must not conceal a rejection.
+    if set(d) != published.KEYS or type(d.get('version')) is not int or d['version'] != 1:
+        return 'SCHEMA'
+    if any(type(d[k]) is not str for k in published.KEYS-{'version','reviewers','signatures'}):
+        return 'SCHEMA'
+    if (d['matrix_blob'] != git_blob(matrix) or d['manifest_blob'] != git_blob(manifest)
+            or d['matrix_sha256'] != hashlib.sha256(matrix).hexdigest()
+            or d['manifest_sha256'] != hashlib.sha256(manifest).hexdigest()):
+        return 'CONTENT_MISMATCH'
+    try:
+        start = datetime.strptime(d['issued_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+        end = datetime.strptime(d['expires_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError, OverflowError):
+        return 'TIME'
+    if not start < end or not start <= now < end:
+        return 'EXPIRED'
+    if d['revocation_id'] in revoked:
+        return 'REVOKED'
+    if any(set(r) != published.REVIEW for r in rs):
+        return 'REVIEWER_SCHEMA'
+    if (any(type(r['role']) is not str or type(r['decision']) is not str for r in rs)
+            or {r['role'] for r in rs} != {'security', 'business'}
+            or any(r['decision'] != 'APPROVED' for r in rs)
+            or len({r['reviewer_id'] for r in rs}) != 2
+            or d['author_id'] in {r['reviewer_id'] for r in rs}):
+        return 'SEPARATION'
+    if (d['signature_scheme'] != 'SYNTHETIC-NOT-CRYPTO'
+            or type(d['signatures']) is not list or len(d['signatures']) != 2
+            or any(type(s) is not str or not s.startswith('SYNTHETIC:') for s in d['signatures'])):
+        return 'SIGNATURE_FIXTURE'
     # The legacy parser can raise on malformed revocation sources; we pass only validated values.
     try:
         result=check(raw, matrix, manifest, now, revoked=revoked, external_verifier=None)
