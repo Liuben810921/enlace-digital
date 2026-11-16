@@ -78,11 +78,14 @@ def hardened_check(raw, matrix, manifest, now, revoked=None, external_verifier=N
     # The legacy parser can raise on malformed revocation sources; we pass only validated values.
     try:
         result=check(raw, matrix, manifest, now, revoked=revoked, external_verifier=None)
-    except (TypeError, ValueError, OverflowError, UnicodeError, AttributeError, KeyError):
-        return 'INVALID_INPUT'
+    except Exception:
+        # A broken or hostile dependency must never authorize.
+        return 'DENY_NO_EXTERNAL_TRUST'
     # Never propagate a positive or unknown decision from a replaceable dependency.
     allowed_denials = frozenset(('INVALID_JSON', 'SCHEMA', 'CONTENT_MISMATCH', 'CLOCK', 'TIME', 'EXPIRED', 'REVOKED', 'REVIEWER_SCHEMA', 'SEPARATION', 'SIGNATURE_FIXTURE', 'DENY_NO_EXTERNAL_TRUST'))
-    return result if type(result) is str and result in allowed_denials else 'DENY_NO_EXTERNAL_TRUST'
+    # The independent checks above establish the diagnostic reasons.
+    # Never accept a reason supplied solely by the replaceable dependency.
+    return 'DENY_NO_EXTERNAL_TRUST'
 
 
 class HardenedAdversarial(unittest.TestCase):
