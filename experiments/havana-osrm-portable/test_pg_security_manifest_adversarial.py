@@ -77,7 +77,7 @@ class AdversarialManifest(unittest.TestCase):
         self.assertNotEqual(fingerprint(a), fingerprint(b))
 
     def test_10_unicode_escape_equivalence(self):
-        self.assertEqual(strict_json('"\u00e9"'), strict_json('"é"'))
+        self.assertEqual(strict_json('"\\u00e9"'), strict_json('"é"'))
 
     def test_11_canonicalization_key_order_ignored(self):
         case = self.matrix['cases'][0]
