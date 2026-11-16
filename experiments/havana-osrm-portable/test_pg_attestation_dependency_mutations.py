@@ -4,14 +4,14 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
 from test_pg_attestation_v1_hardened import hardened_check
-from test_pg_attestation_v1_published import AttestationV1Published
+import test_pg_attestation_v1_published as published
 from test_pg_security_strict_boundary import MATRIX, MANIFEST
 
 class DependencyMutations(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.matrix, cls.manifest = MATRIX.read_bytes(), MANIFEST.read_bytes()
-        fixture = AttestationV1Published()
+        fixture = published.AttestationV1Published()
         fixture.m, fixture.n = cls.matrix, cls.manifest
         cls.doc = fixture.fixture()
         cls.now = datetime(2026, 11, 15, 20, tzinfo=timezone.utc)
