@@ -2335,6 +2335,10 @@ function departmentDragReorder(d){
 }
 function deleteCategory(name){if(!state.categories.includes(name))return;const count=state.products.filter(p=>p.cat===name).length;if(count){alert('No se puede eliminar «'+name+'» porque contiene '+count+' producto(s). Trasládalos a otro departamento antes de eliminarlo.');return;}if(!confirm('¿Eliminar el departamento «'+name+'»? Esta acción quitará la categoría del catálogo y la administración.'))return;state.categories=state.categories.filter(c=>c!==name);if(state.categoryIcons)delete state.categoryIcons[name];if(filter===name)filter='Todos';save();adminTab('categories');renderShop()}function moveCategory(name,step){const i=state.categories.indexOf(name),j=i+step;if(i<0||j<0||j>=state.categories.length)return;[state.categories[i],state.categories[j]]=[state.categories[j],state.categories[i]];save();adminTab('categories');renderShop()}function renameCategory(old){let v=prompt('Nuevo nombre de departamento',old);if(!v||!v.trim())return;v=v.trim();state.categories=state.categories.map(c=>c===old?v:c);if(state.categoryIcons&&state.categoryIcons[old]){state.categoryIcons[v]=state.categoryIcons[old];delete state.categoryIcons[old]}if(state.categoryVisibility&&Object.prototype.hasOwnProperty.call(state.categoryVisibility,old)){state.categoryVisibility[v]=state.categoryVisibility[old];delete state.categoryVisibility[old]}state.products.forEach(p=>{if(p.cat===old)p.cat=v});if(filter===old)filter=v;save();adminTab('categories');renderShop()}
 /* Local-only quote demo. No checkout, no remote routing, no operational prices. */
+// In-memory only: preserve the user's demo input across administrative panel redraws.
+let edQuoteDemoRateDraft='200';
+function edQuoteDemoRateRemember(input){edQuoteDemoRateDraft=input.value;}
+
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -2343,7 +2347,7 @@ function edDeliveryQuoteDemoPanel(){
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
  '<p class="note">Almacenes elegibles: '+eligible.length+'. Destinos de prueba: '+destinations.length+'.</p>'+
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
- '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" value="200"></div>'+
+ '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
