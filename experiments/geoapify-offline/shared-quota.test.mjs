@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import {SharedQuota} from './shared-quota.mjs';
+let n=0;const eq=(a,b)=>{assert.deepEqual(a,b);n++};const dir=mkdtempSync(join(tmpdir(),'shared-quota-')),file=join(dir,'db.sqlite');
+try{
+ let q=new SharedQuota(file,{limit:2});eq(q.reserve('legacy','legacy-0001').status,'RESERVED');eq(q.reserve('NORM-v2','v2-op-0001').status,'RESERVED');eq(q.reserve('legacy','legacy-0002').reason,'QUOTA');eq(q.reserve('legacy','legacy-0001').reason,'ALREADY_TRACKED');eq(q.stats(),{used:0,reserved:2});q.close();
+ q=new SharedQuota(file,{limit:2});eq(q.stats(),{used:0,reserved:2});eq(q.settle('legacy','legacy-0001',{known:true}).status,'CONSUMED');eq(q.settle('NORM-v2','v2-op-0001').reason,'UNKNOWN_CONSUMED');eq(q.stats(),{used:2,reserved:0});eq(q.settle('legacy','legacy-0001').reason,'UNKNOWN_OR_REPLAY');eq(q.reserve('NORM-v2','v2-op-0002').reason,'QUOTA');q.close();
+ const raceFile=join(dir,'race.sqlite');q=new SharedQuota(raceFile,{limit:3});q.close();
+ const run=(i)=>new Promise((resolve,reject)=>{const script=`import {SharedQuota} from ${JSON.stringify(new URL('./shared-quota.mjs',import.meta.url).href)};const q=new SharedQuota(process.argv[1],{limit:3});const v=Number(process.argv[2])%2?'NORM-v2':'legacy';console.log(JSON.stringify(q.reserve(v,'op-'+String(process.argv[2]).padStart(6,'0'))));q.close();`;const p=spawn(process.execPath,['--input-type=module','-e',script,raceFile,String(i)],{stdio:['ignore','pipe','pipe']});let out='',err='';p.stdout.on('data',d=>out+=d);p.stderr.on('data',d=>err+=d);p.on('error',reject);p.on('close',c=>c?reject(new Error(err)):resolve(JSON.parse(out.trim())))});
+ const results=await Promise.all(Array.from({length:24},(_,i)=>run(i)));eq(results.filter(x=>x.status==='RESERVED').length,3);eq(results.filter(x=>x.reason==='QUOTA').length,21);q=new SharedQuota(raceFile,{limit:3});eq(q.stats(),{used:0,reserved:3});q.close();
+ q=new SharedQuota(join(dir,'failure.sqlite'));q.close();eq(q.reserve('legacy','closed-0001').reason,'STORAGE');eq(q.settle('legacy','closed-0001').reason,'STORAGE');eq(q.stats(),null);
+ eq(new SharedQuota(join(dir,'validation.sqlite')).reserve('unknown','unknown-0001').reason,'INVALID');
+ console.log(`PASS ${n} shared-quota assertions; 24 processes, 3 reserved, 21 quota`);
+}finally{rmSync(dir,{recursive:true,force:true})}
