@@ -1,0 +1,22 @@
+import {DatabaseSync} from 'node:sqlite';
+import {createHash} from 'node:crypto';
+export function canonical(v){
+ if(v===null)return 'null';
+ if(typeof v==='string')return JSON.stringify(v.normalize('NFC'));
+ if(typeof v==='number'&&Number.isFinite(v))return JSON.stringify(Object.is(v,-0)?0:v);
+ if(typeof v==='boolean')return String(v);
+ if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';
+ if(v&&typeof v==='object'&&Object.getPrototypeOf(v)===Object.prototype){
+  const m=new Map();for(const k of Object.keys(v)){const n=k.normalize('NFC');if(m.has(n)||['__proto__','constructor','prototype'].includes(n))throw Error('duplicate key');m.set(n,v[k])}
+  return '{'+[...m.keys()].sort().map(k=>JSON.stringify(k)+':'+canonical(m.get(k))).join(',')+'}';
+ }throw Error('invalid payload');
+}
+export function operationHash(identity,payload){if(typeof identity!=='string'||!identity.trim()||identity.length>128)throw Error('identity');return createHash('sha256').update('NORM-v2:'+canonical({identity,payload})).digest('hex')}
+export class LedgerV2{
+ constructor(file,{limit=2,clock=()=>Date.now()}={}){this.db=new DatabaseSync(file);this.db.exec('PRAGMA busy_timeout=5000');this.clock=clock;this.limit=limit;this.db.exec("CREATE TABLE IF NOT EXISTS quota_v2(day TEXT PRIMARY KEY,used INTEGER NOT NULL,reserved INTEGER NOT NULL);CREATE TABLE IF NOT EXISTS ops_v2(id TEXT PRIMARY KEY,identity TEXT NOT NULL,day TEXT NOT NULL,hash TEXT NOT NULL,version TEXT NOT NULL,state TEXT NOT NULL,result TEXT)")}
+ begin(id,identity,payload){let h;try{if(typeof id!=='string'||!/^[A-Za-z0-9_-]{8,80}$/.test(id))throw Error('id');h=operationHash(identity,payload)}catch{return {status:'PENDIENTE',reason:'INVALID'}}const day=new Date(this.clock()).toISOString().slice(0,10);try{this.db.exec('BEGIN IMMEDIATE');const p=this.db.prepare('SELECT * FROM ops_v2 WHERE id=?').get(id);if(p){this.db.exec('COMMIT');if(p.identity!==identity||p.hash!==h)return {status:'CONFLICT'};return p.state==='DONE'?{status:'REUSED',result:JSON.parse(p.result)}:{status:'PENDIENTE',reason:'IN_PROGRESS_OR_UNKNOWN'}}this.db.prepare('INSERT OR IGNORE INTO quota_v2 VALUES(?,0,0)').run(day);const q=this.db.prepare('SELECT used,reserved FROM quota_v2 WHERE day=?').get(day);if(q.used+q.reserved>=this.limit){this.db.exec('ROLLBACK');return {status:'PENDIENTE',reason:'QUOTA'}}this.db.prepare('UPDATE quota_v2 SET reserved=reserved+1 WHERE day=?').run(day);this.db.prepare("INSERT INTO ops_v2 VALUES(?,?,?,?,?,'RESERVED',NULL)").run(id,identity,day,h,'NORM-v2');this.db.exec('COMMIT');return {status:'RESERVED'}}catch{try{this.db.exec('ROLLBACK')}catch{}return {status:'PENDIENTE',reason:'STORAGE'}}}
+ finish(id,identity,payload,result){let h;try{h=operationHash(identity,payload);if(!result||!Number.isFinite(result.distanceMeters)||result.distanceMeters<=0)throw Error('result')}catch{return {status:'PENDIENTE',reason:'INVALID'}}try{this.db.exec('BEGIN IMMEDIATE');const p=this.db.prepare('SELECT * FROM ops_v2 WHERE id=?').get(id);if(!p||p.identity!==identity||p.hash!==h){this.db.exec('ROLLBACK');return {status:'CONFLICT'}}if(p.state==='DONE'){this.db.exec('COMMIT');return {status:'REUSED',result:JSON.parse(p.result)}}if(p.state!=='RESERVED'){this.db.exec('ROLLBACK');return {status:'PENDIENTE',reason:'UNKNOWN'}}this.db.prepare('UPDATE quota_v2 SET used=used+1,reserved=reserved-1 WHERE day=?').run(p.day);this.db.prepare("UPDATE ops_v2 SET state='DONE',result=? WHERE id=?").run(JSON.stringify(result),id);this.db.exec('COMMIT');return {status:'DONE',result}}catch{try{this.db.exec('ROLLBACK')}catch{}return {status:'PENDIENTE',reason:'STORAGE'}}}
+ uncertain(id){try{this.db.exec('BEGIN IMMEDIATE');const p=this.db.prepare('SELECT * FROM ops_v2 WHERE id=?').get(id);if(!p||p.state!=='RESERVED'){this.db.exec('ROLLBACK');return {status:'PENDIENTE',reason:'UNKNOWN'}}this.db.prepare('UPDATE quota_v2 SET used=used+1,reserved=reserved-1 WHERE day=?').run(p.day);this.db.prepare("UPDATE ops_v2 SET state='UNKNOWN_CONSUMED' WHERE id=?").run(id);this.db.exec('COMMIT');return {status:'PENDIENTE',reason:'UNKNOWN_CONSUMED'}}catch{try{this.db.exec('ROLLBACK')}catch{}return {status:'PENDIENTE',reason:'STORAGE'}}}
+ stats(){const d=new Date(this.clock()).toISOString().slice(0,10),r=this.db.prepare('SELECT used,reserved FROM quota_v2 WHERE day=?').get(d);return r?{used:r.used,reserved:r.reserved}:{used:0,reserved:0}}
+ close(){this.db.close()}
+}
