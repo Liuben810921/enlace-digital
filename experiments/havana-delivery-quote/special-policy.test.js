@@ -1,0 +1,24 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {quoteWithSpecialPolicy}=require('./special-policy.js');
+const {quoteDelivery}=require('./quote.js');
+const configuration={schemaVersion:1,revision:1,suppliers:[],origins:[{id:'a',name:'Almacén',type:'propio',active:true}],destinations:[{id:'d',name:'Destino',municipality:'Playa',address:'Ficticia'}]};
+const routes=[{originId:'a',destinationId:'d',km:5,status:'verified',contextRevision:1}];
+const base={configuration,expectedRevision:1,associations:{p:['a'],q:['a']},routes,destinationId:'d',rateCupPerKm:200,quoteDelivery};
+const normal={productId:'p',mode:'normal'},special={productId:'p',mode:'special',feeCup:900},qNormal={productId:'q',mode:'normal'},qSpecial={productId:'q',mode:'special',feeCup:700};
+let n=0;function check(ok){assert.ok(ok);n++}
+const run=x=>quoteWithSpecialPolicy({...base,...x});
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[normal]}).deliveryFeeCup===1000);
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[special]}).deliveryFeeCup===900);
+check(run({cart:[{productId:'p',quantity:1},{productId:'q',quantity:1}],productDeliveryRules:[normal,qNormal]}).deliveryFeeCup===1000);
+check(run({cart:[{productId:'p',quantity:1},{productId:'q',quantity:1}],productDeliveryRules:[special,qNormal]}).reason==='SPECIAL_POLICY_UNDECIDED');
+check(run({cart:[{productId:'p',quantity:1},{productId:'q',quantity:1}],productDeliveryRules:[special,qSpecial]}).reason==='SPECIAL_POLICY_UNDECIDED');
+check(run({cart:[{productId:'p',quantity:2}],productDeliveryRules:[special]}).reason==='SPECIAL_POLICY_UNDECIDED');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[]}).reason==='SPECIAL_POLICY_MISSING');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[special,special]}).reason==='SPECIAL_POLICY_INPUT_INVALID');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[{...special,feeCup:-1}]}).reason==='SPECIAL_POLICY_INPUT_INVALID');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[normal],routes:[]}).reason==='ROAD_DISTANCE_MISSING');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[normal],expectedRevision:0}).reason==='STALE_REVISION');
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[special]}).productTotalAdjustment===0);
+check(run({cart:[{productId:'p',quantity:1}],productDeliveryRules:[special]}).collection==='DIRECT_TO_COURIER');
+console.log('PASS '+n+' special policy offline assertions');
