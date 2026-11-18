@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {quoteOffline,quoteDeliveryOffline,parseRoute} from './adapter.mjs';
+const A={lat:23.13,lon:-82.36},B={lat:23.12,lon:-82.38},C={lat:23.11,lon:-82.39};
+const ok=(distance,time=300)=>({httpStatus:200,body:{results:[{distance,time}]}});
+assert.equal(quoteOffline({origin:A,destination:B,fixture:ok(1500)}).distanceMeters,1500);
+for (const fixture of [null,{}, {httpStatus:500}, {httpStatus:200,body:{}},ok(0),ok(-1),ok(NaN),ok(Infinity),ok(100,-1)]) assert.notEqual(parseRoute(fixture).status,'OK');
+assert.equal(parseRoute({httpStatus:429}).status,'QUOTA');
+assert.equal(parseRoute({httpStatus:404}).status,'NO_ROUTE');
+assert.equal(parseRoute({code:'NoRoute'}).status,'NO_ROUTE');
+for (const origin of [{lat:91,lon:0},{lat:23,lon:181},{lat:NaN,lon:0},{lat:Infinity,lon:0},{lat:'23',lon:-82},null]) assert.equal(quoteOffline({origin,destination:B,fixture:ok(1000)}).status,'INVALID');
+assert.deepEqual(quoteDeliveryOffline({warehouses:[A],destination:B,fixtures:[ok(2500)]}),{status:'COTIZACION_FICTICIA',distanceMeters:2500,billableKm:3,deliveryCUP:600,routeCount:1});
+assert.equal(quoteDeliveryOffline({warehouses:[A,C],destination:B,fixtures:[ok(1200),ok(5500)]}).distanceMeters,5500);
+assert.equal(quoteDeliveryOffline({warehouses:[A,C],destination:B,fixtures:[ok(1200),{httpStatus:429}]}).status,'PENDIENTE');
+assert.equal(quoteDeliveryOffline({warehouses:[A],destination:B,fixtures:[]}).status,'PENDIENTE');
+assert.equal(quoteDeliveryOffline({warehouses:[],destination:B,fixtures:[]}).status,'PENDIENTE');
+assert.equal(quoteDeliveryOffline({warehouses:[A],destination:B,fixtures:[ok(1000)],ratePerKm:-1}).status,'PENDIENTE');
+console.log('PASS: offline routing fixture and delivery assertions');
