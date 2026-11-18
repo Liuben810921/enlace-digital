@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
-import {mkdtempSync,mkdirSync,chmodSync,chownSync,statSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,chmodSync,chownSync,statSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -22,6 +22,7 @@ try{
  chmodSync(root,0o711);mkdirSync(dbdir,{mode:0o700});chownSync(dbdir,owner,client);chmodSync(dbdir,0o700);mkdirSync(ipcdir,{mode:0o750});chownSync(ipcdir,owner,client);chmodSync(ipcdir,0o750);
  await start();check(statSync(dbdir).mode&0o777,0o700);check(statSync(sock).mode&0o777,0o660);
  const denied=call('direct');check(denied.readDenied,true);check(denied.writeDenied,true);
+ const stranger=spawnSync(process.execPath,['--input-type=module','-e',"import net from 'node:net';const s=net.createConnection(process.argv[1]);s.on('connect',()=>process.exit(7));s.on('error',()=>process.exit(0))",sock],{uid:65532,gid:65532,encoding:'utf8',timeout:5000});check(stranger.status,0);
  check(call('legacy','operation-001').status,'RESERVED');check(call('NORM-v2','operation-002').status,'RESERVED');check(call('legacy','operation-003').reason,'QUOTA');
  await kill();await start();check(call('legacy','operation-001').reason,'ALREADY_TRACKED');check(call('NORM-v2','operation-004').reason,'QUOTA');
  const d=new DatabaseSync(db,{readOnly:true});const rows=d.prepare('SELECT used,reserved FROM credits').all();check(rows.length,1);check(Number(rows[0].reserved),2);check(d.prepare('PRAGMA integrity_check').get().integrity_check,'ok');d.close();
