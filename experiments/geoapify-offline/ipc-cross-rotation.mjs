@@ -30,7 +30,7 @@ export async function startCrossRotation({directory,dbPath,owner=process.getuid(
   chmodSync(socketPath,0o660);
   const temp=join(directory,`.current-${randomBytes(16).toString('hex')}`);
   try{writeFileSync(temp,JSON.stringify({version:1,socket:name}),{flag:'wx',mode:0o640});renameSync(temp,join(directory,'current.json'))}catch(e){try{unlinkSync(temp)}catch{}throw e}
-  let closed=false;
+ let closed=false;
   return Object.freeze({socketPath,async close(){if(closed)return;closed=true;try{await broker.close()}finally{try{lock.exec('ROLLBACK')}finally{lock.close();closeSync(fd)}}}});
  }catch(e){if(broker)await broker.close();if(lock){try{lock.exec('ROLLBACK')}catch{}lock.close()}if(fd!==undefined)closeSync(fd);throw e}
 }
