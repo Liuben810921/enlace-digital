@@ -17,7 +17,13 @@ function createServerApprovalLab({readActor,readApprover,readContext,clock,ttlMs
   const key=actor.id+'\u0000'+operationId;
   const payload=JSON.stringify([request.request.fingerprint,feeCup]);
   if(operations.has(key)){
-   const old=operations.get(key);return old.payload===payload?{status:'APPROVAL_STORED',approvalId:old.approvalId,idempotentReplay:true}:{status:'CONFLICT',reason:'OPERATION_REUSED'};
+   const old=operations.get(key);
+   if(old.payload!==payload)return {status:'CONFLICT',reason:'OPERATION_REUSED'};
+   const record=approvals.get(old.approvalId);
+   if(!record||record.revoked)return {status:'REJECTED',reason:'APPROVAL_REVOKED_OR_MISSING'};
+   const replayNow=time(clock());
+   if(!Number.isFinite(replayNow)||replayNow<record.issuedAt||replayNow-record.issuedAt>ttlMs)return {status:'REJECTED',reason:'APPROVAL_EXPIRED'};
+   return {status:'APPROVAL_STORED',approvalId:old.approvalId,idempotentReplay:true};
   }
   const issuedAt=time(clock());if(!Number.isFinite(issuedAt))return {status:'REJECTED',reason:'INVALID_CLOCK'};
   const approvalId='lab-'+(++sequence);
