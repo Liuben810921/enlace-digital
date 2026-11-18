@@ -6,7 +6,7 @@ export const fixtureSession=(key,user,expires)=>({user,expires,signature:mac(key
 export class QuotaLab {
  constructor({file=':memory:',key='fixture-only',limit=3000,clock=()=>Date.now()}={}) {
   if(!Number.isSafeInteger(limit)||limit<1)throw Error('limit');
-  this.db=new DatabaseSync(file);this.key=key;this.limit=limit;this.clock=clock;
+  this.db=new DatabaseSync(file);this.db.exec('PRAGMA busy_timeout=5000');this.key=key;this.limit=limit;this.clock=clock;
   this.db.exec('CREATE TABLE IF NOT EXISTS credits(day TEXT PRIMARY KEY,used INTEGER NOT NULL,reserved INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS requests(nonce TEXT PRIMARY KEY,day TEXT NOT NULL,state TEXT NOT NULL,credits INTEGER NOT NULL)');
  }
  valid(s){return !!s&&typeof s.user==='string'&&s.user.length>0&&Number.isSafeInteger(s.expires)&&s.expires>this.clock()&&equal(s.signature,mac(this.key,s.user+'|'+s.expires))}
