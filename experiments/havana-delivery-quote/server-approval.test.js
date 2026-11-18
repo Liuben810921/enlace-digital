@@ -21,6 +21,6 @@ ctx={...ctx,destinationId:'d',associations:{p:['b'],q:['b']}};check(lab.resolve(
 ctx={...ctx,associations:{p:['a'],q:['b']},configuration:{...config,revision:3},expectedRevision:3};check(lab.resolve({approvalId:first.approvalId}).reason==='APPROVAL_STALE');
 ctx={...ctx,configuration:config,expectedRevision:2};now='2026-11-18T12:16:00Z';check(lab.resolve({approvalId:first.approvalId}).reason==='APPROVAL_EXPIRED');
 now='2026-11-18T12:00:00Z';check(lab.revoke({approvalId:first.approvalId}).status==='REVOKED');check(lab.resolve({approvalId:first.approvalId}).reason==='APPROVAL_REVOKED');
-check(lab.approve({operationId:'op1',feeCup:1250}).idempotentReplay===true);
+check(lab.approve({operationId:'op1',feeCup:1250}).reason==='APPROVAL_REVOKED_OR_MISSING');
 ctx={...ctx,quarantined:true};check(lab.approve({operationId:'op3',feeCup:100}).status==='REJECTED');
 console.log('PASS '+n+' server-side offline lab assertions');
