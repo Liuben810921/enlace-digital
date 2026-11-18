@@ -25,11 +25,9 @@ export async function startCrossRotation({directory,dbPath,owner=process.getuid(
   try{lock.exec('BEGIN IMMEDIATE')}catch(e){throw Error('BROKER_ALREADY_RUNNING',{cause:e})}
  const name=`ipc-${randomBytes(16).toString('hex')}.sock`,socketPath=join(directory,name);
  broker=await startBroker({socketPath,dbPath,authorized,limit});
- try{
   chmodSync(socketPath,0o660);
   const temp=join(directory,`.current-${randomBytes(16).toString('hex')}`);
   try{writeFileSync(temp,JSON.stringify({version:1,socket:name}),{flag:'wx',mode:0o640});renameSync(temp,join(directory,'current.json'))}catch(e){try{unlinkSync(temp)}catch{}throw e}
- }catch(e){await broker.close();throw e}
  let closed=false;
  return Object.freeze({socketPath,async close(){if(closed)return;closed=true;try{await broker.close()}finally{try{lock.exec('ROLLBACK')}finally{lock.close()}}}});
  }catch(e){if(broker)await broker.close();try{lock.exec('ROLLBACK')}catch{}lock.close();throw e}
