@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {parseFixture,quoteFixture,deliveryFixture,budgetDecision} from './adapter-v2.mjs';
+const A={lat:23.13,lon:-82.36},B={lat:23.12,lon:-82.38},C={lat:23.11,lon:-82.39};
+const ok=(distance=1000,time=300)=>({httpStatus:200,body:{results:[{distance,time}]}});
+let count=0; const check=(actual,expected)=>{assert.deepEqual(actual,expected);count++};
+check(quoteFixture({origin:A,destination:B,fixture:ok()}).status,'OK');
+for(const f of [null,{}, {networkError:'ECONNRESET'},{timeout:true},{httpStatus:401},{httpStatus:403},{httpStatus:500},{httpStatus:200,body:{}},{httpStatus:200,body:{results:[]}},{httpStatus:200,body:{results:[{distance:10,time:1},{distance:20,time:2}]}},ok(0),ok(-1),ok(NaN),ok(Infinity),ok(100,-1),ok(100,Infinity),ok('100'),{httpStatus:200,body:{results:[null]}}]) {assert.notEqual(parseFixture(f).status,'OK');count++;}
+check(parseFixture({httpStatus:429}).status,'QUOTA');
+check(parseFixture({httpStatus:404}).status,'NO_ROUTE');
+check(parseFixture({httpStatus:200,body:{code:'NoRoute'}}).status,'NO_ROUTE');
+for(const p of [{lat:91,lon:0},{lat:23,lon:181},{lat:NaN,lon:0},{lat:Infinity,lon:0},{lat:'23',lon:-82},null]) check(quoteFixture({origin:p,destination:B,fixture:ok()}).status,'INVALID');
+check(budgetDecision({used:2999,planned:1}).status,'ALLOW');
+check(budgetDecision({used:2999,planned:2}).status,'QUOTA');
+check(budgetDecision({used:2998,reserved:1,planned:2}).status,'QUOTA');
+check(budgetDecision({used:-1}).status,'INVALID');
+check(budgetDecision({used:1.5}).status,'INVALID');
+check(budgetDecision({used:Number.MAX_SAFE_INTEGER,planned:2}).status,'QUOTA');
+check(deliveryFixture({warehouses:[A],destination:B,fixtures:[ok(2500)]}).deliveryCUP,600);
+check(deliveryFixture({warehouses:[A],destination:B,fixtures:[ok(5000)]}).deliveryCUP,1000);
+check(deliveryFixture({warehouses:[A,C],destination:B,fixtures:[ok(1000),ok(5500)]}).distanceMeters,5500);
+check(deliveryFixture({warehouses:[A,C],destination:B,fixtures:[ok(1000),{httpStatus:429}]}).status,'PENDIENTE');
+check(deliveryFixture({warehouses:[A,C],destination:B,fixtures:[ok(),ok()],budget:{used:2999}}).reason,'QUOTA');
+check(deliveryFixture({warehouses:[A],destination:B,fixtures:[],budget:{used:0}}).status,'PENDIENTE');
+check(deliveryFixture({warehouses:[A],destination:B,fixtures:[ok()],ratePerKm:-1}).status,'PENDIENTE');
+check(deliveryFixture({warehouses:[{lat:100,lon:0}],destination:B,fixtures:[ok()]}).status,'PENDIENTE');
+console.log('PASS '+count+' offline assertions');
