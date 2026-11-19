@@ -8,6 +8,11 @@ const {spawn,spawnSync}=require('node:child_process');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const dir=__dirname;
+const active=new Set();
+function track(p){active.add(p);p.once('close',()=>active.delete(p));return p;}
+function terminate(){for(const p of active){if(p.exitCode===null) p.kill('SIGTERM');}}
+process.once('SIGINT',()=>{terminate();process.exitCode=130;});
+process.once('SIGTERM',()=>{terminate();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
 assert.equal(process.argv.length,4,'exactly two arguments required');
 assert.ok(['approve','revoke'].includes(action),'action must be approve/revoke');
@@ -31,7 +36,7 @@ function file(url,name,extra=[]) {
  if(r.error||r.status!==0)throw Error(name+': '+(r.stderr||r.error));
 }
 function session(name,id,nonce) {
- return spawn('psql',psqlArgs(pool,['-A','-t','-v','intent_id='+id,'-v','nonce_hash='+nonce,'-f',path.join(dir,name)]),{stdio:['ignore','pipe','pipe']});
+ return track(spawn('psql',psqlArgs(pool,['-A','-t','-v','intent_id='+id,'-v','nonce_hash='+nonce,'-f',path.join(dir,name)]),{stdio:['ignore','pipe','pipe']}));
 }
 function done(p) {
  return new Promise((resolve,reject)=>{
@@ -66,11 +71,28 @@ function done(p) {
   a.on('close',()=>{clearTimeout(timeout);reject(Error('A exited before signal'));});
  });
  const b=session('atomic_session_B.sql',id,nonce);
- const [ao,bo]=await Promise.all([aDone,done(b)]);
+ const bDone=done(b);bDone.catch(()=>{});
+ // Observe a real PostgreSQL wait-for edge: B must be blocked by A.
+ // DBA needs pg_stat_activity visibility on this disposable database.
+ let blocked=false;
+ const deadline=Date.now()+9000;
+ while(Date.now()<deadline){
+  const state=run(admin,`SELECT count(*) FROM pg_stat_activity b
+    JOIN pg_stat_activity a ON a.datname=b.datname
+    WHERE b.application_name='ed_atomic_lab_b'
+      AND a.application_name='ed_atomic_lab_a'
+      AND a.pid = ANY(pg_blocking_pids(b.pid))
+      AND b.wait_event_type='Lock'`);
+  if(state==='1'){blocked=true;break;}
+  if(b.exitCode!==null||a.exitCode!==null)break;
+  await new Promise(resolve=>setTimeout(resolve,150));
+ }
+ assert.ok(blocked,'No PostgreSQL lock wait B<-A observed; result is inconclusive');
+ const [ao,bo]=await Promise.all([aDone,bDone]);
  assert.match(ao,/LAB_APPLIED_ONLY/,'A must apply in transaction');
  assert.match(bo,new RegExp(mode==='commit'?'PENDIENTE':'LAB_APPLIED_ONLY'),'B outcome mismatch');
  file(admin,'atomic_postconditions_assert.sql',['-v','operation_id='+operation]);
  const replay=run(pool,"SET ROLE ed_intent_pool; SELECT ed_delivery_intent_lab.apply_intent("+id+",'"+nonce+"')");
  assert.match(replay,/PENDIENTE/,'replay must be rejected');
  console.log('PASS synthetic '+action+' '+mode+' (PostgreSQL executed by operator)');
-})().catch(e=>{console.error('FAIL:',e.message);process.exitCode=1});
+})().catch(e=>{terminate();console.error('FAIL:',e.message);process.exitCode=1});
