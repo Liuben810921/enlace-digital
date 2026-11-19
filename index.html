@@ -1523,7 +1523,7 @@ function edDeliveryRecoverQuarantine(){
   }))return false;
   if(Object.keys(associations).length&&!edInventoryLoaded)return false;
   if(Object.entries(associations).some(([productId,warehouseIds])=>{
-   if(!warehouseIds.length)return false;
+   if(!warehouseIds.length)return false; // An explicitly unlinked product is valid.
    const product=state.products.find(p=>String(p.id)===productId);
    return !!product&&origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
   }))return false;
