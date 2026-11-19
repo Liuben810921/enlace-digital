@@ -11,8 +11,9 @@ const dir=__dirname;
 const active=new Set();
 function track(p){active.add(p);p.once('close',()=>active.delete(p));return p;}
 function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
-process.once('SIGINT',()=>{terminate();process.exitCode=130;});
-process.once('SIGTERM',()=>{terminate();process.exitCode=143;});
+function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null) p.kill('SIGKILL');}},1500);t.unref();}
+process.once('SIGINT',()=>{terminate();forceStopAfterGrace();process.exitCode=130;});
+process.once('SIGTERM',()=>{terminate();forceStopAfterGrace();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
 assert.equal(process.argv.length,4,'exactly two arguments required');
 assert.ok(['approve','revoke'].includes(action),'action must be approve/revoke');
@@ -42,7 +43,7 @@ function session(name,id,nonce) {
 function done(p) {
  return new Promise((resolve,reject)=>{
   let out='',err='';
-  const timer=setTimeout(()=>{p.kill('SIGTERM');reject(Error('psql session exceeded 35s'));},35000);
+  const timer=setTimeout(()=>{p.kill('SIGTERM');forceStopAfterGrace();reject(Error('psql session exceeded 35s'));},35000);
   p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);
   p.on('error',e=>{clearTimeout(timer);reject(e);});
   p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error('psql session exit '+code));});
@@ -104,4 +105,4 @@ function done(p) {
  const replay=run(pool,"SET ROLE ed_intent_pool; SELECT ed_delivery_intent_lab.apply_intent("+id+",'"+nonce+"')");
  assert.equal(replay.split(/\r?\n/).map(x=>x.trim()).at(-1),'PENDIENTE','replay must be rejected');
  console.log('PASS synthetic '+action+' '+mode+' (PostgreSQL executed by operator)');
-})().catch(e=>{terminate();console.error('FAIL:',e.message);process.exitCode=1});
+})().catch(e=>{terminate();forceStopAfterGrace();console.error('FAIL:',e.message);process.exitCode=1});
