@@ -852,11 +852,13 @@ async function edUploadPhoto(src,id,index,token){
  if(!upload.ok)throw Error('No se pudo subir una fotografía: '+upload.status);
  return ED_URL+'/storage/v1/object/public/productos/'+key;
 }
+let edInventoryLastQueueWrite=null,edInventoryQueueWriteVersion=0;
 function edQueueInventory(){
  if(!edInventoryLoaded)return;
  if(!edAdminAuthorized){edStatus('Inventario sin sincronizar: inicia sesión como administrador',true);return}
  const target=JSON.parse(JSON.stringify(state.products));
  let sharedAtEnqueue;
+ const writeVersionAtEnqueue=edInventoryQueueWriteVersion;
  try{sharedAtEnqueue=localStorage.getItem('enlace_demo_v1')}catch(e){edStatus('Inventario local no verificable',true);return}
  edInventoryPendingSaves++;
  edInventoryQueue=edInventoryQueue.catch(()=>{}).then(async()=>{
@@ -881,10 +883,13 @@ function edQueueInventory(){
    for(const p of previous.filter(x=>!nextIds.has(x.id))){
     await edApi('/rest/v1/productos?id=eq.'+p.id,{method:'PATCH',headers:edHeaders(token),body:JSON.stringify({archivado:true,disponible:false})});
    }
-   const persistedState=JSON.stringify(state);
-   if(localStorage.getItem('enlace_demo_v1')!==sharedAtEnqueue)throw new Error('Inventario local modificado en otra pestaña; recarga antes de continuar');
+   const persistedState=JSON.stringify({...state,products:target});
+   const expectedShared=edInventoryQueueWriteVersion===writeVersionAtEnqueue?sharedAtEnqueue:edInventoryLastQueueWrite;
+   if(localStorage.getItem('enlace_demo_v1')!==expectedShared)throw new Error('Inventario local modificado en otra pestaña; recarga antes de continuar');
    localStorage.setItem('enlace_demo_v1',persistedState);
    if(localStorage.getItem('enlace_demo_v1')!==persistedState)throw new Error('Inventario local no persistido');
+   edInventoryLastQueueWrite=persistedState;
+   edInventoryQueueWriteVersion++;
    edInventorySnapshot=JSON.stringify(target);
    edStatus('Inventario sincronizado');return true;
   }catch(e){edStatus('Inventario NO sincronizado: '+e.message,true);alert('No se guardaron todos los cambios del inventario en Supabase: '+e.message);return false}
