@@ -816,6 +816,20 @@ async function edLoadInventory(){
   if(page.length)lastId=Number(page[page.length-1].id);
   if(page.length<pageSize)break;
  }
+ // Segunda lectura de verificación: detecta inserciones anteriores al cursor y cambios de filas durante la primera pasada.
+ const verification=[];
+ let verifyLastId=null;
+ for(;;){
+  if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
+  const cursor=verifyLastId===null?'':'&id=gt.'+encodeURIComponent(String(verifyLastId));
+  const page=await edApi('/rest/v1/productos?select=*&order=id.asc&limit='+pageSize+cursor,{headers:edHeaders(token||undefined)});
+  if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
+  if(!Array.isArray(page)||page.length>pageSize||page.some((p,i)=>!p||!Number.isSafeInteger(Number(p.id))||Number(p.id)<0||(i>0&&Number(page[i-1].id)>=Number(p.id))||(verification.length&&i===0&&Number(verification[verification.length-1].id)>=Number(p.id))))throw new Error('Verificación de inventario inválida');
+  verification.push(...page);
+  if(page.length)verifyLastId=Number(page[page.length-1].id);
+  if(page.length<pageSize)break;
+ }
+ if(JSON.stringify(verification)!==JSON.stringify(rows))throw new Error('Inventario modificado durante la carga. Vuelve a intentarlo.');
  const loaded=rows.map(edFromRow);
  if(loaded.some(p=>!Number.isSafeInteger(p.id)||p.id<0||!['propio','proveedor'].includes(p.origen_producto))||new Set(loaded.map(p=>p.id)).size!==loaded.length)throw new Error('Inventario con identificadores o tipos inválidos');
  if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
