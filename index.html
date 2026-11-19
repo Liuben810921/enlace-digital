@@ -1883,7 +1883,7 @@ function edDeliveryOriginsPanel(){
  const rows=items.map(p=>'<div class="panel" style="padding:12px;margin:10px 0"><strong>'+esc(p.name)+'</strong> · '+(p.type==='proveedor'?'Proveedor':'Almacén propio')+
  '<p class="note">'+esc([p.address,p.municipality,'La Habana'].filter(Boolean).join(', '))+'</p>'+
  '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+' · '+assignedCount(p.id)+' producto(s) asociado(s)</p>'+
- (assignedCount(p.id)?'<div class="field"><label>Reasignar productos a otro almacén compatible</label><select id="edReassignTarget-'+esc(p.id)+'"><option value="">Selecciona almacén destino</option>'+items.filter(o=>o.id!==p.id&&o.active!==false&&o.type===p.type&&(p.type==='propio'||o.supplierId===p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryReassignWarehouse('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Reasignar productos</button></div>':'')+
+ (assignedCount(p.id)?'<div class="field"><label>Reasignar productos a otro almacén compatible</label><select id="edReassignTarget-'+esc(p.id)+'"><option value="">Selecciona almacén destino</option>'+items.filter(o=>o.id!==p.id&&o.active!==false&&o.type===p.type&&(p.type==='propio'||o.supplierId===p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryReassignWarehouse('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Reasignar productos</button> <button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryUnlinkWarehouseProducts('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Desvincular productos</button></div>':'')+
  '<button type="button" class="secondary" aria-label="Editar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  (p.type==='proveedor'?'<button type="button" class="secondary" aria-label="Establecer almacén predeterminado '+esc(p.name)+'"'+lockAttribute+(p.active===false||!edDeliverySuppliersRead().some(x=>x.id===p.supplierId&&x.active!==false)?' disabled':'')+' onclick="edDeliveryOriginSetDefault('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.defaultForSupplier===true?'Predeterminado':'Hacer predeterminado')+'</button> ':'')+
  '<button type="button" class="secondary" aria-label="Cambiar estado del punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> '+
@@ -1988,6 +1988,33 @@ function edDeliveryReassignWarehouse(sourceId){
  }catch(e){
   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}catch(rollbackError){edDeliveryQuarantine()}
   alert('Reasignación no confirmada; revisa las asociaciones.');return false;
+ }
+ adminTab('delivery');return true;
+}
+function edDeliveryUnlinkWarehouseProducts(sourceId){
+ if(edDeliveryIsQuarantined())return false;
+ const source=edDeliveryOriginsRead().find(o=>o.id===sourceId);
+ if(!source)return false;
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron leer las asociaciones.');return false}
+ const map=edProductOriginsRead();
+ if(Object.values(map).some(ids=>!Array.isArray(ids))){alert('Hay asociaciones que requieren revisión.');return false}
+ const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
+ if(!affected.length)return false;
+ if(!confirm('Desvincular '+affected.length+' producto(s) de '+source.name+'? Los productos que no tengan otro almacén quedarán sin punto de salida asignado.'))return false;
+ const updated={...map};
+ for(const [key,ids] of affected)updated[key]=ids.filter(id=>id!==sourceId);
+ let previous;
+ try{previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron volver a leer las asociaciones.');return false}
+ if(previous!==snapshot){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
+ try{
+  const serialized=JSON.stringify(updated);
+  localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,serialized);
+  if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==serialized)throw new Error('Guardado no confirmado');
+  if(edDeliveryContextInvalidate('warehouse_products_unlinked')===null)throw new Error('Invalidación no confirmada');
+ }catch(e){
+  try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}catch(rollbackError){edDeliveryQuarantine()}
+  alert('Desvinculación no confirmada; revisa las asociaciones.');return false;
  }
  adminTab('delivery');return true;
 }
