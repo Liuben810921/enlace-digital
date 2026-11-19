@@ -1516,7 +1516,11 @@ function edDeliveryRecoverQuarantine(){
   const associations=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');
   if(!Array.isArray(origins)||!Array.isArray(suppliers)||!associations||typeof associations!=='object'||Array.isArray(associations))return false;
   const ids=new Set(origins.filter(p=>p&&typeof p.id==='string'&&p.active!==false&&(p.type==='propio'||p.type==='proveedor'&&suppliers.some(x=>x.id===p.supplierId&&x.active!==false))).map(p=>p.id));
-  if(Object.values(associations).some(v=>!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!ids.has(id))))return false;
+  if(Object.values(associations).some(v=>{
+   if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!ids.has(id)))return true;
+   const selected=origins.filter(p=>v.includes(p.id));
+   return selected.some(p=>p.type!==selected[0]?.type||(p.type==='proveedor'&&p.supplierId!==selected[0].supplierId));
+  }))return false;
   if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
   localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
   if(localStorage.getItem(ED_DELIVERY_QUARANTINE_KEY)!==null)return false;
