@@ -17,6 +17,8 @@ const checks=[
 /r NOT IN \('principal','general'\)/.test(sql),
 /old_row.actor_id<>v.actor_id/.test(sql),
 /old_row.revoked_at IS NOT NULL/.test(sql),
+/old_row.expires_at<=clock_timestamp\\(\\)/.test(sql),
+/No authority to edit fee, actor, fingerprint or operation/.test(sql),
 /INSERT INTO ed_delivery_lab.approvals/.test(sql),
 /UPDATE ed_delivery_lab.approvals SET revoked_at/.test(sql),
 /UPDATE ed_delivery_intent_lab.intents SET consumed_at/.test(sql),
