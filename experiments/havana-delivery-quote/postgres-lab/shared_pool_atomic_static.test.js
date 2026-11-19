@@ -24,6 +24,10 @@ const checks=[
 /OWNER TO ed_intent_owner/.test(sql),
 /REVOKE ALL ON FUNCTION ed_delivery_intent_lab.apply_intent/.test(sql),
 /GRANT EXECUTE ON FUNCTION ed_delivery_intent_lab.apply_intent/.test(sql),
+/GRANT UPDATE\\(revision\\) ON ed_delivery_intent_lab.authoritative_context/.test(sql),
+/GRANT UPDATE\\(enabled\\) ON ed_delivery_intent_lab.admin_roles/.test(sql),
+/GRANT SELECT,INSERT,UPDATE\\(revoked_at\\) ON ed_delivery_lab.approvals/.test(sql),
+!/\\\\n/.test(sql),
 !/current_setting\s*\(/.test(sql),
 !/session_user/.test(sql)
 ];checks.forEach((v,i)=>assert.ok(v,'atomic static check '+(i+1)));
