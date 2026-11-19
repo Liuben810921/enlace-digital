@@ -57,6 +57,7 @@ function done(p) {
  const [id,nonce]=rows.split('|');
  const a=session(mode==='commit'?'atomic_session_A_commit.sql':'atomic_session_A_rollback.sql',id,nonce);
  const aDone=done(a);
+ aDone.catch(()=>{}); // keep early rejection observed until Promise.all
  // A is guaranteed to have entered pg_sleep only after the result row is emitted.
  // For stronger synchronization inspect pg_stat_activity or add an advisory handshake.
  await new Promise((resolve,reject)=>{
