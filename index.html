@@ -817,8 +817,8 @@ async function edLoadInventory(){
  if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
  state.products=loaded;
  edInventorySnapshot=JSON.stringify(state.products);
- edInventoryLoaded=true;
  localStorage.setItem('enlace_demo_v1',JSON.stringify(state));
+ edInventoryLoaded=true;
  renderShop();
  if(edAdminAuthorized&&document.getElementById('admin')&&!document.getElementById('admin').classList.contains('hidden'))adminTab(activeTab);
 }
