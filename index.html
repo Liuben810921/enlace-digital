@@ -2039,6 +2039,7 @@ function edProductOriginsCollect(mode){
 
 function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){
  const p=state.products.find(x=>x.id===id);if(!p||!['qty','price'].includes(k))return false;
+ const previous=p[k];
  const raw=String(v).trim(),number=raw===''?NaN:Number(raw);
  if(k==='qty'&&raw===''){p.qty=null}
  else{
@@ -2048,7 +2049,12 @@ function deliveryBarrios(){let m=document.getElementById('admM').value;document.
   }
   p[k]=number;
  }
- save();adminTab('inventory');renderShop();return true;
+ try{save()}catch(e){
+  p[k]=previous;
+  alert('No se pudo guardar el cambio en inventario. Se conservará el valor anterior.');
+  return false;
+ }
+ adminTab('inventory');renderShop();return true;
 }function updateNewQtyHelp(){const supplier=document.getElementById('porigin')?.value==='proveedor',help=document.getElementById('qtyHelp'),qty=document.getElementById('pqty');if(help)help.textContent=supplier?'Proveedor: sin control obligatorio de existencias.':'Producto propio: introduce existencias para que pueda comprarse.';if(qty)qty.closest('.field').style.display=supplier?'none':'';edToggleSupplierAlias('new')}
 function edSuggestDepartment(description){
  const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
