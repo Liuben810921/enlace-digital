@@ -2079,8 +2079,12 @@ function edDeliveryOriginDelete(id){
  if(edDeliveryIsQuarantined())return false;
  const items=edDeliveryOriginsRead(),point=items.find(p=>p.id===id);
  if(!point)return false;
- const associations=edProductOriginsRead();
- if(Object.values(associations).some(ids=>!Array.isArray(ids)||ids.includes(id))){
+ let associations;
+ try{
+  const raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  associations=JSON.parse(raw===null?'{}':raw);
+ }catch(e){alert('Asociaciones ilegibles. No se puede eliminar el almacén.');return false}
+ if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(ids=>!Array.isArray(ids)||ids.some(value=>typeof value!=='string')||ids.includes(id))){
   alert('No se puede eliminar: hay productos asociados o asociaciones que deben revisarse. Desactiva el almacén o reasigna los productos primero.');
   return false;
  }
