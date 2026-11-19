@@ -1524,7 +1524,7 @@ function edDeliveryContextInvalidate(reason){
  const current=edDeliveryContextRevision();
  if(current===null||current>=Number.MAX_SAFE_INTEGER){alert('No se pudo validar la versión de la cotización local.');return null}
  const next=current+1;
- try{localStorage.setItem(ED_DELIVERY_CONTEXT_REV_KEY,String(next));return next}
+ try{localStorage.setItem(ED_DELIVERY_CONTEXT_REV_KEY,String(next));if(localStorage.getItem(ED_DELIVERY_CONTEXT_REV_KEY)!==String(next))throw new Error('Revisión no persistida');return next}
  catch(e){alert('No se pudo invalidar la cotización local. No utilices tarifas anteriores.');return null}
 }
 function edDeliveryQuoteSnapshot(){return {contextRevision:edDeliveryContextRevision(),status:'pending_verified_road_distance'}}
