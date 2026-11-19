@@ -69,9 +69,11 @@ RETURNS TABLE(result text, fee_cup bigint)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_delivery_lab AS $$
 DECLARE v_old ed_delivery_lab.approvals%ROWTYPE; v_ctx record; v_role text;
 BEGIN
+ -- Lock order matches approve: context first, then approval, to avoid inversion.
+ SELECT c.fingerprint,c.configuration_revision INTO v_ctx FROM ed_delivery_lab.context_state c WHERE c.singleton FOR SHARE;
+ IF NOT FOUND THEN RETURN QUERY SELECT 'PENDIENTE'::text,NULL::bigint; RETURN; END IF;
  SELECT * INTO v_old FROM ed_delivery_lab.approvals a WHERE a.id=p_id FOR SHARE;
  IF NOT FOUND THEN RETURN QUERY SELECT 'PENDIENTE'::text,NULL::bigint; RETURN; END IF;
- SELECT c.fingerprint,c.configuration_revision INTO v_ctx FROM ed_delivery_lab.context_state c WHERE c.singleton FOR SHARE;
  SELECT a.role INTO v_role FROM ed_delivery_lab.actor_grants a WHERE a.actor_id=v_old.actor_id AND a.enabled FOR SHARE;
  IF v_old.revoked_at IS NOT NULL OR v_old.expires_at<=clock_timestamp()
  OR v_role IS NULL OR v_role NOT IN ('principal','general')
