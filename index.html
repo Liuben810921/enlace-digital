@@ -2037,7 +2037,19 @@ function edProductOriginsCollect(mode){
  return [...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value).filter(id=>edDeliveryOriginEligible(id,type,supplierId));
 }
 
-function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){let p=state.products.find(x=>x.id===id);if(!p)return;p[k]=k==='qty'?(v===''?null:Math.max(0,Math.floor(Number(v)||0))):Math.max(0,Number(v)||0);save();adminTab('inventory');renderShop()}function updateNewQtyHelp(){const supplier=document.getElementById('porigin')?.value==='proveedor',help=document.getElementById('qtyHelp'),qty=document.getElementById('pqty');if(help)help.textContent=supplier?'Proveedor: sin control obligatorio de existencias.':'Producto propio: introduce existencias para que pueda comprarse.';if(qty)qty.closest('.field').style.display=supplier?'none':'';edToggleSupplierAlias('new')}
+function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){
+ const p=state.products.find(x=>x.id===id);if(!p||!['qty','price'].includes(k))return false;
+ const raw=String(v).trim(),number=raw===''?NaN:Number(raw);
+ if(k==='qty'&&raw===''){p.qty=null}
+ else{
+  if(!Number.isFinite(number)||number<0||(k==='qty'&&!Number.isSafeInteger(number))){
+   alert(k==='qty'?'Las existencias deben ser un número entero no negativo.':'El precio debe ser un número no negativo.');
+   return false;
+  }
+  p[k]=number;
+ }
+ save();adminTab('inventory');renderShop();return true;
+}function updateNewQtyHelp(){const supplier=document.getElementById('porigin')?.value==='proveedor',help=document.getElementById('qtyHelp'),qty=document.getElementById('pqty');if(help)help.textContent=supplier?'Proveedor: sin control obligatorio de existencias.':'Producto propio: introduce existencias para que pueda comprarse.';if(qty)qty.closest('.field').style.display=supplier?'none':'';edToggleSupplierAlias('new')}
 function edSuggestDepartment(description){
  const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  const text=normalize(description),head=text.split(/\n/).slice(0,3).join(' ').slice(0,300);
