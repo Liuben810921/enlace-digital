@@ -20,6 +20,7 @@ GRANT SELECT ON ed_delivery_intent_lab.authoritative_context,ed_delivery_intent_
 GRANT UPDATE(revision) ON ed_delivery_intent_lab.authoritative_context TO ed_intent_owner;
 GRANT UPDATE(enabled) ON ed_delivery_intent_lab.admin_roles TO ed_intent_owner;
 GRANT SELECT,INSERT,UPDATE(revoked_at) ON ed_delivery_lab.approvals TO ed_intent_owner;
+-- No authority to edit fee, actor, fingerprint or operation after insertion.
 GRANT USAGE ON SCHEMA ed_delivery_lab TO ed_intent_owner;
 GRANT USAGE ON SEQUENCE ed_delivery_lab.approvals_id_seq TO ed_intent_owner;
 CREATE FUNCTION ed_delivery_intent_lab.apply_intent(p_intent_id bigint,p_nonce_hash text)
@@ -54,6 +55,7 @@ BEGIN
  ELSIF v.action='revoke' THEN
   SELECT * INTO old_row FROM ed_delivery_lab.approvals WHERE id=v.target_approval_id FOR UPDATE;
   IF NOT FOUND OR old_row.actor_id<>v.actor_id OR old_row.request_fingerprint<>v.context_hash OR old_row.configuration_revision<>v.context_revision
+  OR old_row.revoked_at IS NOT NULL OR old_row.expires_at<=clock_timestamp()
   THEN RETURN 'PENDIENTE'; END IF;
   UPDATE ed_delivery_lab.approvals SET revoked_at=clock_timestamp()
   WHERE id=v.target_approval_id AND revoked_at IS NULL;
