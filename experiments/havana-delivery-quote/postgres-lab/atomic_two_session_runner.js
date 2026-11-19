@@ -12,9 +12,9 @@ const active=new Set();
 const cleanEnv={...process.env};
 for(const key of Object.keys(cleanEnv)) if(key.startsWith('PG')) delete cleanEnv[key];
 // Only explicit connection URLs may select a PostgreSQL target.
-function track(p){active.add(p);p.once('close',()=>active.delete(p));return p;}
+function track(p){active.add(p);p.once('close',()=>active.delete(p));p.once('error',()=>active.delete(p));return p;}
 function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
-function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null) p.kill('SIGKILL');}},1500);t.unref();}
+function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGKILL');}},1500);t.unref();}
 process.once('SIGINT',()=>{terminate();forceStopAfterGrace();process.exitCode=130;});
 process.once('SIGTERM',()=>{terminate();forceStopAfterGrace();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
@@ -49,7 +49,7 @@ function session(name,id,nonce) {
 function done(p) {
  return new Promise((resolve,reject)=>{
   let out='',err='';
-  const timer=setTimeout(()=>{p.kill('SIGTERM');forceStopAfterGrace();reject(Error('psql session exceeded 35s'));},35000);
+  const timer=setTimeout(()=>{if(p.exitCode===null && !p.killed) p.kill('SIGTERM');forceStopAfterGrace();reject(Error('psql session exceeded 35s'));},35000);
   p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);
   p.on('error',e=>{clearTimeout(timer);reject(e);});
   p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error('psql session exit '+code));});
@@ -61,6 +61,8 @@ function done(p) {
  assert.ok(!['postgres','template0','template1'].includes(db),'system database forbidden');
  assert.equal(db,run(pool,'SELECT current_database()'),'admin/pool must use same database');
  assert.equal(run(pool,'SELECT session_user'),'ed_intent_test_pool','pool must use pre-provisioned test login');
+ const roleFlags=run(admin,"SELECT rolcanlogin::int||'|'||rolsuper::int||'|'||rolbypassrls::int||'|'||rolinherit::int FROM pg_roles WHERE rolname='ed_intent_test_pool'");
+ assert.equal(roleFlags,'1|0|0|0','pool login must be LOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT');
  assert.notEqual(run(admin,'SELECT session_user'),run(pool,'SELECT session_user'),'admin and pool must use distinct login identities');
  const exists=run(admin,"SELECT count(*) FROM pg_namespace WHERE nspname IN ('ed_delivery_lab','ed_delivery_intent_lab')");
  assert.equal(exists,'0','database not empty: use a fresh disposable DB');
