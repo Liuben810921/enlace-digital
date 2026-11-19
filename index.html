@@ -804,13 +804,16 @@ async function edLoadInventory(){
  edInventoryLoaded=false;
  const token=edAdminAuthorized?await edToken():null;
  const pageSize=500,rows=[];
- for(let offset=0;;offset+=pageSize){
+ let lastId=null;
+ for(;;){
   if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
-  const page=await edApi('/rest/v1/productos?select=*&order=id.asc&limit='+pageSize+'&offset='+offset,{headers:edHeaders(token||undefined)});
+  const cursor=lastId===null?'':'&id=gt.'+encodeURIComponent(String(lastId));
+  const page=await edApi('/rest/v1/productos?select=*&order=id.asc&limit='+pageSize+cursor,{headers:edHeaders(token||undefined)});
   if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
   if(!Array.isArray(page)||page.length>pageSize)throw new Error('Página de inventario inválida');
   if(page.some((p,i)=>!p||!Number.isSafeInteger(Number(p.id))||Number(p.id)<0||(i>0&&Number(page[i-1].id)>=Number(p.id))||(rows.length&&i===0&&Number(rows[rows.length-1].id)>=Number(p.id))))throw new Error('Paginación de inventario inconsistente');
   rows.push(...page);
+  if(page.length)lastId=Number(page[page.length-1].id);
   if(page.length<pageSize)break;
  }
  const loaded=rows.map(edFromRow);
