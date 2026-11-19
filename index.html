@@ -1597,7 +1597,12 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  try{rawAssociations=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el almacenamiento de dependencias.');return false}
  let associations;
  try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
- if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v)||v.some(id=>typeof id!=='string'))){
+ const knownOrigins=new Map(origins.map(o=>[o.id,o]));
+ if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>{
+  if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!knownOrigins.has(id)))return true;
+  const selected=v.map(id=>knownOrigins.get(id));
+  return selected.some(o=>o.active===false||o.type!==selected[0]?.type||(o.type==='proveedor'&&o.supplierId!==selected[0].supplierId));
+ })){
   alert('No se pueden verificar las asociaciones. Operación cancelada.');return false;
  }
  const ids=new Set(affected.map(o=>o.id));
