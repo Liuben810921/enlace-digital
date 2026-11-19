@@ -1583,8 +1583,8 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  if(!edInventoryLoaded){alert('Carga primero el inventario para verificar las dependencias de productos.');return false}
  let rawAssociations,rawOrigins,rawSuppliers;
  try{rawAssociations=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el almacenamiento de dependencias.');return false}
- const associations=edProductOriginsRead();
- if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v))){
+ let associations;\n try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
+ if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v)||v.some(id=>typeof id!=='string'))){
   alert('No se pueden verificar las asociaciones. Operación cancelada.');return false;
  }
  const ids=new Set(affected.map(o=>o.id));
@@ -1596,10 +1596,10 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  const target=candidates.find(s=>s.id===selection.trim());
  if(!target){alert('Selecciona un ID válido de proveedor activo.');return false}
  if(!confirm('Transferir '+affected.length+' almacén(es) de '+source.name+' a '+target.name+'? No se cambiarán productos.'))return false;
- const freshOrigins=edDeliveryOriginsRead(),freshSuppliers=edDeliverySuppliersRead(),freshAssociations=edProductOriginsRead();
+ const freshOrigins=edDeliveryOriginsRead(),freshSuppliers=edDeliverySuppliersRead();
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
- if(!unchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)||JSON.stringify(freshAssociations)!==JSON.stringify(associations)){
+ if(!unchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,origins.map(o=>ids.has(o.id)?{...o,supplierId:target.id,defaultForSupplier:false,version:(Number.isSafeInteger(o.version)&&o.version>=0?o.version:0)+1}:o),'supplier_warehouses_transferred'))return false;
