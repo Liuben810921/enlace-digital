@@ -90,10 +90,15 @@ function done(p) {
  }
  assert.ok(blocked,'No PostgreSQL lock wait B<-A observed; result is inconclusive');
  const [ao,bo]=await Promise.all([aDone,bDone]);
- assert.match(ao,/LAB_APPLIED_ONLY/,'A must apply in transaction');
- assert.match(bo,new RegExp(mode==='commit'?'PENDIENTE':'LAB_APPLIED_ONLY'),'B outcome mismatch');
+ const exactResult=(output,expected,label)=> {
+  const lines=output.split(/\\r?\\n/).map(x=>x.trim());
+  assert.ok(lines.includes(expected),label+' expected exact '+expected);
+  assert.ok(!lines.includes(expected==='PENDIENTE'?'LAB_APPLIED_ONLY':'PENDIENTE'),label+' contradictory result');
+ };
+ exactResult(ao,'LAB_APPLIED_ONLY','A');
+ exactResult(bo,mode==='commit'?'PENDIENTE':'LAB_APPLIED_ONLY','B');
  file(admin,'atomic_postconditions_assert.sql',['-v','operation_id='+operation]);
  const replay=run(pool,"SET ROLE ed_intent_pool; SELECT ed_delivery_intent_lab.apply_intent("+id+",'"+nonce+"')");
- assert.match(replay,/PENDIENTE/,'replay must be rejected');
+ assert.equal(replay.split(/\\r?\\n/).map(x=>x.trim()).at(-1),'PENDIENTE','replay must be rejected');
  console.log('PASS synthetic '+action+' '+mode+' (PostgreSQL executed by operator)');
 })().catch(e=>{terminate();console.error('FAIL:',e.message);process.exitCode=1});
