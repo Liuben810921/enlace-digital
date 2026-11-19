@@ -1523,9 +1523,10 @@ function edDeliveryRecoverQuarantine(){
   }))return false;
   if(Object.keys(associations).length&&!edInventoryLoaded)return false;
   if(Object.entries(associations).some(([productId,warehouseIds])=>{
-   if(!warehouseIds.length)return false; // An explicitly unlinked product is valid.
    const product=state.products.find(p=>String(p.id)===productId);
-   return !product||origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
+   if(!product)return true;
+   if(!warehouseIds.length)return false; // Known product explicitly unlinked.
+   return origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
   }))return false;
   if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
   localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
