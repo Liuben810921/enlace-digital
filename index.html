@@ -1583,11 +1583,21 @@ function edDeliverySupplierDelete(id){
  adminTab('delivery');return true;
 }
 function edDeliverySupplierToggle(id){
- if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
-
- const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
+ if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return false}
+ const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return false;
+ if(supplier.active!==false){
+  const warehouses=edDeliveryOriginsRead().filter(o=>o.type==='proveedor'&&o.supplierId===id);
+  const associations=edProductOriginsRead();
+  if(Object.values(associations).some(ids=>!Array.isArray(ids))){
+   alert('Hay asociaciones que requieren revisión. No se puede desactivar el proveedor hasta resolverlas.');return false;
+  }
+  const warehouseIds=new Set(warehouses.map(o=>o.id));
+  const affected=Object.values(associations).filter(ids=>ids.some(warehouseId=>warehouseIds.has(warehouseId))).length;
+  if((warehouses.length||affected)&&!confirm('Desactivar este proveedor dejará inactivos '+warehouses.length+' almacén(es) y afectará a '+affected+' producto(s) asociado(s). ¿Continuar?'))return false;
+ }
  supplier.active=supplier.active===false;
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_status'))adminTab('delivery')
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_status'))return false;
+ adminTab('delivery');return true;
 }
 function edDeliverySupplierAdd(){
  const name=document.getElementById('edSupplierName').value.trim();
