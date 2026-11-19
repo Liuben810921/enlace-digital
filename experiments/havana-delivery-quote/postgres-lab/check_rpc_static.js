@@ -24,7 +24,7 @@ const checks=[
 /count\(\*\) AS must_equal_one/.test(b),
 /ed_delivery_lab\.revoke/.test(b),
 /'PENDIENTE'/.test(sql),
-/context first, then approval/.test(sql),
+/context first, then approval/.test(sql),\n/session_user/.test(sql),\n!/current_setting\\('ed_delivery_lab\\.trusted_actor'/.test(sql),
 ];
 checks.forEach((v,i)=>assert.ok(v,'static check '+(i+1)));
 console.log('PASS '+checks.length+' static RPC contract checks; PostgreSQL NOT executed');
