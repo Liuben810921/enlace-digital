@@ -809,6 +809,7 @@ async function edLoadInventory(){
   const page=await edApi('/rest/v1/productos?select=*&order=id.asc&limit='+pageSize+'&offset='+offset,{headers:edHeaders(token||undefined)});
   if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
   if(!Array.isArray(page)||page.length>pageSize)throw new Error('Página de inventario inválida');
+  if(page.some((p,i)=>!p||!Number.isSafeInteger(Number(p.id))||Number(p.id)<0||(i>0&&Number(page[i-1].id)>=Number(p.id))||(rows.length&&i===0&&Number(rows[rows.length-1].id)>=Number(p.id))))throw new Error('Paginación de inventario inconsistente');
   rows.push(...page);
   if(page.length<pageSize)break;
  }
