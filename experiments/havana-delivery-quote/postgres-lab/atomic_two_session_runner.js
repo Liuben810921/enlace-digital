@@ -14,7 +14,7 @@ for(const key of Object.keys(cleanEnv)) if(key.startsWith('PG')) delete cleanEnv
 // Only explicit connection URLs may select a PostgreSQL target.
 function track(p){active.add(p);p.once('close',()=>active.delete(p));p.once('error',()=>active.delete(p));return p;}
 function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
-function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null && p.signalCode===null) p.kill('SIGKILL');}},1500);t.unref();}
+function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(active.has(p) && p.exitCode===null) {try{p.kill('SIGKILL');}catch{}}}},1500);}
 process.once('SIGINT',()=>{terminate();forceStopAfterGrace();process.exitCode=130;});
 process.once('SIGTERM',()=>{terminate();forceStopAfterGrace();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
@@ -48,9 +48,9 @@ function session(name,id,nonce) {
 }
 function done(p) {
  return new Promise((resolve,reject)=>{
-  let out='',err='';
+  let out='';
   const timer=setTimeout(()=>{if(p.exitCode===null && !p.killed) p.kill('SIGTERM');forceStopAfterGrace();reject(Error('psql session exceeded 35s'));},35000);
-  p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);
+  p.stdout.on('data',x=>out+=x);p.stderr.on('data',()=>{});
   p.on('error',e=>{clearTimeout(timer);reject(e);});
   p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error('psql session exit '+code));});
  });
@@ -76,12 +76,15 @@ function done(p) {
  const a=session(mode==='commit'?'atomic_session_A_commit.sql':'atomic_session_A_rollback.sql',id,nonce);
  const aDone=done(a);
  aDone.catch(()=>{}); // keep early rejection observed until Promise.all
- // A is guaranteed to have entered pg_sleep only after the result row is emitted.
- // For stronger synchronization inspect pg_stat_activity or add an advisory handshake.
+ // Wait for explicit psql marker while the A transaction remains open.
  await new Promise((resolve,reject)=>{
-  let output='';const timeout=setTimeout(()=>reject(Error('A did not produce result')),5000);
-  a.stdout.on('data',chunk=>{output+=chunk;if(output.includes('A_LOCK_HELD')){clearTimeout(timeout);resolve();}});
-  a.on('close',()=>{clearTimeout(timeout);reject(Error('A exited before signal'));});
+  let output='',settled=false;
+  const finish=(error)=>{if(settled)return;settled=true;clearTimeout(timeout);a.stdout.off('data',onData);a.off('close',onClose);a.off('error',onError);error?reject(error):resolve();};
+  const onData=chunk=>{output+=chunk;if(output.includes('A_LOCK_HELD'))finish();};
+  const onClose=()=>finish(Error('A exited before handshake'));
+  const onError=()=>finish(Error('A process failed before handshake'));
+  const timeout=setTimeout(()=>finish(Error('A handshake exceeded 5s')),5000);
+  a.stdout.on('data',onData);a.once('close',onClose);a.once('error',onError);
  });
  const b=session('atomic_session_B.sql',id,nonce);
  const bDone=done(b);bDone.catch(()=>{});
