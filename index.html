@@ -2057,7 +2057,7 @@ function edDeliveryReassignWarehouse(sourceId){
   suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
   map=JSON.parse(snapshot===null?'{}':snapshot);
  }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
- if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string'))){alert('Asociaciones inválidas.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)){alert('Asociaciones inválidas.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
  if(!confirm('Reasignar '+affected.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
@@ -2092,7 +2092,7 @@ function edDeliveryUnlinkWarehouseProducts(sourceId){
   suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
   map=JSON.parse(snapshot===null?'{}':snapshot);
  }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
- if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string'))){alert('Asociaciones inválidas.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)){alert('Asociaciones inválidas.');return false}
  if(Object.values(map).some(ids=>!Array.isArray(ids))){alert('Hay asociaciones que requieren revisión.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
