@@ -1629,8 +1629,8 @@ function edDeliveryDestinationSave(){
  if(Boolean(a)!==Boolean(b)){alert('Indica ambas coordenadas o ninguna.');return}
  const lat=a===''?null:Number(a),lng=b===''?null:Number(b);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return}
- const items=edDeliveryDestinationsRead();items.push({id:'destination-'+Date.now(),name,municipality,address,lat,lng});
- try{localStorage.setItem(ED_DELIVERY_DESTINATIONS_KEY,JSON.stringify(items));adminTab('delivery')}catch(e){alert('No se pudo guardar el destino.')}
+ const items=edDeliveryDestinationsRead();items.push({id:'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng});
+ if(edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_added'))adminTab('delivery');
 }
 
 /* Isolated OsmAnd route validation laboratory. Browser-only synthetic test data. */
