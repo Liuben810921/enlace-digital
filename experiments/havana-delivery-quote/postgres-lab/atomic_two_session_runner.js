@@ -33,7 +33,7 @@ function run(url,sql,extra=[]) {
 }
 function file(url,name,extra=[]) {
  const r=spawnSync('psql',psqlArgs(url,[...extra,'-f',path.join(dir,name)]),{encoding:'utf8',timeout:30000});
- if(r.error||r.status!==0)throw Error(name+': '+(r.stderr||r.error));
+ if(r.error||r.status!==0)throw Error(name+': psql failed (status '+r.status+', timeout='+Boolean(r.error)+')');
 }
 function session(name,id,nonce) {
  return track(spawn('psql',psqlArgs(pool,['-A','-t','-v','intent_id='+id,'-v','nonce_hash='+nonce,'-f',path.join(dir,name)]),{stdio:['ignore','pipe','pipe']}));
