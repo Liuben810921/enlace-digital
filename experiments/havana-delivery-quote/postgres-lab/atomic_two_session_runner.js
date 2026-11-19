@@ -14,7 +14,7 @@ for(const key of Object.keys(cleanEnv)) if(key.startsWith('PG')) delete cleanEnv
 // Only explicit connection URLs may select a PostgreSQL target.
 function track(p){active.add(p);p.once('close',()=>active.delete(p));p.once('error',()=>active.delete(p));return p;}
 function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
-function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGKILL');}},1500);t.unref();}
+function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null && p.signalCode===null) p.kill('SIGKILL');}},1500);t.unref();}
 process.once('SIGINT',()=>{terminate();forceStopAfterGrace();process.exitCode=130;});
 process.once('SIGTERM',()=>{terminate();forceStopAfterGrace();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
