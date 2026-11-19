@@ -1992,6 +1992,7 @@ function edDeliveryOriginSetDefault(id){
 }
 function edDeliveryReassignWarehouse(sourceId){
  if(edDeliveryIsQuarantined())return false;
+ if(!edInventoryLoaded){alert('Carga el inventario antes de modificar asociaciones.');return false}
  const targetId=document.getElementById('edReassignTarget-'+sourceId)?.value;
  const origins=edDeliveryOriginsRead(),source=origins.find(o=>o.id===sourceId),target=origins.find(o=>o.id===targetId);
  if(!source||!target||source.id===target.id||target.active===false||source.type!==target.type||
@@ -2015,7 +2016,9 @@ function edDeliveryReassignWarehouse(sourceId){
  }
  let previous;
  try{previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudo leer las asociaciones anteriores.');return false}
- if(previous!==snapshot){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
+ let unchanged=false;
+ try{unchanged=previous===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===suppliersSnapshot}catch(e){}
+ if(!unchanged){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
  try{
   const serialized=JSON.stringify(updated);
   localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,serialized);
@@ -2029,11 +2032,17 @@ function edDeliveryReassignWarehouse(sourceId){
 }
 function edDeliveryUnlinkWarehouseProducts(sourceId){
  if(edDeliveryIsQuarantined())return false;
+ if(!edInventoryLoaded){alert('Carga el inventario antes de modificar asociaciones.');return false}
  const source=edDeliveryOriginsRead().find(o=>o.id===sourceId);
  if(!source)return false;
- let snapshot;
- try{snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron leer las asociaciones.');return false}
- const map=edProductOriginsRead();
+ let snapshot,originsSnapshot,suppliersSnapshot,map;
+ try{
+  snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  originsSnapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);
+  suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
+  map=JSON.parse(snapshot===null?'{}':snapshot);
+ }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string'))){alert('Asociaciones inválidas.');return false}
  if(Object.values(map).some(ids=>!Array.isArray(ids))){alert('Hay asociaciones que requieren revisión.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
@@ -2042,7 +2051,9 @@ function edDeliveryUnlinkWarehouseProducts(sourceId){
  for(const [key,ids] of affected)updated[key]=ids.filter(id=>id!==sourceId);
  let previous;
  try{previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron volver a leer las asociaciones.');return false}
- if(previous!==snapshot){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
+ let unchanged=false;
+ try{unchanged=previous===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===suppliersSnapshot}catch(e){}
+ if(!unchanged){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
  try{
   const serialized=JSON.stringify(updated);
   localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,serialized);
