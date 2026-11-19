@@ -842,8 +842,8 @@ function edQueueInventory(){
    }
    edInventorySnapshot=JSON.stringify(target);
    localStorage.setItem('enlace_demo_v1',JSON.stringify(state));
-   edStatus('Inventario sincronizado');
-  }catch(e){edStatus('Inventario NO sincronizado: '+e.message,true);alert('No se guardaron todos los cambios del inventario en Supabase: '+e.message)}
+   edStatus('Inventario sincronizado');return true;
+  }catch(e){edStatus('Inventario NO sincronizado: '+e.message,true);alert('No se guardaron todos los cambios del inventario en Supabase: '+e.message);return false}
  });
 }
 
@@ -2333,7 +2333,7 @@ async function saveEditedProduct(id){if(!edInventoryLoaded||!edAdminAuthorized)r
  if(p.colors?.length&&!isSupplier(p))p.qty=colorQtyTotal;const supplierAlias=document.getElementById('editSupplierAlias')?.value.trim()||'';const button=document.getElementById('editSaveButton');if(button){button.disabled=true;button.textContent='Guardando…'}
  const edOriginIds=edProductOriginsCollect('edit');
  const adminScroll=window.scrollY;
- try{save();await edInventoryQueue;if(edAdminRole==='principal')await edSaveSupplierAlias(id,supplierAlias);if(!edProductOriginsSave(id,edOriginIds,p.origen_producto))throw new Error('El producto se guardó, pero no se pudieron confirmar sus almacenes asociados. Revisa las asociaciones antes de cerrar.');renderShop();
+ try{save();if(await edInventoryQueue!==true)throw new Error('Inventario no sincronizado; conserva abierto el editor y revisa el estado antes de reintentar.');if(edAdminRole==='principal')await edSaveSupplierAlias(id,supplierAlias);if(!edProductOriginsSave(id,edOriginIds,p.origen_producto))throw new Error('El producto se guardó, pero no se pudieron confirmar sus almacenes asociados. Revisa las asociaciones antes de cerrar.');renderShop();
  document.getElementById('overlay').classList.add('hidden');edModalHistoryOpen=false;
  requestAnimationFrame(()=>window.scrollTo(0,adminScroll));
  }catch(e){alert('No se pudo completar el guardado: '+e.message)}finally{if(button?.isConnected){button.disabled=false;button.textContent='Guardar cambios'}}
