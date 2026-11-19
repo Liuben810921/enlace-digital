@@ -1,0 +1,11 @@
+-- DISPOSABLE PostgreSQL ONLY; NOT EXECUTED. Run in a third DBA fixture session.
+-- Prerequisite: insert synthetic approval and corresponding revoke intent with
+-- same actor, fingerprint and revision; use unique nonce_hash and operation_id.
+-- Connection A (pool login): BEGIN; SELECT ed_delivery_intent_lab.apply_intent(:revoke_intent_id, :'revoke_nonce_hash'); SELECT pg_sleep(5); COMMIT;
+-- Connection B (separate pool login), while A holds lock:
+-- BEGIN; SELECT ed_delivery_intent_lab.apply_intent(:revoke_intent_id, :'revoke_nonce_hash'); COMMIT;
+-- Expected after A commit: A LAB_APPLIED_ONLY, B PENDIENTE; revoked_at once, intent consumed once.
+-- Repeat with A ROLLBACK: B may apply once; no partial mutation from A.
+-- Revoke an already revoked or expired approval: PENDIENTE, intent remains unconsumed.
+-- Revocation of other actor's approval: PENDIENTE.
+-- This DOES NOT test a final checkout/quote consumer; no real checkout exists.
