@@ -1588,7 +1588,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  if(Object.values(associations).some(v=>v.some(id=>ids.has(id)))){
   alert('Hay productos asociados a estos almacenes. Reasigna o desvincula primero esos productos para evitar dependencias inconsistentes.');return false;
  }
- const selection=prompt('ID del proveedor de destino activo:\\n'+candidates.map(s=>s.id+' — '+s.name).join('\\n'));
+ const selection=prompt('ID del proveedor de destino activo:\n'+candidates.map(s=>s.id+' — '+s.name).join('\n'));
  if(selection===null)return false;
  const target=candidates.find(s=>s.id===selection.trim());
  if(!target){alert('Selecciona un ID válido de proveedor activo.');return false}
