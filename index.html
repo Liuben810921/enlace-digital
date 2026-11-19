@@ -1861,7 +1861,7 @@ function edDeliveryOriginSave(){
  const items=edDeliveryOriginsRead();
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
- const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false};
+ const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false,defaultForSupplier:!!(existing?.defaultForSupplier&&type==='proveedor'&&existing.supplierId===supplierId)};
  if(existing)items.splice(items.indexOf(existing),1,point);else items.push(point);
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
 }
