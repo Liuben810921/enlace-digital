@@ -1597,6 +1597,13 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  try{rawAssociations=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el almacenamiento de dependencias.');return false}
  let associations;
  try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
+ let inventorySnapshot;
+ try{
+  if(!Array.isArray(state.products)||state.products.some(p=>!p||p.id===null||p.id===undefined||typeof p.origen_producto!=='string'))throw new Error('Inventario incompleto');
+  const productIds=state.products.map(p=>String(p.id));
+  if(new Set(productIds).size!==productIds.length)throw new Error('IDs de producto duplicados');
+  inventorySnapshot=JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]));
+ }catch(e){alert('Inventario incompleto o con IDs duplicados. No se puede transferir.');return false}
  const knownOrigins=new Map(origins.map(o=>[o.id,o]));
  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>{
   if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!knownOrigins.has(id)))return true;
@@ -1624,7 +1631,9 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  const freshOrigins=edDeliveryOriginsRead(),freshSuppliers=edDeliverySuppliersRead();
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
- if(!unchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
+ let inventoryUnchanged=false;
+ try{inventoryUnchanged=edInventoryLoaded&&Array.isArray(state.products)&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
+ if(!unchanged||!inventoryUnchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,origins.map(o=>ids.has(o.id)?{...o,supplierId:target.id,defaultForSupplier:false,version:(Number.isSafeInteger(o.version)&&o.version>=0?o.version:0)+1}:o),'supplier_warehouses_transferred',rawOrigins))return false;
