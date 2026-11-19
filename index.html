@@ -832,7 +832,10 @@ function edQueueInventory(){
     const row=edToRow(p);
     row.imagenes=await Promise.all((p.photos||[]).map((src,i)=>edUploadPhoto(src,p.id,i,token)));row.variantes_color=await Promise.all((p.colors||[]).map(async(v,vi)=>({...v,photos:await Promise.all((v.photos||[]).map((src,i)=>edUploadPhoto(src,p.id,'color-'+vi+'-'+i,token)))})));
     const current=state.products.find(x=>x.id===p.id);
-    if(current){current.photos=row.imagenes;current.colors=row.variantes_color;}
+    if(current){
+     if(JSON.stringify(current.photos||[])===JSON.stringify(p.photos||[]))current.photos=row.imagenes;
+     if(JSON.stringify(current.colors||[])===JSON.stringify(p.colors||[]))current.colors=row.variantes_color;
+    }
     p.photos=row.imagenes;p.colors=row.variantes_color;
     const isNew=!prevIds.has(p.id);
     await edApi('/rest/v1/productos'+(isNew?'?on_conflict=id':'?id=eq.'+p.id),{method:isNew?'POST':'PATCH',headers:{...edHeaders(token),Prefer:isNew?'resolution=merge-duplicates,return=minimal':'return=minimal'},body:JSON.stringify(row)});
