@@ -1621,16 +1621,47 @@ function edApplyOsmAndCoordinates(source,latId,lngId){
 
 const ED_DELIVERY_DESTINATIONS_KEY='ed_delivery_destinations_demo_v1';
 function edDeliveryDestinationsRead(){try{const a=JSON.parse(localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function edDeliveryDestinationEdit(id){
+ if(edDeliveryIsQuarantined())return false;
+ const item=edDeliveryDestinationsRead().find(d=>d.id===id);
+ if(!item)return false;
+ const fields={edDestinationId:item.id,edDestinationName:item.name,edDestinationMunicipality:item.municipality,edDestinationAddress:item.address,edDestinationLat:item.lat??'',edDestinationLng:item.lng??''};
+ for(const [key,value] of Object.entries(fields)){const el=document.getElementById(key);if(el)el.value=String(value)}
+ document.getElementById('edDestinationFormTitle').textContent='Editar destino de referencia';
+ document.getElementById('edDestinationCancelEdit').hidden=false;
+ document.getElementById('edDestinationName')?.focus();
+ return true;
+}
+function edDeliveryDestinationCancelEdit(){
+ for(const key of ['edDestinationId','edDestinationName','edDestinationMunicipality','edDestinationAddress','edDestinationLat','edDestinationLng','edDestinationOsmAnd']){
+  const el=document.getElementById(key);if(el)el.value='';
+ }
+ document.getElementById('edDestinationFormTitle').textContent='Nuevo destino de referencia (La Habana)';
+ document.getElementById('edDestinationCancelEdit').hidden=true;
+}
+function edDeliveryDestinationDelete(id){
+ if(edDeliveryIsQuarantined())return false;
+ const items=edDeliveryDestinationsRead();
+ const item=items.find(d=>d.id===id);
+ if(!item||!confirm('¿Eliminar el destino de referencia "'+item.name+'"?'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items.filter(d=>d.id!==id),'destination_deleted'))return false;
+ adminTab('delivery');return true;
+}
 function edDeliveryDestinationSave(){
  const val=id=>document.getElementById(id).value.trim();
- const name=val('edDestinationName'),municipality=val('edDestinationMunicipality'),address=val('edDestinationAddress');
+ const id=val('edDestinationId'),name=val('edDestinationName'),municipality=val('edDestinationMunicipality'),address=val('edDestinationAddress');
  const a=val('edDestinationLat'),b=val('edDestinationLng');
- if(!name||!municipality||!address){alert('Completa nombre, municipio y referencia manual.');return}
- if(Boolean(a)!==Boolean(b)){alert('Indica ambas coordenadas o ninguna.');return}
+ if(!name||!municipality||!address){alert('Completa nombre, municipio y referencia manual.');return false}
+ if(Boolean(a)!==Boolean(b)){alert('Indica ambas coordenadas o ninguna.');return false}
  const lat=a===''?null:Number(a),lng=b===''?null:Number(b);
- if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return}
- const items=edDeliveryDestinationsRead();items.push({id:'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng});
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_added'))adminTab('delivery');
+ if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return false}
+ const items=edDeliveryDestinationsRead();
+ const existing=id?items.find(d=>d.id===id):null;
+ if(id&&!existing){alert('El destino ya no existe.');return false}
+ const item={id:existing?.id||'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng};
+ if(existing)items.splice(items.indexOf(existing),1,item);else items.push(item);
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,existing?'destination_edited':'destination_added'))return false;
+ adminTab('delivery');return true;
 }
 
 /* Isolated OsmAnd route validation laboratory. Browser-only synthetic test data. */
@@ -1793,13 +1824,13 @@ function edDeliveryLocationPreview(){
   svg+='<circle cx="'+x+'" cy="'+y+'" r="6" fill="'+(p.kind==='Almacén'?'#45dfcc':'#ffcc75')+'" stroke="white" stroke-width="1.5"/>';
  }
  svg+='</svg>';
- const rows=points.map(p=>'<p><strong>'+esc(p.kind)+' · '+esc(p.name)+'</strong> — '+esc(p.municipality)+'<span class="note"> · '+esc(p.address)+' · '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'Con coordenadas':'Sin coordenadas')+'</span></p>').join('');
+ const rows=points.map(p=>'<p><strong>'+esc(p.kind)+' · '+esc(p.name)+'</strong> — '+esc(p.municipality)+'<span class="note"> · '+esc(p.address)+' · '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'Con coordenadas':'Sin coordenadas')+'</span>'+(p.kind==='Destino'?'<span> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationEdit(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Editar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDelete(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar</button></span>':'')+'</p>').join('');
  return '<div class="panel"><h3>Ubicaciones de referencia</h3><p class="note">Esquema local, no mapa de calles. No calcula rutas ni distancias viales. Turquesa: almacenes; ámbar: destinos. Las direcciones manuales se conservan.</p>'+svg+rows+
- '<h4>Nuevo destino de referencia (La Habana)</h4><div class="field"><label>Nombre</label><input id="edDestinationName"></div>'+
+ '<h4 id="edDestinationFormTitle">Nuevo destino de referencia (La Habana)</h4><input id="edDestinationId" type="hidden"><div class="field"><label>Nombre</label><input id="edDestinationName"></div>'+
  '<div class="field"><label>Municipio</label><select id="edDestinationMunicipality"><option value="">Seleccionar</option>'+municipios.map(m=>'<option>'+esc(m)+'</option>').join('')+'</select></div>'+
  '<div class="field"><label>Dirección o referencia manual</label><textarea id="edDestinationAddress"></textarea></div>'+
  '<div class="field"><label>Pegar coordenadas GPS de OsmAnd</label><input id="edDestinationOsmAnd" placeholder="23.13024 -82.36028"><button type="button" class="secondary" onclick="edApplyOsmAndCoordinates(\'edDestinationOsmAnd\',\'edDestinationLat\',\'edDestinationLng\')">Aplicar coordenadas</button></div>'+'<div class="grid2"><div class="field"><label>Latitud opcional</label><input id="edDestinationLat" type="number" step="any"></div><div class="field"><label>Longitud opcional</label><input id="edDestinationLng" type="number" step="any"></div></div>'+
- '<button type="button" class="secondary" onclick="edDeliveryDestinationSave()">Guardar destino de referencia</button></div>';
+ '<button type="button" class="secondary" onclick="edDeliveryDestinationSave()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Guardar destino de referencia</button> <button type="button" id="edDestinationCancelEdit" class="secondary" onclick="edDeliveryDestinationCancelEdit()" hidden>Cancelar edición</button></div>';
 }
 
 function edDeliveryOriginsPanel(){
