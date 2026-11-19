@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');
 const dir=__dirname;
 const active=new Set();
 function track(p){active.add(p);p.once('close',()=>active.delete(p));return p;}
-function terminate(){for(const p of active){if(p.exitCode===null) p.kill('SIGTERM');}}
+function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
 process.once('SIGINT',()=>{terminate();process.exitCode=130;});
 process.once('SIGTERM',()=>{terminate();process.exitCode=143;});
 const [action,mode]=process.argv.slice(2);
@@ -52,6 +52,7 @@ function done(p) {
  const db=run(admin,'SELECT current_database()');
  assert.ok(!['postgres','template0','template1'].includes(db),'system database forbidden');
  assert.equal(db,run(pool,'SELECT current_database()'),'admin/pool must use same database');
+ assert.notEqual(run(admin,'SELECT session_user'),run(pool,'SELECT session_user'),'admin and pool must use distinct login identities');
  const exists=run(admin,"SELECT count(*) FROM pg_namespace WHERE nspname IN ('ed_delivery_lab','ed_delivery_intent_lab')");
  assert.equal(exists,'0','database not empty: use a fresh disposable DB');
  for(const n of ['manual_approval.sql','shared_pool_intents.sql','shared_pool_atomic_lab.sql','atomic_disposable_roles.sql','atomic_two_connections_setup.sql'])file(admin,n);
