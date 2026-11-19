@@ -13,7 +13,7 @@ CREATE TABLE ed_delivery_lab.context_state (
 -- Context fingerprint must be recomputed and written by trusted server from cart/destination/origins/rules.
 -- Grant API membership to authenticated PostgreSQL LOGIN roles only in disposable lab.\n-- SECURITY DEFINER must be owned by a dedicated non-login technical owner in a future deployment.
 -- Prerequisite: create ed_delivery_lab_api NOLOGIN once as database owner.\n-- This script does not create login roles or passwords.
--- Only DBA-controlled login grants may execute RPCs.\nGRANT USAGE ON SCHEMA ed_delivery_lab TO ed_delivery_lab_api;
+-- Only DBA-controlled login grants may execute RPCs.\nGRANT USAGE ON SCHEMA ed_delivery_lab TO ed_delivery_lab_api,ed_delivery_lab_owner;
 REVOKE ALL ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals FROM PUBLIC,ed_delivery_lab_api;\nREVOKE CREATE ON SCHEMA ed_delivery_lab FROM PUBLIC,ed_delivery_lab_api;\n-- Technical definer requires explicit SELECT/INSERT/UPDATE; no BYPASSRLS or LOGIN.\nGRANT SELECT ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals TO ed_delivery_lab_owner;\nGRANT INSERT,UPDATE ON ed_delivery_lab.approvals TO ed_delivery_lab_owner;\nGRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA ed_delivery_lab TO ed_delivery_lab_owner;
 -- Explicit definer owner is set after creation, in same DBA transaction.\nCREATE OR REPLACE FUNCTION ed_delivery_lab.approve(p_operation text,p_fee bigint,p_expected_fingerprint text,p_expected_revision bigint)
 RETURNS TABLE(result text, approval_id bigint)
