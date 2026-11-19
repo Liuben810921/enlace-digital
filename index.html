@@ -1944,6 +1944,11 @@ function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_P
 function edProductOriginsSave(productId,ids){
  if(edDeliveryIsQuarantined()){alert('Asociaciones bloqueadas: revisa los almacenes y confirma la recuperación en Administración de entregas.');return false}
  if(!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(p=>p.id===id&&p.active!==false&&(p.type!=='proveedor'||edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))))){alert('Selecciona únicamente almacenes activos y proveedores habilitados.');return false}
+ const chosen=edDeliveryOriginsRead().filter(p=>ids.includes(p.id));
+ if(chosen.length!==ids.length||chosen.some(p=>p.type!==chosen[0]?.type||(p.type==='proveedor'&&p.supplierId!==chosen[0].supplierId))){
+  alert('Un producto solo puede asociarse a almacenes de su mismo tipo y, si es de proveedor, del mismo proveedor.');
+  return false;
+ }
  const map=edProductOriginsRead(),key=String(productId);
  let previous;
  try{previous=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudo leer el almacenamiento local de asociaciones.');return false}
