@@ -1521,6 +1521,12 @@ function edDeliveryRecoverQuarantine(){
    const selected=origins.filter(p=>v.includes(p.id));
    return selected.some(p=>p.type!==selected[0]?.type||(p.type==='proveedor'&&p.supplierId!==selected[0].supplierId));
   }))return false;
+  if(Object.keys(associations).length&&!edInventoryLoaded)return false;
+  if(Object.entries(associations).some(([productId,warehouseIds])=>{
+   if(!warehouseIds.length)return false;
+   const product=state.products.find(p=>String(p.id)===productId);
+   return !!product&&origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
+  }))return false;
   if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
   localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
   if(localStorage.getItem(ED_DELIVERY_QUARANTINE_KEY)!==null)return false;
