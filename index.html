@@ -1540,7 +1540,7 @@ function edDeliveryPersistAndInvalidate(key,items,reason){
   alert('No se pudo confirmar el guardado de entregas.');return false
  }
  if(edDeliveryContextInvalidate(reason)!==null)return true;
- try{if(previous===null)localStorage.removeItem(key);else localStorage.setItem(key,previous)}
+ try{if(previous===null)localStorage.removeItem(key);else localStorage.setItem(key,previous);if(localStorage.getItem(key)!==previous)edDeliveryQuarantine()}
  catch(e){edDeliveryQuarantine()}
  alert('Cambio no confirmado: falló la invalidación de cotizaciones. Revisa la configuración.');
  return false;
