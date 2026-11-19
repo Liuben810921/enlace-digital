@@ -25,7 +25,7 @@ GRANT USAGE ON SCHEMA ed_delivery_lab TO ed_intent_owner;
 GRANT USAGE ON SEQUENCE ed_delivery_lab.approvals_id_seq TO ed_intent_owner;
 CREATE FUNCTION ed_delivery_intent_lab.apply_intent(p_intent_id bigint,p_nonce_hash text)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE v ed_delivery_intent_lab.intents%ROWTYPE; c record; r text; old_row ed_delivery_lab.approvals%ROWTYPE;
+DECLARE v ed_delivery_intent_lab.intents%ROWTYPE; c record; r text; old_row ed_delivery_lab.approvals%ROWTYPE; inserted_id bigint;
 BEGIN
  IF p_intent_id IS NULL OR p_nonce_hash IS NULL OR p_nonce_hash !~ '^[0-9a-f]{64}$'
  THEN RETURN 'PENDIENTE'; END IF;
@@ -50,7 +50,11 @@ BEGIN
    -- Existing identical operation: do not duplicate approval.
   ELSE
    INSERT INTO ed_delivery_lab.approvals(actor_id,operation_id,request_fingerprint,configuration_revision,fee_cup,expires_at)
-   VALUES(v.actor_id,v.operation_id,v.context_hash,v.context_revision,v.fee_cup,v.expires_at);
+   VALUES(v.actor_id,v.operation_id,v.context_hash,v.context_revision,v.fee_cup,v.expires_at)
+   ON CONFLICT (actor_id,operation_id) DO NOTHING RETURNING id INTO inserted_id;
+   -- A competing intent can insert the same operation after our SELECT found no row.
+   -- Fail closed rather than raising unique_violation or consuming a second intent.
+   IF inserted_id IS NULL THEN RETURN 'PENDIENTE'; END IF;
   END IF;
  ELSIF v.action='revoke' THEN
   SELECT * INTO old_row FROM ed_delivery_lab.approvals WHERE id=v.target_approval_id FOR UPDATE;
