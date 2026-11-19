@@ -2303,7 +2303,7 @@ async function saveEditedProduct(id){if(!edInventoryLoaded||!edAdminAuthorized)r
  if(p.colors?.length&&!isSupplier(p))p.qty=p.colors.reduce((n,v)=>n+v.qty,0);const supplierAlias=document.getElementById('editSupplierAlias')?.value.trim()||'';const button=document.getElementById('editSaveButton');if(button){button.disabled=true;button.textContent='Guardando…'}
  const edOriginIds=edProductOriginsCollect('edit');
  const adminScroll=window.scrollY;
- try{save();await edInventoryQueue;if(edAdminRole==='principal')await edSaveSupplierAlias(id,supplierAlias);edProductOriginsSave(id,edOriginIds);renderShop();
+ try{save();await edInventoryQueue;if(edAdminRole==='principal')await edSaveSupplierAlias(id,supplierAlias);if(!edProductOriginsSave(id,edOriginIds))throw new Error('El producto se guardó, pero no se pudieron confirmar sus almacenes asociados. Revisa las asociaciones antes de cerrar.');renderShop();
  document.getElementById('overlay').classList.add('hidden');edModalHistoryOpen=false;
  requestAnimationFrame(()=>window.scrollTo(0,adminScroll));
  }catch(e){alert('No se pudo completar el guardado: '+e.message)}finally{if(button?.isConnected){button.disabled=false;button.textContent='Guardar cambios'}}
