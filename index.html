@@ -1615,7 +1615,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  if(!unchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
- if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,origins.map(o=>ids.has(o.id)?{...o,supplierId:target.id,defaultForSupplier:false,version:(Number.isSafeInteger(o.version)&&o.version>=0?o.version:0)+1}:o),'supplier_warehouses_transferred'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,origins.map(o=>ids.has(o.id)?{...o,supplierId:target.id,defaultForSupplier:false,version:(Number.isSafeInteger(o.version)&&o.version>=0?o.version:0)+1}:o),'supplier_warehouses_transferred',rawOrigins))return false;
  adminTab('delivery');return true;
 }
 function edDeliverySupplierDelete(id){
