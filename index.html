@@ -856,6 +856,8 @@ function edQueueInventory(){
  if(!edInventoryLoaded)return;
  if(!edAdminAuthorized){edStatus('Inventario sin sincronizar: inicia sesión como administrador',true);return}
  const target=JSON.parse(JSON.stringify(state.products));
+ let sharedAtEnqueue;
+ try{sharedAtEnqueue=localStorage.getItem('enlace_demo_v1')}catch(e){edStatus('Inventario local no verificable',true);return}
  edInventoryPendingSaves++;
  edInventoryQueue=edInventoryQueue.catch(()=>{}).then(async()=>{
   edStatus('Guardando inventario…');
@@ -880,6 +882,7 @@ function edQueueInventory(){
     await edApi('/rest/v1/productos?id=eq.'+p.id,{method:'PATCH',headers:edHeaders(token),body:JSON.stringify({archivado:true,disponible:false})});
    }
    const persistedState=JSON.stringify(state);
+   if(localStorage.getItem('enlace_demo_v1')!==sharedAtEnqueue)throw new Error('Inventario local modificado en otra pestaña; recarga antes de continuar');
    localStorage.setItem('enlace_demo_v1',persistedState);
    if(localStorage.getItem('enlace_demo_v1')!==persistedState)throw new Error('Inventario local no persistido');
    edInventorySnapshot=JSON.stringify(target);
