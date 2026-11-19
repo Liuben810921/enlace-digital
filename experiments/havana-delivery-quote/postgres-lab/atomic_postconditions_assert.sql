@@ -2,7 +2,7 @@
 -- Must run AFTER A and B finish; intended result is exactly one committed effect.
 \set ON_ERROR_STOP on
 SELECT set_config('ed_lab.operation', :'operation_id', false);
-DO $
+DO $$
 DECLARE v_count integer; v_consumed integer; v_effect integer;
 BEGIN
  SELECT count(*),count(*) FILTER (WHERE consumed_at IS NOT NULL)
