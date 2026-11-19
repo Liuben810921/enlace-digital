@@ -1569,9 +1569,14 @@ function edDeliverySupplierEdit(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
 
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el proveedor.');return}
  const name=prompt('Nombre del proveedor',supplier.name);if(name===null)return;
  const clean=name.trim();if(!clean){alert('Introduce el nombre del proveedor.');return}
  if(items.some(p=>p.id!==id&&p.name.toLocaleLowerCase()===clean.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return}
+ let unchanged=false;
+ try{unchanged=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===snapshot}catch(e){}
+ if(!unchanged){alert('El proveedor cambió durante la edición. Vuelve a revisar.');return}
  supplier.name=clean;
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited'))adminTab('delivery')
 }
