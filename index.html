@@ -1616,9 +1616,12 @@ function edDeliverySupplierDelete(id){
  }
  let snapshot;
  try{snapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){alert('No se pudieron verificar las dependencias.');return false}
+ let ownSnapshot;
+ try{ownSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){return false}
  if(!confirm('¿Eliminar el proveedor "'+supplier.name+'"?'))return false;
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot}catch(e){}
+ try{unchanged=unchanged&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===ownSnapshot}catch(e){unchanged=false}
  if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items.filter(p=>p.id!==id),'supplier_deleted'))return false;
  adminTab('delivery');return true;
@@ -1722,7 +1725,13 @@ function edDeliveryDestinationDelete(id){
  if(edDeliveryIsQuarantined())return false;
  const items=edDeliveryDestinationsRead();
  const item=items.find(d=>d.id===id);
- if(!item||!confirm('¿Eliminar el destino de referencia "'+item.name+'"?'))return false;
+ if(!item)return false;
+ let ownSnapshot;
+ try{ownSnapshot=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)}catch(e){return false}
+ if(!confirm('¿Eliminar el destino de referencia "'+item.name+'"?'))return false;
+ let same=false;
+ try{same=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===ownSnapshot}catch(e){}
+ if(!same){alert('El destino cambió durante la confirmación.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items.filter(d=>d.id!==id),'destination_deleted'))return false;
  adminTab('delivery');return true;
 }
@@ -2090,9 +2099,12 @@ function edDeliveryOriginDelete(id){
  }
  let snapshot;
  try{snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron verificar las dependencias.');return false}
+ let ownSnapshot;
+ try{ownSnapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){return false}
  if(!confirm('¿Eliminar el punto de salida "'+point.name+'"?'))return false;
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===snapshot}catch(e){}
+ try{unchanged=unchanged&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===ownSnapshot}catch(e){unchanged=false}
  if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items.filter(p=>p.id!==id),'warehouse_deleted'))return false;
  adminTab('delivery');return true;
