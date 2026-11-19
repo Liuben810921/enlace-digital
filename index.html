@@ -1999,10 +1999,15 @@ function edDeliveryReassignWarehouse(sourceId){
  (source.type==='proveedor'&&(source.supplierId!==target.supplierId||!edDeliverySuppliersRead().some(s=>s.id===target.supplierId&&s.active!==false)))){
   alert('Selecciona otro almacén activo del mismo tipo y proveedor.');return false;
  }
- let snapshot;
- try{snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron leer las asociaciones.');return false}
- const map=edProductOriginsRead(),affected=Object.entries(map).filter(([key,ids])=>Array.isArray(ids)&&ids.includes(sourceId));
- if(Object.values(map).some(ids=>!Array.isArray(ids))){alert('Hay asociaciones que requieren revisión.');return false}
+ let snapshot,originsSnapshot,suppliersSnapshot,map;
+ try{
+  snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  originsSnapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);
+  suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
+  map=JSON.parse(snapshot===null?'{}':snapshot);
+ }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string'))){alert('Asociaciones inválidas.');return false}
+ const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
  if(!confirm('Reasignar '+affected.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
  const updated={...map};
