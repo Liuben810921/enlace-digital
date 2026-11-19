@@ -1960,7 +1960,7 @@ function edProductOriginsSave(productId,ids,expectedType=null){
  try{
   localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,JSON.stringify(map));
   if(edDeliveryContextInvalidate('product_origins')===null){
-   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous)}catch(rollbackError){edDeliveryQuarantine()}
+   try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}catch(rollbackError){edDeliveryQuarantine()}
    alert('Asociación no confirmada: comprueba el almacenamiento local antes de continuar.');return false;
   }
   return true
