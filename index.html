@@ -1957,10 +1957,20 @@ function edDeliveryOriginDelete(id){
  adminTab('delivery');return true;
 }
 function edDeliveryOriginToggle(id){
+ if(edDeliveryIsQuarantined())return false;
  const items=edDeliveryOriginsRead(),p=items.find(x=>x.id===id);
- if(!p)return;
+ if(!p)return false;
+ if(p.active!==false){
+  const associations=edProductOriginsRead();
+  if(Object.values(associations).some(ids=>!Array.isArray(ids))){
+   alert('Hay asociaciones que requieren revisión. No se puede desactivar el almacén hasta resolverlas.');return false;
+  }
+  const affected=Object.values(associations).filter(ids=>ids.includes(id)).length;
+  if(affected&&!confirm('Este almacén tiene '+affected+' producto(s) asociado(s). Al desactivarlo dejará de estar disponible para esos productos. ¿Continuar?'))return false;
+ }
  p.active=p.active===false;
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_status'))adminTab('delivery')
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_status'))return false;
+ adminTab('delivery');return true;
 }
 
 
