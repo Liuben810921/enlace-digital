@@ -2,7 +2,7 @@
 -- Prerequisite: shared_pool_intents.sql and manual_approval.sql.
 -- DBA must ensure this function owner has explicit privileges; no pool direct table access.
 BEGIN;
-CREATE TABLE ed_delivery_intent_lab.authoritative_context (
+-- Disable earlier standalone consume entry point: consumption without application is unsafe.\nREVOKE EXECUTE ON FUNCTION ed_delivery_intent_lab.consume(bigint,text) FROM ed_intent_pool;\nCREATE TABLE ed_delivery_intent_lab.authoritative_context (
  singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
  fingerprint text NOT NULL CHECK(fingerprint ~ '^[0-9a-f]{64}$'),
  revision bigint NOT NULL CHECK(revision>=0)
@@ -48,7 +48,7 @@ BEGIN
   END IF;
  ELSIF v.action='revoke' THEN
   SELECT * INTO old_row FROM ed_delivery_lab.approvals WHERE id=v.target_approval_id FOR UPDATE;
-  IF NOT FOUND OR old_row.request_fingerprint<>v.context_hash OR old_row.configuration_revision<>v.context_revision
+  IF NOT FOUND OR old_row.actor_id<>v.actor_id OR old_row.request_fingerprint<>v.context_hash OR old_row.configuration_revision<>v.context_revision
   THEN RETURN 'PENDIENTE'; END IF;
   UPDATE ed_delivery_lab.approvals SET revoked_at=clock_timestamp()
   WHERE id=v.target_approval_id AND revoked_at IS NULL;
