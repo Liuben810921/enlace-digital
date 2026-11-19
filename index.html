@@ -1525,7 +1525,7 @@ function edDeliveryRecoverQuarantine(){
   if(Object.entries(associations).some(([productId,warehouseIds])=>{
    if(!warehouseIds.length)return false; // An explicitly unlinked product is valid.
    const product=state.products.find(p=>String(p.id)===productId);
-   return !!product&&origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
+   return !product||origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
   }))return false;
   if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
   localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
