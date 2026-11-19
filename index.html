@@ -1641,6 +1641,8 @@ function edDeliverySupplierTransferWarehouses(sourceId){
   if(new Set(productIds).size!==productIds.length)throw new Error('IDs de producto duplicados');
   inventorySnapshot=JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]));
   if(edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot)throw new Error('Inventario no sincronizado');
+  const sharedInventory=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');
+  if(!sharedInventory||!Array.isArray(sharedInventory.products)||JSON.stringify(sharedInventory.products)!==edInventorySnapshot)throw new Error('Inventario de otra pestaña no verificado');
  }catch(e){alert('Inventario incompleto, duplicado o no sincronizado. No se puede transferir.');return false}
  const knownOrigins=new Map(origins.map(o=>[o.id,o]));
  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>{
@@ -1671,7 +1673,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
  let inventoryUnchanged=false;
- try{inventoryUnchanged=edInventoryLoaded&&edInventoryPendingSaves===0&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
+ try{const shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');inventoryUnchanged=!!shared&&Array.isArray(shared.products)&&JSON.stringify(shared.products)===inventoryVersion&&edInventoryLoaded&&edInventoryPendingSaves===0&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
  if(!unchanged||!inventoryUnchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
