@@ -1580,7 +1580,7 @@ function edDeliverySupplierEdit(id){
  try{unchanged=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===snapshot}catch(e){}
  if(!unchanged){alert('El proveedor cambió durante la edición. Vuelve a revisar.');return}
  supplier.name=clean;
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited'))adminTab('delivery')
+ if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited',snapshot))adminTab('delivery')
 }
 /* Cambio controlado de proveedor para almacenes sin dependencias de producto.
    Los almacenes asociados requieren primero reasignar/desvincular productos. */
@@ -1635,7 +1635,7 @@ function edDeliverySupplierDelete(id){
  try{unchanged=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot}catch(e){}
  try{unchanged=unchanged&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===ownSnapshot}catch(e){unchanged=false}
  if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
- if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items.filter(p=>p.id!==id),'supplier_deleted'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items.filter(p=>p.id!==id),'supplier_deleted',ownSnapshot))return false;
  adminTab('delivery');return true;
 }
 function edDeliverySupplierToggle(id){
@@ -2031,7 +2031,7 @@ function edDeliveryOriginSave(){
   try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===associationSnapshot}catch(e){}
   if(!unchanged){alert('Las asociaciones cambiaron durante la edición. Vuelve a revisar el almacén.');return false}
  }
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
+ if((id?edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed',edDeliveryEditSnapshots.origin):edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed'))){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
 }
 function edDeliveryOriginSetDefault(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica las asociaciones.');return false}
@@ -2143,7 +2143,7 @@ function edDeliveryOriginDelete(id){
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===snapshot}catch(e){}
  try{unchanged=unchanged&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===ownSnapshot}catch(e){unchanged=false}
  if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
- if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items.filter(p=>p.id!==id),'warehouse_deleted'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items.filter(p=>p.id!==id),'warehouse_deleted',ownSnapshot))return false;
  adminTab('delivery');return true;
 }
 function edDeliveryOriginToggle(id){
