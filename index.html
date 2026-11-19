@@ -2283,10 +2283,18 @@ async function edLoadSupplierAlias(id){
  if(edAdminRole!=='principal')return;
  try{const token=await edToken();const rows=await edApi('/rest/v1/productos_proveedores_privados?producto_id=eq.'+id+'&select=alias',{headers:edHeaders(token)});const el=document.getElementById('editSupplierAlias');if(el)el.value=rows[0]?.alias||'';}catch(e){console.error('No se pudo consultar el alias privado',e)}
 }
-async function edSaveSupplierAlias(id,alias){
- if(edAdminRole!=='principal')return;
- const token=await edToken();
- await edApi('/rest/v1/productos_proveedores_privados?on_conflict=producto_id',{method:'POST',headers:{...edHeaders(token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({producto_id:id,alias:alias.slice(0,160)})});
+const edSupplierAliasQueues=new Map();
+function edSaveSupplierAlias(id,alias){
+ if(edAdminRole!=='principal')return Promise.resolve();
+ const key=String(id);
+ const prior=edSupplierAliasQueues.get(key)||Promise.resolve();
+ const task=prior.catch(()=>{}).then(async()=>{
+  const token=await edToken();
+  await edApi('/rest/v1/productos_proveedores_privados?on_conflict=producto_id',{method:'POST',headers:{...edHeaders(token),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({producto_id:id,alias:alias.slice(0,160)})});
+ });
+ edSupplierAliasQueues.set(key,task);
+ task.finally(()=>{if(edSupplierAliasQueues.get(key)===task)edSupplierAliasQueues.delete(key)}).catch(()=>{});
+ return task;
 }
 function edToggleSupplierAlias(mode){
  const origin=document.getElementById(mode==='new'?'porigin':'editOrigin');
