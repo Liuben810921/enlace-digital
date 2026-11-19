@@ -792,7 +792,7 @@ async function edInit(){try{edSession=JSON.parse(localStorage.getItem(ED_AUTH_KE
 
 
 /* Inventario centralizado: Supabase es la fuente de verdad; no importar automáticamente datos locales de prueba. */
-let edInventoryLoaded=false,edInventoryQueue=Promise.resolve(),edInventorySnapshot='[]';
+let edInventoryLoaded=false,edInventoryQueue=Promise.resolve(),edInventorySnapshot='[]',edInventoryPendingSaves=0;
 const ED_CONDITIONS={nuevo:{label:'NUEVO',color:'#15803D'},grado_a:{label:'USADO · GRADO A',color:'#276A82'},usado:{label:'USADO',color:'#64748B'},reacondicionado:{label:'REACONDICIONADO',color:'#55538A'}};
 function edConditionBadge(p){const c=ED_CONDITIONS[p.condition];return c?'<span class="ed-condition-badge" style="background:'+c.color+'">'+c.label+'</span>':''}
 function edConditionOptions(selected){return '<option value="">Sin especificar</option>'+Object.entries(ED_CONDITIONS).map(([key,c])=>'<option value="'+key+'" '+(selected===key?'selected':'')+'>'+c.label+'</option>').join('')}
@@ -856,6 +856,7 @@ function edQueueInventory(){
  if(!edInventoryLoaded)return;
  if(!edAdminAuthorized){edStatus('Inventario sin sincronizar: inicia sesión como administrador',true);return}
  const target=JSON.parse(JSON.stringify(state.products));
+ edInventoryPendingSaves++;
  edInventoryQueue=edInventoryQueue.catch(()=>{}).then(async()=>{
   edStatus('Guardando inventario…');
   try{
@@ -884,6 +885,7 @@ function edQueueInventory(){
    edInventorySnapshot=JSON.stringify(target);
    edStatus('Inventario sincronizado');return true;
   }catch(e){edStatus('Inventario NO sincronizado: '+e.message,true);alert('No se guardaron todos los cambios del inventario en Supabase: '+e.message);return false}
+  finally{edInventoryPendingSaves--}
  });
 }
 
@@ -1638,7 +1640,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
   const productIds=state.products.map(p=>String(p.id));
   if(new Set(productIds).size!==productIds.length)throw new Error('IDs de producto duplicados');
   inventorySnapshot=JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]));
-  if(JSON.stringify(state.products)!==edInventorySnapshot)throw new Error('Inventario no sincronizado');
+  if(edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot)throw new Error('Inventario no sincronizado');
  }catch(e){alert('Inventario incompleto, duplicado o no sincronizado. No se puede transferir.');return false}
  const knownOrigins=new Map(origins.map(o=>[o.id,o]));
  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>{
@@ -1669,7 +1671,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
  let inventoryUnchanged=false;
- try{inventoryUnchanged=edInventoryLoaded&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
+ try{inventoryUnchanged=edInventoryLoaded&&edInventoryPendingSaves===0&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
  if(!unchanged||!inventoryUnchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
