@@ -9,6 +9,9 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const dir=__dirname;
 const active=new Set();
+const cleanEnv={...process.env};
+for(const key of Object.keys(cleanEnv)) if(key.startsWith('PG')) delete cleanEnv[key];
+// Only explicit connection URLs may select a PostgreSQL target.
 function track(p){active.add(p);p.once('close',()=>active.delete(p));return p;}
 function terminate(){for(const p of active){if(p.exitCode===null && !p.killed) p.kill('SIGTERM');}}
 function forceStopAfterGrace(){const t=setTimeout(()=>{for(const p of active){if(p.exitCode===null) p.kill('SIGKILL');}},1500);t.unref();}
@@ -28,17 +31,17 @@ for(const u of [admin,pool]) {
  assert.ok(x.pathname.length>1,'explicit disposable database name required');
 }
 const psqlArgs=(url,extra=[])=>['-X','-w','-v','ON_ERROR_STOP=1','-d',url,...extra];
-function run(url,sql,extra=[]) {
- const r=spawnSync('psql',psqlArgs(url,['-A','-t',...extra,'-c',sql]),{encoding:'utf8',timeout:30000});
- if(r.error||r.status!==0)throw Error('psql failed: '+(r.stderr||r.error));
+function run(url,sql,extra=[],timeoutMs=30000) {
+ const r=spawnSync('psql',psqlArgs(url,['-A','-t',...extra,'-c',sql]),{encoding:'utf8',timeout:timeoutMs,env:cleanEnv});
+ if(r.error||r.status!==0)throw Error('psql query failed (status '+r.status+', timedOut='+Boolean(r.error)+')');
  return r.stdout.trim();
 }
 function file(url,name,extra=[]) {
- const r=spawnSync('psql',psqlArgs(url,[...extra,'-f',path.join(dir,name)]),{encoding:'utf8',timeout:30000});
+ const r=spawnSync('psql',psqlArgs(url,[...extra,'-f',path.join(dir,name)]),{encoding:'utf8',timeout:30000,env:cleanEnv});
  if(r.error||r.status!==0)throw Error(name+': psql failed (status '+r.status+', timeout='+Boolean(r.error)+')');
 }
 function session(name,id,nonce) {
- return track(spawn('psql',psqlArgs(pool,['-A','-t','-v','intent_id='+id,'-v','nonce_hash='+nonce,'-f',path.join(dir,name)]),{stdio:['ignore','pipe','pipe']}));
+ return track(spawn('psql',psqlArgs(pool,['-A','-t','-v','intent_id='+id,'-v','nonce_hash='+nonce,'-f',path.join(dir,name)]),{stdio:['ignore','pipe','pipe'],env:cleanEnv}));
 }
 function done(p) {
  return new Promise((resolve,reject)=>{
@@ -87,7 +90,7 @@ function done(p) {
     WHERE b.application_name='ed_atomic_lab_b'
       AND a.application_name='ed_atomic_lab_a'
       AND a.pid = ANY(pg_blocking_pids(b.pid))
-      AND b.wait_event_type='Lock'`);
+      AND b.wait_event_type='Lock'`,[],2000);
   if(state==='1'){blocked=true;break;}
   if(b.exitCode!==null||a.exitCode!==null)break;
   await new Promise(resolve=>setTimeout(resolve,150));
