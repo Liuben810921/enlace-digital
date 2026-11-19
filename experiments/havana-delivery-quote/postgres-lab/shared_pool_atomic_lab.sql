@@ -2,7 +2,9 @@
 -- Prerequisite: shared_pool_intents.sql and manual_approval.sql.
 -- DBA must ensure this function owner has explicit privileges; no pool direct table access.
 BEGIN;
--- Disable earlier standalone consume entry point: consumption without application is unsafe.\nREVOKE EXECUTE ON FUNCTION ed_delivery_intent_lab.consume(bigint,text) FROM ed_intent_pool;\nCREATE TABLE ed_delivery_intent_lab.authoritative_context (
+-- Disable earlier standalone consume entry point: consumption without application is unsafe.
+REVOKE EXECUTE ON FUNCTION ed_delivery_intent_lab.consume(bigint,text) FROM ed_intent_pool;
+CREATE TABLE ed_delivery_intent_lab.authoritative_context (
  singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
  fingerprint text NOT NULL CHECK(fingerprint ~ '^[0-9a-f]{64}$'),
  revision bigint NOT NULL CHECK(revision>=0)
@@ -14,7 +16,10 @@ CREATE TABLE ed_delivery_intent_lab.admin_roles (
 );
 REVOKE ALL ON ed_delivery_intent_lab.authoritative_context,ed_delivery_intent_lab.admin_roles FROM PUBLIC,ed_intent_pool,ed_intent_gateway;
 GRANT SELECT ON ed_delivery_intent_lab.authoritative_context,ed_delivery_intent_lab.admin_roles TO ed_intent_owner;
-GRANT SELECT,INSERT,UPDATE ON ed_delivery_lab.approvals TO ed_intent_owner;
+-- PostgreSQL row-locking SELECT FOR SHARE requires UPDATE privilege on at least one column.
+GRANT UPDATE(revision) ON ed_delivery_intent_lab.authoritative_context TO ed_intent_owner;
+GRANT UPDATE(enabled) ON ed_delivery_intent_lab.admin_roles TO ed_intent_owner;
+GRANT SELECT,INSERT,UPDATE(revoked_at) ON ed_delivery_lab.approvals TO ed_intent_owner;
 GRANT USAGE ON SCHEMA ed_delivery_lab TO ed_intent_owner;
 GRANT USAGE ON SEQUENCE ed_delivery_lab.approvals_id_seq TO ed_intent_owner;
 CREATE FUNCTION ed_delivery_intent_lab.apply_intent(p_intent_id bigint,p_nonce_hash text)
