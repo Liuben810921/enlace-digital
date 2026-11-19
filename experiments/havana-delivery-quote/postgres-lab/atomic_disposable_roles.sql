@@ -1,14 +1,13 @@
--- NOT EXECUTED. Disposable PostgreSQL DBA ONLY. After shared_pool_intents.sql.
--- No passwords or network services. Local DBA configures peer/trust only in isolated DB.
+-- NOT EXECUTED. Dedicated disposable CLUSTER only. Test login roles pre-created by operator.
+-- Run after shared_pool_intents.sql. Never CREATE LOGIN roles inside the test runner.
 BEGIN;
-CREATE ROLE ed_intent_test_pool LOGIN NOINHERIT NOBYPASSRLS;
-CREATE ROLE ed_intent_test_gateway LOGIN NOINHERIT NOBYPASSRLS;
+DO $$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='ed_intent_test_pool' AND rolcanlogin AND NOT rolsuper AND NOT rolbypassrls AND NOT rolinherit)
+ OR NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='ed_intent_test_gateway' AND rolcanlogin AND NOT rolsuper AND NOT rolbypassrls AND NOT rolinherit)
+ THEN RAISE EXCEPTION 'Disposable test login roles must be pre-provisioned with LOGIN NOINHERIT NOSUPERUSER NOBYPASSRLS'; END IF;
+END $$;
 GRANT ed_intent_pool TO ed_intent_test_pool;
--- NOINHERIT: explicitly SET ROLE ed_intent_pool in each disposable test session.
 GRANT ed_intent_gateway TO ed_intent_test_gateway;
--- A separate gateway test session must SET ROLE ed_intent_gateway.
--- On PostgreSQL 16+, membership SET/INHERIT options must be reviewed by DBA.
--- No membership in ed_intent_owner and no cross-membership.
 COMMIT;
--- For testing as a local DBA session: SET ROLE ed_intent_pool;
--- This verifies effective permissions but is NOT a substitute for testing LOGIN isolation.
+-- Operator must use a separate, fully disposable PostgreSQL cluster.
