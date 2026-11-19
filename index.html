@@ -1605,6 +1605,13 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  })){
   alert('No se pueden verificar las asociaciones. Operación cancelada.');return false;
  }
+ if(Object.entries(associations).some(([productId,warehouseIds])=>{
+  const product=state.products.find(p=>String(p.id)===productId);
+  if(!product)return true;
+  return warehouseIds.some(id=>knownOrigins.get(id).type!==product.origen_producto);
+ })){
+  alert('Las asociaciones no coinciden con el inventario o el tipo de producto. Revisa los productos antes de transferir.');return false;
+ }
  const ids=new Set(affected.map(o=>o.id));
  if(Object.values(associations).some(v=>v.some(id=>ids.has(id)))){
   alert('Hay productos asociados a estos almacenes. Reasigna o desvincula primero esos productos para evitar dependencias inconsistentes.');return false;
