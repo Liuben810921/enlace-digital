@@ -6,17 +6,19 @@
 // EACH run requires a FRESH empty disposable DB. Never use production.
 const {spawn,spawnSync}=require('node:child_process');
 const path=require('node:path');
-const fs=require('node:fs');
 const assert=require('node:assert/strict');
 const dir=__dirname;
 const [action,mode]=process.argv.slice(2);
+assert.equal(process.argv.length,4,'exactly two arguments required');
 assert.ok(['approve','revoke'].includes(action),'action must be approve/revoke');
 assert.ok(['commit','rollback'].includes(mode),'mode must be commit/rollback');
 const admin=process.env.LAB_ADMIN_URL,pool=process.env.LAB_POOL_URL;
 assert.ok(admin&&pool,'LAB_ADMIN_URL and LAB_POOL_URL required');
 for(const u of [admin,pool]) {
  const x=new URL(u);
- assert.ok(['localhost','127.0.0.1','::1'].includes(x.hostname),'only local disposable PostgreSQL permitted');
+ assert.equal(x.protocol,'postgresql:','PostgreSQL URI required');
+ assert.ok(['localhost','127.0.0.1','[::1]'].includes(x.hostname),'only local disposable PostgreSQL permitted');
+ assert.ok(x.pathname.length>1,'explicit disposable database name required');
 }
 const psqlArgs=(url,extra=[])=>['-X','-w','-v','ON_ERROR_STOP=1','-d',url,...extra];
 function run(url,sql,extra=[]) {
@@ -41,6 +43,9 @@ function done(p) {
 }
 (async()=>{
  // Fail closed: schema must not exist. Only a disposable empty database is accepted.
+ const db=run(admin,'SELECT current_database()');
+ assert.ok(!['postgres','template0','template1'].includes(db),'system database forbidden');
+ assert.equal(db,run(pool,'SELECT current_database()'),'admin/pool must use same database');
  const exists=run(admin,"SELECT count(*) FROM pg_namespace WHERE nspname IN ('ed_delivery_lab','ed_delivery_intent_lab')");
  assert.equal(exists,'0','database not empty: use a fresh disposable DB');
  for(const n of ['manual_approval.sql','shared_pool_intents.sql','shared_pool_atomic_lab.sql','atomic_disposable_roles.sql','atomic_two_connections_setup.sql'])file(admin,n);
@@ -56,7 +61,7 @@ function done(p) {
  // For stronger synchronization inspect pg_stat_activity or add an advisory handshake.
  await new Promise((resolve,reject)=>{
   let output='';const timeout=setTimeout(()=>reject(Error('A did not produce result')),5000);
-  a.stdout.on('data',chunk=>{output+=chunk;if(output.includes('LAB_APPLIED_ONLY')){clearTimeout(timeout);resolve();}});
+  a.stdout.on('data',chunk=>{output+=chunk;if(output.includes('A_LOCK_HELD')){clearTimeout(timeout);resolve();}});
   a.on('close',()=>{clearTimeout(timeout);reject(Error('A exited before signal'));});
  });
  const b=session('atomic_session_B.sql',id,nonce);
