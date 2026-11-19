@@ -1977,7 +1977,9 @@ function edDeliveryOriginEligible(id,type,supplierId){
 function edProductOriginsPanel(mode,productId){
  if(edDeliveryIsQuarantined())return '<div class="panel" role="alert" style="padding:12px;margin:12px 0;border:2px solid #b42318"><strong>Asociaciones bloqueadas</strong><p class="note">Revisa Administración de entregas y pulsa Verificar y desbloquear antes de asociar almacenes.</p></div>';
  const type=mode==='edit'?(document.getElementById('editOrigin')?.value||'propio'):(document.getElementById('porigin')?.value||'propio');
- const saved=productId==null?[]:(edProductOriginsRead()[String(productId)]||[]);
+ const rawSaved=productId==null?[]:(edProductOriginsRead()[String(productId)]??[]);
+ if(!Array.isArray(rawSaved)||rawSaved.some(id=>typeof id!=='string'))return '<div class="panel" role="alert"><strong>Asociaciones de almacenes pendientes de revisión</strong><p class="note">Los datos locales de este producto no tienen un formato válido. No se modificaron; revisa Administración de entregas antes de continuar.</p></div>';
+ const saved=rawSaved;
  const supplierIds=[...new Set(edDeliveryOriginsRead().filter(p=>saved.includes(p.id)&&p.active!==false&&p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false)).map(p=>p.supplierId))];
  const activeSuppliers=edDeliverySuppliersRead().filter(p=>p.active!==false);
  const supplierId=supplierIds[0]||(type==='proveedor'?activeSuppliers.find(p=>edDeliveryOriginsRead().some(o=>o.type==='proveedor'&&o.supplierId===p.id&&o.active!==false))?.id||'':'');
