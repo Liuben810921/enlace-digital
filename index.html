@@ -1583,7 +1583,8 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  if(!edInventoryLoaded){alert('Carga primero el inventario para verificar las dependencias de productos.');return false}
  let rawAssociations,rawOrigins,rawSuppliers;
  try{rawAssociations=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el almacenamiento de dependencias.');return false}
- let associations;\n try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
+ let associations;
+ try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v)||v.some(id=>typeof id!=='string'))){
   alert('No se pueden verificar las asociaciones. Operación cancelada.');return false;
  }
