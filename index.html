@@ -1614,7 +1614,12 @@ function edDeliverySupplierDelete(id){
   alert('No se puede eliminar este proveedor mientras tenga almacenes asociados. Reasigna o elimina primero esos almacenes.');
   return false;
  }
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){alert('No se pudieron verificar las dependencias.');return false}
  if(!confirm('¿Eliminar el proveedor "'+supplier.name+'"?'))return false;
+ let unchanged=false;
+ try{unchanged=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot}catch(e){}
+ if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items.filter(p=>p.id!==id),'supplier_deleted'))return false;
  adminTab('delivery');return true;
 }
@@ -2079,7 +2084,12 @@ function edDeliveryOriginDelete(id){
   alert('No se puede eliminar: hay productos asociados o asociaciones que deben revisarse. Desactiva el almacén o reasigna los productos primero.');
   return false;
  }
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)}catch(e){alert('No se pudieron verificar las dependencias.');return false}
  if(!confirm('¿Eliminar el punto de salida "'+point.name+'"?'))return false;
+ let unchanged=false;
+ try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===snapshot}catch(e){}
+ if(!unchanged){alert('Los datos cambiaron durante la confirmación. Revisa la operación.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items.filter(p=>p.id!==id),'warehouse_deleted'))return false;
  adminTab('delivery');return true;
 }
