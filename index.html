@@ -840,8 +840,8 @@ function edQueueInventory(){
    for(const p of previous.filter(x=>!nextIds.has(x.id))){
     await edApi('/rest/v1/productos?id=eq.'+p.id,{method:'PATCH',headers:edHeaders(token),body:JSON.stringify({archivado:true,disponible:false})});
    }
-   edInventorySnapshot=JSON.stringify(target);
    localStorage.setItem('enlace_demo_v1',JSON.stringify(state));
+   edInventorySnapshot=JSON.stringify(target);
    edStatus('Inventario sincronizado');return true;
   }catch(e){edStatus('Inventario NO sincronizado: '+e.message,true);alert('No se guardaron todos los cambios del inventario en Supabase: '+e.message);return false}
  });
