@@ -1,5 +1,5 @@
 -- LAB ONLY. Requires prior manual_approval.sql in disposable PostgreSQL.
--- Trusted backend owns ed_delivery_lab; caller cannot choose actor or role.
+-- Actor identity is PostgreSQL session_user, NOT a caller-controlled GUC.\n-- Each test login must be a distinct PostgreSQL LOGIN role; never expose SQL login to browser.
 BEGIN;
 CREATE TABLE ed_delivery_lab.actor_grants (
  actor_id text PRIMARY KEY, role text NOT NULL CHECK(role IN ('principal','general','supervisor','gestor')),
@@ -11,8 +11,8 @@ CREATE TABLE ed_delivery_lab.context_state (
  configuration_revision bigint NOT NULL CHECK(configuration_revision>=0)
 );
 -- Context fingerprint must be recomputed and written by trusted server from cart/destination/origins/rules.
--- Lab-only login binding: SET ROLE ed_delivery_lab_api is a privileged backend action, never browser input.
-CREATE ROLE ed_delivery_lab_api NOLOGIN;
+-- Grant API membership to authenticated PostgreSQL LOGIN roles only in disposable lab.\n-- SECURITY DEFINER must be owned by a dedicated non-login technical owner in a future deployment.
+-- Prerequisite: create ed_delivery_lab_api NOLOGIN once as database owner.\n-- This script does not create login roles or passwords.
 GRANT USAGE ON SCHEMA ed_delivery_lab TO ed_delivery_lab_api;
 REVOKE ALL ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals FROM PUBLIC,ed_delivery_lab_api;
 CREATE OR REPLACE FUNCTION ed_delivery_lab.approve(p_operation text,p_fee bigint,p_expected_fingerprint text,p_expected_revision bigint)
@@ -20,8 +20,8 @@ RETURNS TABLE(result text, approval_id bigint)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_delivery_lab AS $$
 DECLARE v_actor text; v_role text; v_context record; v_old ed_delivery_lab.approvals%ROWTYPE;
 BEGIN
- v_actor:=nullif(current_setting('ed_delivery_lab.trusted_actor',true),'');
- -- This GUC is NOT secure if untrusted clients can execute arbitrary SQL; lab only.
+ v_actor:=session_user;
+ -- session_user is set by PostgreSQL authentication and not by SQL SET ROLE.
  IF v_actor IS NULL OR p_operation IS NULL OR length(p_operation)=0 OR p_fee IS NULL OR p_fee<0
  OR p_expected_fingerprint IS NULL OR p_expected_fingerprint !~ '^[0-9a-f]{64}$'
  OR p_expected_revision IS NULL THEN
@@ -55,7 +55,7 @@ CREATE OR REPLACE FUNCTION ed_delivery_lab.revoke(p_id bigint)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_delivery_lab AS $$
 DECLARE v_actor text; v_role text; v_old ed_delivery_lab.approvals%ROWTYPE;
 BEGIN
- v_actor:=nullif(current_setting('ed_delivery_lab.trusted_actor',true),'');
+ v_actor:=session_user;
  SELECT a.role INTO v_role FROM ed_delivery_lab.actor_grants a WHERE a.actor_id=v_actor AND a.enabled FOR SHARE;
  IF v_role IS NULL OR v_role NOT IN ('principal','general') THEN RETURN 'PENDIENTE'; END IF;
  SELECT * INTO v_old FROM ed_delivery_lab.approvals a WHERE a.id=p_id FOR UPDATE;
