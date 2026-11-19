@@ -815,9 +815,12 @@ async function edLoadInventory(){
  const loaded=rows.map(edFromRow);
  if(loaded.some(p=>!Number.isSafeInteger(p.id)||p.id<0||!['propio','proveedor'].includes(p.origen_producto))||new Set(loaded.map(p=>p.id)).size!==loaded.length)throw new Error('Inventario con identificadores o tipos inválidos');
  if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
+ const nextState={...state,products:loaded};
+ const nextSnapshot=JSON.stringify(loaded);
+ localStorage.setItem('enlace_demo_v1',JSON.stringify(nextState));
+ if(generation!==edInventoryLoadGeneration)throw new Error('Carga de inventario reemplazada');
  state.products=loaded;
- edInventorySnapshot=JSON.stringify(state.products);
- localStorage.setItem('enlace_demo_v1',JSON.stringify(state));
+ edInventorySnapshot=nextSnapshot;
  edInventoryLoaded=true;
  renderShop();
  if(edAdminAuthorized&&document.getElementById('admin')&&!document.getElementById('admin').classList.contains('hidden'))adminTab(activeTab);
