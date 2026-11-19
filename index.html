@@ -2009,10 +2009,13 @@ function edDeliveryOriginSave(){
  }
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
+ let associationSnapshot=null,dependencyChange=false;
  if(existing&&(existing.type!==type||(type==='proveedor'&&existing.supplierId!==supplierId))){
   let associations;
   try{
    const raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+   associationSnapshot=raw;
+   dependencyChange=true;
    associations=JSON.parse(raw===null?'{}':raw);
   }catch(e){alert('Asociaciones ilegibles. No se puede cambiar el tipo o proveedor del almacén.');return false}
   if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(ids=>!Array.isArray(ids)||ids.some(value=>typeof value!=='string')||ids.includes(id))){
@@ -2021,6 +2024,11 @@ function edDeliveryOriginSave(){
  }
  const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false,defaultForSupplier:!!(existing?.defaultForSupplier&&type==='proveedor'&&existing.supplierId===supplierId)};
  if(existing)items.splice(items.indexOf(existing),1,point);else items.push(point);
+ if(dependencyChange){
+  let unchanged=false;
+  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===associationSnapshot}catch(e){}
+  if(!unchanged){alert('Las asociaciones cambiaron durante la edición. Vuelve a revisar el almacén.');return false}
+ }
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
 }
 function edDeliveryOriginSetDefault(id){
