@@ -41,9 +41,10 @@ function session(name,id,nonce) {
 function done(p) {
  return new Promise((resolve,reject)=>{
   let out='',err='';
+  const timer=setTimeout(()=>{p.kill('SIGTERM');reject(Error('psql session exceeded 35s'));},35000);
   p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);
-  p.on('error',reject);
-  p.on('close',code=>code===0?resolve(out):reject(Error(err||'psql exit '+code)));
+  p.on('error',e=>{clearTimeout(timer);reject(e);});
+  p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error(err||'psql exit '+code));});
  });
 }
 (async()=>{
