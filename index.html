@@ -2075,13 +2075,7 @@ function edDeliveryReassignWarehouse(sourceId){
  let unchanged=false;
  try{unchanged=previous===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===suppliersSnapshot}catch(e){}
  if(!unchanged){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
- try{
-  const serialized=JSON.stringify(updated);
-  localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,serialized);
-  if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==serialized)throw new Error('Guardado no confirmado');
-  if(edDeliveryContextInvalidate('warehouse_reassigned')===null)throw new Error('Invalidación no confirmada');
- }catch(e){
-  try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}catch(rollbackError){edDeliveryQuarantine()}
+ if(!edDeliveryPersistAndInvalidate(ED_PRODUCT_ORIGINS_KEY,updated,'warehouse_reassigned',snapshot)){
   alert('Reasignación no confirmada; revisa las asociaciones.');return false;
  }
  adminTab('delivery');return true;
@@ -2110,13 +2104,7 @@ function edDeliveryUnlinkWarehouseProducts(sourceId){
  let unchanged=false;
  try{unchanged=previous===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===suppliersSnapshot}catch(e){}
  if(!unchanged){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
- try{
-  const serialized=JSON.stringify(updated);
-  localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,serialized);
-  if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==serialized)throw new Error('Guardado no confirmado');
-  if(edDeliveryContextInvalidate('warehouse_products_unlinked')===null)throw new Error('Invalidación no confirmada');
- }catch(e){
-  try{if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}catch(rollbackError){edDeliveryQuarantine()}
+ if(!edDeliveryPersistAndInvalidate(ED_PRODUCT_ORIGINS_KEY,updated,'warehouse_products_unlinked',snapshot)){
   alert('Desvinculación no confirmada; revisa las asociaciones.');return false;
  }
  adminTab('delivery');return true;
