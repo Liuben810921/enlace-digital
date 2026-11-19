@@ -1550,8 +1550,13 @@ function edDeliveryPersistAndInvalidate(key,items,reason){
  try{previous=localStorage.getItem(key)}catch(e){alert('No se pudo leer la configuración anterior.');return false}
  try{const serialized=JSON.stringify(items);localStorage.setItem(key,serialized);if(localStorage.getItem(key)!==serialized)throw new Error('Configuración no persistida')}
  catch(e){
-  try{const current=localStorage.getItem(key);if(current!==previous)edDeliveryQuarantine()}
-  catch(readError){edDeliveryQuarantine()}
+  try{
+   if(localStorage.getItem(key)!==previous){
+    if(previous===null)localStorage.removeItem(key);
+    else localStorage.setItem(key,previous);
+   }
+   if(localStorage.getItem(key)!==previous)edDeliveryQuarantine();
+  }catch(rollbackError){edDeliveryQuarantine()}
   alert('No se pudo confirmar el guardado de entregas.');return false
  }
  if(edDeliveryContextInvalidate(reason)!==null)return true;
