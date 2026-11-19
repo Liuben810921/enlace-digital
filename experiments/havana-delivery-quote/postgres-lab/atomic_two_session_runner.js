@@ -3,7 +3,7 @@
 // Required: LAB_ADMIN_URL and LAB_POOL_URL (separate local credentials).
 // Usage: node atomic_two_session_runner.js approve commit
 //        node atomic_two_session_runner.js revoke rollback
-// EACH run requires a FRESH empty disposable DB. Never use production.
+// EACH run requires a FRESH disposable CLUSTER and empty DB. Never use production.
 const {spawn,spawnSync}=require('node:child_process');
 const path=require('node:path');
 const assert=require('node:assert/strict');
@@ -17,6 +17,7 @@ const [action,mode]=process.argv.slice(2);
 assert.equal(process.argv.length,4,'exactly two arguments required');
 assert.ok(['approve','revoke'].includes(action),'action must be approve/revoke');
 assert.ok(['commit','rollback'].includes(mode),'mode must be commit/rollback');
+assert.equal(process.env.LAB_DISPOSABLE_CLUSTER_ACK,'YES_DISCARD_WHOLE_CLUSTER','explicit disposable-cluster acknowledgment required');
 const admin=process.env.LAB_ADMIN_URL,pool=process.env.LAB_POOL_URL;
 assert.ok(admin&&pool,'LAB_ADMIN_URL and LAB_POOL_URL required');
 for(const u of [admin,pool]) {
@@ -44,7 +45,7 @@ function done(p) {
   const timer=setTimeout(()=>{p.kill('SIGTERM');reject(Error('psql session exceeded 35s'));},35000);
   p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);
   p.on('error',e=>{clearTimeout(timer);reject(e);});
-  p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error(err||'psql exit '+code));});
+  p.on('close',code=>{clearTimeout(timer);code===0?resolve(out):reject(Error('psql session exit '+code));});
  });
 }
 (async()=>{
@@ -52,6 +53,7 @@ function done(p) {
  const db=run(admin,'SELECT current_database()');
  assert.ok(!['postgres','template0','template1'].includes(db),'system database forbidden');
  assert.equal(db,run(pool,'SELECT current_database()'),'admin/pool must use same database');
+ assert.equal(run(pool,'SELECT session_user'),'ed_intent_test_pool','pool must use pre-provisioned test login');
  assert.notEqual(run(admin,'SELECT session_user'),run(pool,'SELECT session_user'),'admin and pool must use distinct login identities');
  const exists=run(admin,"SELECT count(*) FROM pg_namespace WHERE nspname IN ('ed_delivery_lab','ed_delivery_intent_lab')");
  assert.equal(exists,'0','database not empty: use a fresh disposable DB');
