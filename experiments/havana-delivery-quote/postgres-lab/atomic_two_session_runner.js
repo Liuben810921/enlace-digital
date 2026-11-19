@@ -24,8 +24,8 @@ function run(url,sql,extra=[]) {
  if(r.error||r.status!==0)throw Error('psql failed: '+(r.stderr||r.error));
  return r.stdout.trim();
 }
-function file(url,name) {
- const r=spawnSync('psql',psqlArgs(url,['-f',path.join(dir,name)]),{encoding:'utf8',timeout:30000});
+function file(url,name,extra=[]) {
+ const r=spawnSync('psql',psqlArgs(url,[...extra,'-f',path.join(dir,name)]),{encoding:'utf8',timeout:30000});
  if(r.error||r.status!==0)throw Error(name+': '+(r.stderr||r.error));
 }
 function session(name,id,nonce) {
@@ -63,7 +63,7 @@ function done(p) {
  const [ao,bo]=await Promise.all([aDone,done(b)]);
  assert.match(ao,/LAB_APPLIED_ONLY/,'A must apply in transaction');
  assert.match(bo,new RegExp(mode==='commit'?'PENDIENTE':'LAB_APPLIED_ONLY'),'B outcome mismatch');
- file(admin,'atomic_postconditions_assert.sql'); // requires operation_id: invoked below instead
+ file(admin,'atomic_postconditions_assert.sql',['-v','operation_id='+operation]);
  const replay=run(pool,"SET ROLE ed_intent_pool; SELECT ed_delivery_intent_lab.apply_intent("+id+",'"+nonce+"')");
  assert.match(replay,/PENDIENTE/,'replay must be rejected');
  console.log('PASS synthetic '+action+' '+mode+' (PostgreSQL executed by operator)');
