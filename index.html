@@ -1717,6 +1717,7 @@ function edDeliveryDestinationEdit(id){
  if(edDeliveryIsQuarantined())return false;
  const item=edDeliveryDestinationsRead().find(d=>d.id===id);
  if(!item)return false;
+ try{edDeliveryEditSnapshots.destination=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)}catch(e){alert('No se pudo verificar el destino.');return false}
  const fields={edDestinationId:item.id,edDestinationName:item.name,edDestinationMunicipality:item.municipality,edDestinationAddress:item.address,edDestinationLat:item.lat??'',edDestinationLng:item.lng??''};
  for(const [key,value] of Object.entries(fields)){const el=document.getElementById(key);if(el)el.value=String(value)}
  document.getElementById('edDestinationFormTitle').textContent='Editar destino de referencia';
@@ -1754,6 +1755,11 @@ function edDeliveryDestinationSave(){
  const lat=a===''?null:Number(a),lng=b===''?null:Number(b);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return false}
  const items=edDeliveryDestinationsRead();
+ if(id){
+  let unchanged=false;
+  try{unchanged=edDeliveryEditSnapshots.destination!==null&&localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===edDeliveryEditSnapshots.destination}catch(e){}
+  if(!unchanged){alert('Los datos cambiaron desde que abriste la edición. Vuelve a cargar el registro.');return false}
+ }
  const existing=id?items.find(d=>d.id===id):null;
  if(id&&!existing){alert('El destino ya no existe.');return false}
  const item={id:existing?.id||'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng};
@@ -1968,10 +1974,12 @@ function edDeliveryOriginReset(){
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
  document.getElementById('edOriginName').focus();
 }
+const edDeliveryEditSnapshots={origin:null,destination:null};
 function edDeliveryOriginEdit(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
 
  const p=edDeliveryOriginsRead().find(x=>x.id===id);if(!p)return;
+ try{edDeliveryEditSnapshots.origin=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){alert('No se pudo verificar el almacén.');return}
  document.getElementById('edOriginId').value=p.id;
  document.getElementById('edOriginName').value=p.name;
  document.getElementById('edOriginType').value=p.type;
@@ -1994,6 +2002,11 @@ function edDeliveryOriginSave(){
  const lat=latRaw===''?null:Number(latRaw),lng=lngRaw===''?null:Number(lngRaw);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){document.getElementById(!Number.isFinite(lat)||lat< -90||lat>90?'edOriginLat':'edOriginLng').focus();alert('Coordenadas fuera de rango.');return}
  const items=edDeliveryOriginsRead();
+ if(id){
+  let unchanged=false;
+  try{unchanged=edDeliveryEditSnapshots.origin!==null&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===edDeliveryEditSnapshots.origin}catch(e){}
+  if(!unchanged){alert('Los datos cambiaron desde que abriste la edición. Vuelve a cargar el registro.');return false}
+ }
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
  if(existing&&(existing.type!==type||(type==='proveedor'&&existing.supplierId!==supplierId))){
