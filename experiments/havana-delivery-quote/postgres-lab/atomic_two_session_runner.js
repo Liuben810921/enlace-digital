@@ -27,8 +27,11 @@ assert.ok(admin&&pool,'LAB_ADMIN_URL and LAB_POOL_URL required');
 for(const u of [admin,pool]) {
  const x=new URL(u);
  assert.equal(x.protocol,'postgresql:','PostgreSQL URI required');
- assert.ok(['localhost','127.0.0.1','[::1]'].includes(x.hostname),'only local disposable PostgreSQL permitted');
+ assert.ok(['127.0.0.1','[::1]'].includes(x.hostname),'only local disposable PostgreSQL permitted');
  assert.ok(x.pathname.length>1,'explicit disposable database name required');
+ assert.ok(x.username.length>0,'explicit login required');
+ assert.equal(x.search,'','URI query parameters (including hostaddr/service) forbidden');
+ assert.equal(x.hash,'','URI fragments forbidden');
 }
 const psqlArgs=(url,extra=[])=>['-X','-w','-v','ON_ERROR_STOP=1','-d',url,...extra];
 function run(url,sql,extra=[],timeoutMs=30000) {
