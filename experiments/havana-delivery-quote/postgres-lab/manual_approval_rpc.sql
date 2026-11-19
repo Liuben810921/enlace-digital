@@ -1,5 +1,6 @@
 -- LAB ONLY. Requires prior manual_approval.sql in disposable PostgreSQL.
--- Actor identity is PostgreSQL session_user, NOT a caller-controlled GUC.\n-- Each test login must be a distinct PostgreSQL LOGIN role; never expose SQL login to browser.
+-- Legacy lab: session_user is safe only with individual PostgreSQL logins. Shared pool is unsupported.
+-- Each test login must be a distinct PostgreSQL LOGIN role; never expose SQL login to browser.
 BEGIN;
 CREATE TABLE ed_delivery_lab.actor_grants (
  actor_id text PRIMARY KEY, role text NOT NULL CHECK(role IN ('principal','general','supervisor','gestor')),
@@ -11,11 +12,20 @@ CREATE TABLE ed_delivery_lab.context_state (
  configuration_revision bigint NOT NULL CHECK(configuration_revision>=0)
 );
 -- Context fingerprint must be recomputed and written by trusted server from cart/destination/origins/rules.
--- Grant API membership to authenticated PostgreSQL LOGIN roles only in disposable lab.\n-- SECURITY DEFINER must be owned by a dedicated non-login technical owner in a future deployment.
--- Prerequisite: create ed_delivery_lab_api NOLOGIN once as database owner.\n-- This script does not create login roles or passwords.
--- Only DBA-controlled login grants may execute RPCs.\nGRANT USAGE ON SCHEMA ed_delivery_lab TO ed_delivery_lab_api,ed_delivery_lab_owner;
-REVOKE ALL ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals FROM PUBLIC,ed_delivery_lab_api;\nREVOKE CREATE ON SCHEMA ed_delivery_lab FROM PUBLIC,ed_delivery_lab_api;\n-- Technical definer requires explicit SELECT/INSERT/UPDATE; no BYPASSRLS or LOGIN.\nGRANT SELECT ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals TO ed_delivery_lab_owner;\nGRANT INSERT,UPDATE ON ed_delivery_lab.approvals TO ed_delivery_lab_owner;\nGRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA ed_delivery_lab TO ed_delivery_lab_owner;
--- Explicit definer owner is set after creation, in same DBA transaction.\nCREATE OR REPLACE FUNCTION ed_delivery_lab.approve(p_operation text,p_fee bigint,p_expected_fingerprint text,p_expected_revision bigint)
+-- Grant API membership to authenticated PostgreSQL LOGIN roles only in disposable lab.
+-- SECURITY DEFINER must be owned by a dedicated non-login technical owner in a future deployment.
+-- Prerequisite: create ed_delivery_lab_api NOLOGIN once as database owner.
+-- This script does not create login roles or passwords.
+-- Only DBA-controlled login grants may execute RPCs.
+GRANT USAGE ON SCHEMA ed_delivery_lab TO ed_delivery_lab_api,ed_delivery_lab_owner;
+REVOKE ALL ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals FROM PUBLIC,ed_delivery_lab_api;
+REVOKE CREATE ON SCHEMA ed_delivery_lab FROM PUBLIC,ed_delivery_lab_api;
+-- Technical definer requires explicit SELECT/INSERT/UPDATE; no BYPASSRLS or LOGIN.
+GRANT SELECT ON ed_delivery_lab.actor_grants,ed_delivery_lab.context_state,ed_delivery_lab.approvals TO ed_delivery_lab_owner;
+GRANT INSERT,UPDATE ON ed_delivery_lab.approvals TO ed_delivery_lab_owner;
+GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA ed_delivery_lab TO ed_delivery_lab_owner;
+-- Explicit definer owner is set after creation, in same DBA transaction.
+CREATE OR REPLACE FUNCTION ed_delivery_lab.approve(p_operation text,p_fee bigint,p_expected_fingerprint text,p_expected_revision bigint)
 RETURNS TABLE(result text, approval_id bigint)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,ed_delivery_lab AS $$
 DECLARE v_actor text; v_role text; v_context record; v_old ed_delivery_lab.approvals%ROWTYPE;
@@ -83,9 +93,13 @@ BEGIN
  END IF;
  RETURN QUERY SELECT 'LAB_VALID_ONLY'::text,v_old.fee_cup;
 END $$;
-ALTER FUNCTION ed_delivery_lab.approve(text,bigint,text,bigint) OWNER TO ed_delivery_lab_owner;\nALTER FUNCTION ed_delivery_lab.revoke(bigint) OWNER TO ed_delivery_lab_owner;\nALTER FUNCTION ed_delivery_lab.resolve(bigint) OWNER TO ed_delivery_lab_owner;\nREVOKE ALL ON FUNCTION ed_delivery_lab.approve(text,bigint,text,bigint) FROM PUBLIC;
+ALTER FUNCTION ed_delivery_lab.approve(text,bigint,text,bigint) OWNER TO ed_delivery_lab_owner;
+ALTER FUNCTION ed_delivery_lab.revoke(bigint) OWNER TO ed_delivery_lab_owner;
+ALTER FUNCTION ed_delivery_lab.resolve(bigint) OWNER TO ed_delivery_lab_owner;
+REVOKE ALL ON FUNCTION ed_delivery_lab.approve(text,bigint,text,bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION ed_delivery_lab.revoke(bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION ed_delivery_lab.resolve(bigint) FROM PUBLIC;
+-- DO NOT grant these legacy RPCs to a shared pool. Individual-login lab only.
 GRANT EXECUTE ON FUNCTION ed_delivery_lab.approve(text,bigint,text,bigint) TO ed_delivery_lab_api;
 GRANT EXECUTE ON FUNCTION ed_delivery_lab.revoke(bigint) TO ed_delivery_lab_api;
 GRANT EXECUTE ON FUNCTION ed_delivery_lab.resolve(bigint) TO ed_delivery_lab_api;
