@@ -1965,8 +1965,16 @@ function edProductOriginsSave(productId,ids,expectedType=null){
   }
   return true
  }catch(e){
-  try{if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine()}
-  catch(readError){edDeliveryQuarantine()}
+  // A failed write can leave an uncertain local state. Restore the exact previous
+  // serialized value; quarantine if the rollback cannot be verified.
+  try{
+   const current=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+   if(current!==previous){
+    if(previous===null)localStorage.removeItem(ED_PRODUCT_ORIGINS_KEY);
+    else localStorage.setItem(ED_PRODUCT_ORIGINS_KEY,previous);
+   }
+   if(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==previous)edDeliveryQuarantine();
+  }catch(rollbackError){edDeliveryQuarantine()}
   alert('No se pudo confirmar la asociación local de almacenes.');return false
  }
 }
