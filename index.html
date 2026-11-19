@@ -1545,10 +1545,11 @@ function edDeliveryContextInvalidate(reason){
 }
 function edDeliveryQuoteSnapshot(){return {contextRevision:edDeliveryContextRevision(),status:'pending_verified_road_distance'}}
 function edDeliveryQuoteStillValid(snapshot){const current=edDeliveryContextRevision();return !edDeliveryIsQuarantined()&&current!==null&&!!snapshot&&snapshot.contextRevision!==null&&snapshot.contextRevision===current&&snapshot.status==='pending_verified_road_distance'}
-function edDeliveryPersistAndInvalidate(key,items,reason){
+function edDeliveryPersistAndInvalidate(key,items,reason,expectedPrevious){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return false}
  let previous;
  try{previous=localStorage.getItem(key)}catch(e){alert('No se pudo leer la configuración anterior.');return false}
+ if(arguments.length>=4&&previous!==expectedPrevious){alert('La configuración cambió antes del guardado. Vuelve a revisar.');return false}
  try{const serialized=JSON.stringify(items);localStorage.setItem(key,serialized);if(localStorage.getItem(key)!==serialized)throw new Error('Configuración no persistida')}
  catch(e){
   try{
@@ -1744,7 +1745,7 @@ function edDeliveryDestinationDelete(id){
  let same=false;
  try{same=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===ownSnapshot}catch(e){}
  if(!same){alert('El destino cambió durante la confirmación.');return false}
- if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items.filter(d=>d.id!==id),'destination_deleted'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items.filter(d=>d.id!==id),'destination_deleted',ownSnapshot))return false;
  adminTab('delivery');return true;
 }
 function edDeliveryDestinationSave(){
@@ -1765,7 +1766,7 @@ function edDeliveryDestinationSave(){
  if(id&&!existing){alert('El destino ya no existe.');return false}
  const item={id:existing?.id||'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng};
  if(existing)items.splice(items.indexOf(existing),1,item);else items.push(item);
- if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,existing?'destination_edited':'destination_added'))return false;
+ if(!(id?edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_edited',edDeliveryEditSnapshots.destination):edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_added')))return false;
  adminTab('delivery');return true;
 }
 
