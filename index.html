@@ -1533,7 +1533,7 @@ function edDeliveryPersistAndInvalidate(key,items,reason){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return false}
  let previous;
  try{previous=localStorage.getItem(key)}catch(e){alert('No se pudo leer la configuración anterior.');return false}
- try{localStorage.setItem(key,JSON.stringify(items))}
+ try{const serialized=JSON.stringify(items);localStorage.setItem(key,serialized);if(localStorage.getItem(key)!==serialized)throw new Error('Configuración no persistida')}
  catch(e){
   try{const current=localStorage.getItem(key);if(current!==previous)edDeliveryQuarantine()}
   catch(readError){edDeliveryQuarantine()}
