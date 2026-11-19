@@ -1,17 +1,18 @@
 -- NOT EXECUTED. DBA-only psql script. -v operation_id=synthetic-op-1 or synthetic-revoke-1
 -- Must run AFTER A and B finish; intended result is exactly one committed effect.
 \set ON_ERROR_STOP on
-DO $$
+SELECT set_config('ed_lab.operation', :'operation_id', false);
+DO $
 DECLARE v_count integer; v_consumed integer; v_effect integer;
 BEGIN
  SELECT count(*),count(*) FILTER (WHERE consumed_at IS NOT NULL)
  INTO v_count,v_consumed FROM ed_delivery_intent_lab.intents
- WHERE operation_id=:'operation_id';
+ WHERE operation_id=current_setting('ed_lab.operation');
  IF v_count<>1 OR v_consumed<>1 THEN RAISE EXCEPTION 'Intent count/consumption mismatch: %, %',v_count,v_consumed; END IF;
- IF :'operation_id'='synthetic-op-1' THEN
+ IF current_setting('ed_lab.operation')='synthetic-op-1' THEN
   SELECT count(*) INTO v_effect FROM ed_delivery_lab.approvals
   WHERE actor_id='synthetic-admin' AND operation_id='synthetic-op-1' AND revoked_at IS NULL;
- ELSIF :'operation_id'='synthetic-revoke-1' THEN
+ ELSIF current_setting('ed_lab.operation')='synthetic-revoke-1' THEN
   SELECT count(*) INTO v_effect FROM ed_delivery_lab.approvals
   WHERE actor_id='synthetic-admin' AND operation_id='synthetic-revoke-target' AND revoked_at IS NOT NULL;
  ELSE RAISE EXCEPTION 'Unknown synthetic operation'; END IF;
