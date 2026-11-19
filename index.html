@@ -1843,7 +1843,8 @@ function edDeliveryOriginsPanel(){
  '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+'</p>'+
  '<button type="button" class="secondary" aria-label="Editar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  (p.type==='proveedor'?'<button type="button" class="secondary" aria-label="Establecer almacén predeterminado '+esc(p.name)+'"'+lockAttribute+(p.active===false||!edDeliverySuppliersRead().some(x=>x.id===p.supplierId&&x.active!==false)?' disabled':'')+' onclick="edDeliveryOriginSetDefault('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.defaultForSupplier===true?'Predeterminado':'Hacer predeterminado')+'</button> ':'')+
- '<button type="button" class="secondary" aria-label="Cambiar estado del punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div>').join('');
+ '<button type="button" class="secondary" aria-label="Cambiar estado del punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> '+
+ '<button type="button" class="secondary" aria-label="Eliminar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginDelete('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Eliminar</button></div>').join('');
  return quarantineNotice+'<div class="panel"><h3 id="edDeliveryPanelTitle" tabindex="-1">Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+'<div><button type="button" class="secondary" aria-label="Editar proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary" aria-label="Cambiar estado del proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button></div></div>').join('')+'<fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><div class="field"><label for="edSupplierName">Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" '+lockAttribute+' onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></fieldset></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
  (rows||'<p class="note">Todavía no hay puntos de salida registrados.</p>')+
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><input type="hidden" id="edOriginId">'+
@@ -1903,6 +1904,19 @@ function edDeliveryOriginSetDefault(id){
  for(const p of items)if(p.type==='proveedor'&&p.supplierId===chosen.supplierId)p.defaultForSupplier=p.id===id;
  if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'default_warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus();return true}
  return false;
+}
+function edDeliveryOriginDelete(id){
+ if(edDeliveryIsQuarantined())return false;
+ const items=edDeliveryOriginsRead(),point=items.find(p=>p.id===id);
+ if(!point)return false;
+ const associations=edProductOriginsRead();
+ if(Object.values(associations).some(ids=>!Array.isArray(ids)||ids.includes(id))){
+  alert('No se puede eliminar: hay productos asociados o asociaciones que deben revisarse. Desactiva el almacén o reasigna los productos primero.');
+  return false;
+ }
+ if(!confirm('¿Eliminar el punto de salida "'+point.name+'"?'))return false;
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items.filter(p=>p.id!==id),'warehouse_deleted'))return false;
+ adminTab('delivery');return true;
 }
 function edDeliveryOriginToggle(id){
  const items=edDeliveryOriginsRead(),p=items.find(x=>x.id===id);
