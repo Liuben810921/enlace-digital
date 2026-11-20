@@ -794,3 +794,32 @@ function testQuarantineRequiresSynchronizedInventory(mode){
 for(const mode of ['matched','stale-shared','pending-save','stale-memory'])
  testQuarantineRequiresSynchronizedInventory(mode);
 console.log('PASS: 4 synchronized-inventory quarantine recovery cases');
+
+
+function testRollbackPreservesObservedConcurrentWrites(mode){
+ const store={k:'old'},writes=[];let quarantined=false,reads=0;
+ const ctx={
+  edDeliveryIsQuarantined:()=>quarantined,
+  edDeliveryQuarantine:()=>{quarantined=true},alert:()=>{},
+  localStorage:{
+   getItem:k=>{reads++;if(mode==='readback-concurrent'&&reads===2)store.k='external';return store[k]??null},
+   setItem:(k,v)=>{writes.push([k,v]);
+    if(mode==='write-throws'&&writes.length===1)throw Error('write');
+    if(mode==='rollback-throws'&&writes.length===2)throw Error('rollback');
+    store[k]=v;
+   },
+   removeItem:k=>{delete store[k]}
+  },
+  edDeliveryContextInvalidate:()=>{if(mode==='invalidate-concurrent')store.k='external';return null}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryPersistAndInvalidate'),ctx,{timeout:1000});
+ assert.equal(ctx.edDeliveryPersistAndInvalidate('k',['new'],'test','old'),false,mode+' failure');
+ const concurrent=mode.endsWith('concurrent');
+ assert.equal(store.k,concurrent?'external':mode==='rollback-throws'?'["new"]':'old',mode+' retained value');
+ assert.equal(quarantined,concurrent||mode==='rollback-throws',mode+' quarantine');
+ assert.equal(writes.length,concurrent||mode==='write-throws'?1:2,mode+' write count');
+}
+for(const mode of ['invalidate-concurrent','readback-concurrent','invalidate-ordinary','write-throws','rollback-throws'])
+ testRollbackPreservesObservedConcurrentWrites(mode);
+console.log('PASS: 5 rollback and observed-concurrent-write scenarios');
