@@ -1613,22 +1613,33 @@ function edDeliveryPersistAndInvalidate(key,items,reason,expectedPrevious){
  return false;
 }
 function edDeliverySupplierEdit(id){
- if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
-
- const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return;
+ if(edDeliveryIsQuarantined())return false;
+ const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);
+ if(!supplier)return false;
+ const field=document.getElementById('edSupplierEdit-'+id);
+ const input=document.getElementById('edSupplierEditName-'+id);
+ if(!field||!input)return false;
+ if(field.hidden){
+  try{field.dataset.snapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)??''}catch(e){alert('No se pudo verificar el proveedor.');return false}
+  input.value=supplier.name;field.hidden=false;input.focus();return true;
+ }
+ const clean=input.value.trim();
+ if(!clean){alert('Introduce el nombre del proveedor.');input.focus();return false}
+ if(items.some(p=>p.id!==id&&p.name.toLocaleLowerCase()===clean.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return false}
  let snapshot;
- try{snapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el proveedor.');return}
- const name=prompt('Nombre del proveedor',supplier.name);if(name===null)return;
- const clean=name.trim();if(!clean){alert('Introduce el nombre del proveedor.');return}
- if(items.some(p=>p.id!==id&&p.name.toLocaleLowerCase()===clean.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return}
- let unchanged=false;
- try{unchanged=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===snapshot}catch(e){}
- if(!unchanged){alert('El proveedor cambió durante la edición. Vuelve a revisar.');return}
+ try{snapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el proveedor.');return false}
+ if((snapshot??'')!==field.dataset.snapshot){alert('El proveedor cambió durante la edición. Vuelve a revisar.');return false}
+ if(clean===supplier.name){field.hidden=true;return true}
  supplier.name=clean;
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited',snapshot))adminTab('delivery')
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_edited',snapshot))return false;
+ adminTab('delivery');return true;
 }
-/* Cambio controlado de proveedor para almacenes sin dependencias de producto.
-   Los almacenes asociados requieren primero reasignar/desvincular productos. */
+function edDeliverySupplierCancelEdit(id){
+ const field=document.getElementById('edSupplierEdit-'+id);
+ if(!field)return false;
+ field.hidden=true;delete field.dataset.snapshot;return true;
+}
+
 function edDeliverySupplierTransferWarehouses(sourceId){
  if(edDeliveryIsQuarantined())return false;
  const suppliers=edDeliverySuppliersRead(),source=suppliers.find(s=>s.id===sourceId);
@@ -2062,7 +2073,7 @@ function edDeliveryOriginsPanel(){
  (p.type==='proveedor'?'<button type="button" class="secondary" aria-label="Establecer almacén predeterminado '+esc(p.name)+'"'+lockAttribute+(p.active===false||!edDeliverySuppliersRead().some(x=>x.id===p.supplierId&&x.active!==false)?' disabled':'')+' onclick="edDeliveryOriginSetDefault('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.defaultForSupplier===true?'Predeterminado':'Hacer predeterminado')+'</button> ':'')+
  '<button type="button" class="secondary" aria-label="Cambiar estado del punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> '+
  '<button type="button" class="secondary" aria-label="Eliminar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginDelete('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Eliminar</button></div>').join('');
- return quarantineNotice+'<div class="panel"><h3 id="edDeliveryPanelTitle" tabindex="-1">Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+' · '+supplierWarehouseCount(p.id)+' almacén(es) · '+supplierProductCount(p.id)+' producto(s) asociado(s)<div><button type="button" class="secondary" aria-label="Editar proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <button type="button" class="secondary" aria-label="Cambiar estado del proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> <details style="margin:8px 0"><summary>Transferir almacenes</summary><div class="field"><label for="edTransferSupplier-'+esc(p.id)+'">Proveedor de destino</label><select id="edTransferSupplier-'+esc(p.id)+'"><option value="">Selecciona proveedor</option>'+edDeliverySuppliersRead().filter(s=>s.id!==p.id&&s.active!==false).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></div><fieldset id="edTransferWarehouses-'+esc(p.id)+'"'+(locked?' disabled':'')+'><legend>Almacenes a transferir</legend>'+items.filter(o=>o.type==='proveedor'&&o.supplierId===p.id).map(o=>'<label style="display:block;padding:5px"><input type="checkbox" value="'+esc(o.id)+'" checked> '+esc(o.name)+' ('+assignedCount(o.id)+' productos)</label>').join('')+'</fieldset><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliverySupplierTransferWarehouses('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Confirmar transferencia</button></details> <button type="button" class="secondary" aria-label="Eliminar proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierDelete('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Eliminar</button></div></div>').join('')+'<fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><div class="field"><label for="edSupplierName">Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" '+lockAttribute+' onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></fieldset></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
+ return quarantineNotice+'<div class="panel"><h3 id="edDeliveryPanelTitle" tabindex="-1">Proveedores</h3><p class="note">Registra cada proveedor una sola vez; sus almacenes quedarán asociados a él. Configuración local de pruebas.</p>'+edDeliverySuppliersRead().map(p=>'<div class="panel" style="padding:10px;margin:8px 0"><strong>'+esc(p.name)+'</strong> · '+(p.active===false?'Inactivo':'Activo')+' · '+supplierWarehouseCount(p.id)+' almacén(es) · '+supplierProductCount(p.id)+' producto(s) asociado(s)<div><button type="button" class="secondary" aria-label="Editar proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Editar</button> <fieldset id="edSupplierEdit-'+esc(p.id)+'" hidden style="margin:8px 0"><label for="edSupplierEditName-'+esc(p.id)+'">Nombre del proveedor</label><input id="edSupplierEditName-'+esc(p.id)+'" maxlength="120" value="'+esc(p.name)+'"><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliverySupplierEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Guardar nombre</button> <button type="button" class="secondary" onclick="edDeliverySupplierCancelEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Cancelar</button></fieldset> <button type="button" class="secondary" aria-label="Cambiar estado del proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierToggle('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> <details style="margin:8px 0"><summary>Transferir almacenes</summary><div class="field"><label for="edTransferSupplier-'+esc(p.id)+'">Proveedor de destino</label><select id="edTransferSupplier-'+esc(p.id)+'"><option value="">Selecciona proveedor</option>'+edDeliverySuppliersRead().filter(s=>s.id!==p.id&&s.active!==false).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('')+'</select></div><fieldset id="edTransferWarehouses-'+esc(p.id)+'"'+(locked?' disabled':'')+'><legend>Almacenes a transferir</legend>'+items.filter(o=>o.type==='proveedor'&&o.supplierId===p.id).map(o=>'<label style="display:block;padding:5px"><input type="checkbox" value="'+esc(o.id)+'" checked> '+esc(o.name)+' ('+assignedCount(o.id)+' productos)</label>').join('')+'</fieldset><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliverySupplierTransferWarehouses('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Confirmar transferencia</button></details> <button type="button" class="secondary" aria-label="Eliminar proveedor '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliverySupplierDelete('+JSON.stringify(p.id).replace(/\"/g,'&quot;')+')">Eliminar</button></div></div>').join('')+'<fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><div class="field"><label for="edSupplierName">Nuevo proveedor</label><input id="edSupplierName" maxlength="120" placeholder="Nombre o alias"></div><button type="button" class="secondary" '+lockAttribute+' onclick="edDeliverySupplierAdd()">+ Registrar proveedor</button></fieldset></div><div class="panel"><h3>Puntos de salida</h3><p class="note">Almacenes propios y proveedores. Datos de demostración guardados solamente en este navegador. No se usan aún para cotizar pedidos.</p>'+
  (rows||'<p class="note">Todavía no hay puntos de salida registrados.</p>')+
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><input type="hidden" id="edOriginId">'+
  '<div class="field"><label for="edOriginName">Nombre del punto</label><input id="edOriginName" maxlength="120" placeholder="Ej.: Almacén principal"></div>'+
