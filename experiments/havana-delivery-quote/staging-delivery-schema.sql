@@ -131,4 +131,36 @@ create policy ed_operations_admin on ed_delivery_private.operations
  with check (actor_id=(select auth.uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
 alter function public.ed_delivery_staging_read() owner to ed_delivery_staging_rpc;
 alter function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) owner to ed_delivery_staging_rpc;
+-- Explicit soft deactivation avoids breaking linked warehouses and historical drafts.
+create or replace function public.ed_delivery_staging_deactivate(p_kind text,p_id text,p_expected_revision bigint,p_operation_id uuid)
+returns jsonb language plpgsql security definer set search_path = ''
+as $
+declare v_actor uuid:=auth.uid(); v_entity ed_delivery_private.entities%rowtype; v_previous ed_delivery_private.operations%rowtype; v_args jsonb; v_result jsonb;
+begin
+ if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
+  raise exception 'not authorized' using errcode='42501';
+ end if;
+ if p_kind not in ('supplier','warehouse','destination') or p_id is null or p_expected_revision is null or p_expected_revision<1 or p_operation_id is null then
+  raise exception 'invalid deactivation' using errcode='22023';
+ end if;
+ v_args:=jsonb_build_object('action','deactivate','kind',p_kind,'id',p_id,'expected_revision',p_expected_revision);
+ perform pg_advisory_xact_lock(hashtextextended(p_operation_id::text,0));
+ select * into v_previous from ed_delivery_private.operations where operation_id=p_operation_id;
+ if found then
+  if v_previous.actor_id<>v_actor or v_previous.payload<>v_args then raise exception 'idempotency conflict' using errcode='23505'; end if;
+  return v_previous.response;
+ end if;
+ perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
+ select * into v_entity from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
+ if not found or v_entity.revision<>p_expected_revision then raise exception 'revision conflict' using errcode='40001'; end if;
+ update ed_delivery_private.entities set payload=jsonb_set(payload,'{active}','false'::jsonb,true),revision=revision+1,updated_at=now()
+ where kind=p_kind and id=p_id;
+ v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',p_expected_revision+1,'active',false);
+ insert into ed_delivery_private.operations(operation_id,actor_id,payload,response) values(p_operation_id,v_actor,v_args,v_result);
+ return v_result;
+end $;
+revoke all on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) from public,anon,authenticated;
+grant execute on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) to authenticated;
+alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owner to ed_delivery_staging_rpc;
+
 commit;
