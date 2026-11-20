@@ -199,15 +199,15 @@ function init(){
  wrap('edDeliveryDestinationSave',destination);
  wrap('edProductOriginsSave',association);
  wrap('edDeliverySaveShipmentDraft',draft);
- wrap(bulkSupplierActive);
- wrap(bulkWarehouseActive);
- wrap(bulkMunicipality);
- wrap(setDefault);
- wrap(bulkTransferSupplier);
+ wrap('edDeliverySuppliersSetSelectedActive',bulkSupplierActive);
+ wrap('edDeliveryOriginsSetSelectedActive',bulkWarehouseActive);
+ wrap('edDeliveryOriginsMoveSelected',bulkMunicipality);
+ wrap('edDeliveryOriginSetDefault',setDefault);
+ wrap('edDeliveryOriginsTransferSelectedSupplier',bulkTransferSupplier);
  // Prevent unsupported local-only mutations from being mistaken for remote saves.
  const unsupported=['edDeliveryPersistAndInvalidate',
  'edDeliverySuppliersDeleteSelected','edDeliverySupplierTransferWarehouses',
- 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsMoveSelected','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
+ 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
  for(const name of unsupported){
   if(typeof window[name]!=='function')continue;
   const original=window[name];
