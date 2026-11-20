@@ -24,7 +24,7 @@ function create({publishableKey,getAccessToken}={}){
     const kind=KINDS[x.collection];
     if(!kind||typeof x.id!=='string'||!x.id||!Number.isSafeInteger(x.expectedRevision)||x.expectedRevision<0||!x.payload||typeof x.payload!=='object'||Array.isArray(x.payload)||!Array.isArray(x.links)||typeof x.operationId!=='string')throw Error('Cambio de lote inválido');
     return {kind,id:x.id,payload:x.payload,expected_revision:x.expectedRevision,links:x.links,operation_id:x.operationId};
-   }).sort((a,b)=>(a.kind+':'+a.id).localeCompare(b.kind+':'+b.id,'en'));
+   }).sort((a,b)=>{const x=a.kind+':'+a.id,y=b.kind+':'+b.id;return x<y?-1:x>y?1:0});
    if(items.some((x,i)=>i>0&&x.kind===items[i-1].kind&&x.id===items[i-1].id))throw Error('Entidad duplicada en lote');
    return rpc('ed_delivery_staging_batch',{p_items:items});
   },
