@@ -3845,13 +3845,13 @@ function edDeliveryQuoteDemo(synthetic){
  if(candidates.some(d=>!Number.isFinite(d.km)))return pending('Distancia ficticia incompleta.');
  candidates.sort((a,b)=>b.km-a.km||String(a.id).localeCompare(String(b.id)));
  const farthest=candidates[0];
- const fee=Math.ceil(Math.max(3,farthest.km)*rateCupPerKm);
+ const fee=Math.max(600,Math.ceil(Math.max(3,farthest.km)*rateCupPerKm));
  if(!Number.isSafeInteger(fee))return pending('Importe de simulación fuera de rango.');
  const lines=basket.groups.map(g=>g.productId+': '+g.origins.map(o=>o.name).join(', '));
  let unchanged=false;
  try{unchanged=edDeliveryContextRevision()===revision&&[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'].every((k,i)=>localStorage.getItem(k)===snapshot[i])}catch(e){}
  if(!unchanged)return pending('Los datos cambiaron durante la simulación; vuelve a calcular.');
- result.textContent='SIMULACIÓN FICTICIA MULTIPRODUCTO · '+basket.groups.length+' producto(s) · '+basket.origins.length+' almacén(es) · '+lines.join(' | ')+' · Almacén más lejano: '+farthest.name+' ('+farthest.km+' km ficticios) · TARIFA ÚNICA DE EJEMPLO: '+fee+' CUP. No incluye recargos especiales por producto. NO ES TARIFA REAL NI AUTORIZA PEDIDOS.';
+ result.textContent='SIMULACIÓN FICTICIA MULTIPRODUCTO · '+basket.groups.length+' producto(s) · '+basket.origins.length+' almacén(es) · '+lines.join(' | ')+' · Almacén más lejano: '+farthest.name+' ('+farthest.km+' km ficticios) · Distancia mínima 3 km · tarifa mínima 600 CUP · TARIFA ÚNICA DE EJEMPLO: '+fee+' CUP. No incluye recargos especiales por producto. NO ES TARIFA REAL NI AUTORIZA PEDIDOS.';
  return true;
 }
 
