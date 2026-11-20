@@ -3638,9 +3638,13 @@ function edDeliveryReassignArchivedDraftDestination(){
  if(!item||item.version!==1||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length||new Set(item.productIds).size!==item.productIds.length)return pending('Selecciona una versión válida.');
  const basket=edDeliveryQuoteDemoBasket(item.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!basket)return pending('Los productos de la versión no tienen almacenes compatibles. Reasigna primero sus dependencias.');
+ let initialSnapshot;
+ try{initialSnapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias iniciales.')}
+ if(initialSnapshot.revision===null)return pending('Revisión inicial inválida.');
  if(!confirm('Cambiar el destino de «'+item.name+'» a '+destination.name+' y actualizar sus almacenes? La versión seguirá PENDIENTE.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
+ if(snapshot.revision===null||Object.keys(initialSnapshot).some(k=>initialSnapshot[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación.');
  const currentBasket=edDeliveryQuoteDemoBasket(item.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!currentBasket||currentBasket.origins.map(o=>o.id).join('|')!==basket.origins.map(o=>o.id).join('|'))return pending('Los almacenes cambiaron durante la operación.');
  try{
@@ -3667,9 +3671,13 @@ function edDeliveryReplaceArchivedDraftProducts(){
  if(!item||item.version!==1||item.status!=='PENDIENTE'||!edDeliveryDestinationsRead().some(d=>d.id===item.destinationId))return pending('Versión o destino no disponible.');
  const basket=edDeliveryQuoteDemoBasket(productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!basket)return pending('Algún producto carece de almacenes válidos.');
+ let initialSnapshot;
+ try{initialSnapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias iniciales.')}
+ if(initialSnapshot.revision===null)return pending('Revisión inicial inválida.');
  if(!confirm('Sustituir productos de «'+item.name+'» por '+productIds.length+' seleccionados? Se conserva su destino y se actualizan almacenes.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
+ if(snapshot.revision===null||Object.keys(initialSnapshot).some(k=>initialSnapshot[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación.');
  const fresh=edDeliveryQuoteDemoBasket(productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!fresh||fresh.origins.map(o=>o.id).join('|')!==basket.origins.map(o=>o.id).join('|'))return pending('Los almacenes cambiaron durante la operación.');
  try{
