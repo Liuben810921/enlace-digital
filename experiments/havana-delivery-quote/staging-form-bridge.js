@@ -131,8 +131,8 @@ async function batch(changes){
  busy=true;
  try{
   const result=await api.batch(changes.map(c=>{
-   const old=get(c.kind,c.id);if(!old)throw Error('Entidad inexistente: '+c.id);
-   return {collection:map[c.kind],id:c.id,payload:c.payload,expectedRevision:old.revision,
+   const old=get(c.kind,c.id);if(!old&&c.create!==true)throw Error('Entidad inexistente: '+c.id);
+   return {collection:map[c.kind],id:c.id,payload:c.payload,expectedRevision:old?.revision??0,
     links:c.links??links.filter(l=>l.source_kind===c.kind&&l.source_id===c.id).map(l=>({target_kind:l.target_kind,target_id:l.target_id})),operationId:crypto.randomUUID()};
   }));
   try{await refresh()}catch(e){tell('Lote confirmado por staging; actualización de pantalla pendiente');return true}
@@ -181,6 +181,29 @@ function bulkTransferSupplier(){
  if(changed.some(id=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===id))){tell('Reasigna productos asociados antes de transferir almacenes');return false}
  return batch(changed.map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,supplierId:targetId,defaultForSupplier:false},links:[{target_kind:'supplier',target_id:targetId}]})));
 }
+function duplicateSuppliers(){
+ const ids=selected('edSupplierBulkCheck','edSupplierBulkSelection');
+ if(!ids.length||ids.some(id=>!get('supplier',id))){tell('Selección de proveedores inválida');return false}
+ if(!confirm('Crear '+ids.length+' proveedores independientes e inactivos en staging?'))return false;
+ return batch(ids.map(id=>{const p=get('supplier',id).payload;return {kind:'supplier',id:'supplier-copy-'+crypto.randomUUID(),create:true,payload:{name:p.name+' (copia)',active:false},links:[]}}));
+}
+function duplicateWarehouses(){
+ const ids=selected('edOriginBulkCheck','edOriginBulkSelection');
+ if(!ids.length||ids.some(id=>!get('warehouse',id))){tell('Selección de almacenes inválida');return false}
+ if(!confirm('Duplicar '+ids.length+' almacenes inactivos, sin coordenadas ni asociaciones?'))return false;
+ return batch(ids.map(id=>{const p=get('warehouse',id).payload;return {kind:'warehouse',id:'origin-copy-'+crypto.randomUUID(),create:true,payload:{...p,name:p.name+' (copia)',active:false,defaultForSupplier:false,lat:null,lng:null},links:p.supplierId?[{target_kind:'supplier',target_id:p.supplierId}]:[]}}));
+}
+function transferSupplierWarehouses(sourceId){
+ const ids=[...(document.getElementById('edTransferWarehouses-'+sourceId)?.querySelectorAll('input[type="checkbox"]:checked')||[])].map(x=>x.value);
+ const targetId=field('edTransferSupplier-'+sourceId);
+ if(!ids.length||ids.length!==new Set(ids).size||!get('supplier',targetId)||get('supplier',targetId).payload.active===false||sourceId===targetId){tell('Selección o proveedor destino inválidos');return false}
+ if(ids.some(id=>!get('warehouse',id)||get('warehouse',id).payload.supplierId!==sourceId)){tell('Almacenes de origen inválidos');return false}
+ if(ids.some(id=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===id))){tell('Existen asociaciones: reasigna los productos antes de transferir');return false}
+ const makeDefault=document.getElementById('edTransferMakeDefault-'+sourceId)?.checked===true;
+ const changes=ids.map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,supplierId:targetId,defaultForSupplier:makeDefault&&id===ids[0]},links:[{target_kind:'supplier',target_id:targetId}]}));
+ if(makeDefault)for(const w of rows('warehouse'))if(w.payload.supplierId===targetId&&w.payload.defaultForSupplier===true)changes.push({kind:'warehouse',id:w.id,payload:{...w.payload,defaultForSupplier:false}});
+ return batch(changes);
+}
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
@@ -204,10 +227,13 @@ function init(){
  wrap('edDeliveryOriginsMoveSelected',bulkMunicipality);
  wrap('edDeliveryOriginSetDefault',setDefault);
  wrap('edDeliveryOriginsTransferSelectedSupplier',bulkTransferSupplier);
+ wrap('edDeliverySuppliersDuplicateSelected',duplicateSuppliers);
+ wrap('edDeliveryOriginsDuplicateSelected',duplicateWarehouses);
+ wrap('edDeliverySupplierTransferWarehouses',transferSupplierWarehouses);
  // Prevent unsupported local-only mutations from being mistaken for remote saves.
  const unsupported=['edDeliveryPersistAndInvalidate',
- 'edDeliverySuppliersDeleteSelected','edDeliverySupplierTransferWarehouses',
- 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
+ 'edDeliverySuppliersDeleteSelected',
+ 'edDeliveryOriginsDeleteSelected'];
  for(const name of unsupported){
   if(typeof window[name]!=='function')continue;
   const original=window[name];
