@@ -104,6 +104,12 @@ begin
  if p_kind='product_origin' and jsonb_typeof(p_payload->'warehouseIds') is distinct from 'array' then
   raise exception 'association warehouses must be an array' using errcode='23514';
  end if;
+ -- IDs must be nonempty JSON strings, not numbers, booleans or nulls
+ -- that jsonb_array_elements_text would silently coerce.
+ if p_kind='product_origin' and exists(
+  select 1 from jsonb_array_elements(p_payload->'warehouseIds') x
+  where jsonb_typeof(x.value) is distinct from 'string' or nullif(x.value#>>'{}','') is null
+ ) then raise exception 'invalid warehouse association ID' using errcode='23514'; end if;
  if p_kind='product_origin' and (
    jsonb_array_length(p_payload->'warehouseIds')<>jsonb_array_length(p_links) or
    exists(select 1 from jsonb_array_elements(p_links) l where l->>'target_kind' is distinct from 'warehouse') or
@@ -115,6 +121,10 @@ begin
   and (select count(distinct value) from jsonb_array_elements_text(p_payload->'productIds'))
        <>jsonb_array_length(p_payload->'productIds')
  then raise exception 'duplicate draft products' using errcode='23514'; end if;
+ if p_kind='shipment_draft' and jsonb_typeof(p_payload->'productIds')='array'
+  and exists(select 1 from jsonb_array_elements(p_payload->'productIds') x
+   where jsonb_typeof(x.value) is distinct from 'string' or nullif(x.value#>>'{}','') is null)
+ then raise exception 'invalid draft product ID' using errcode='23514'; end if;
  if p_kind='shipment_draft' then
   if jsonb_typeof(p_payload->'productIds') is distinct from 'array' then
    raise exception 'draft products must be an array' using errcode='23514';
