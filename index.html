@@ -2151,9 +2151,15 @@ function edDeliveryReassignWarehouse(sourceId){
   if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot)throw Error('Inventario compartido no verificado');
   inventoryVersion=edInventorySnapshot;
  }catch(e){alert('No se puede reasignar: '+e.message);return false}
- if(!confirm('Reasignar '+affected.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
+ const productSelection=prompt('Productos a reasignar (IDs separados por coma; vacío = todos):\\n'+affected.map(([key])=>key).join(', '),'');
+ if(productSelection===null)return false;
+ const chosenKeys=productSelection.trim()?productSelection.split(',').map(key=>key.trim()):affected.map(([key])=>key);
+ const validKeys=new Set(affected.map(([key])=>key));
+ if(!chosenKeys.length||new Set(chosenKeys).size!==chosenKeys.length||chosenKeys.some(key=>!validKeys.has(key))){alert('Selecciona IDs únicos de productos asociados a este almacén.');return false}
+ const chosenSet=new Set(chosenKeys);
+ if(!confirm('Reasignar '+chosenKeys.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
  const updated={...map};
- for(const [key,ids] of affected){
+ for(const [key,ids] of affected.filter(([key])=>chosenSet.has(key))){
   const next=[...new Set(ids.map(id=>id===sourceId?targetId:id))];
   const chosen=origins.filter(o=>next.includes(o.id));
   if(chosen.length!==next.length||chosen.some(o=>o.type!==source.type||o.active===false||source.type==='proveedor'&&o.supplierId!==source.supplierId)){
