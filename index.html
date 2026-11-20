@@ -1584,6 +1584,7 @@ function edDeliveryQuarantineRecoverFromPanel(){
 function edDeliveryRecoverQuarantine(){
  if(!edDeliveryIsQuarantined())return true;
  try{
+  const observed={origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),inventory:localStorage.getItem('enlace_demo_v1')};
   const origins=JSON.parse(localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)||'[]');
   const suppliers=JSON.parse(localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)||'[]');
   const associations=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');
@@ -1606,6 +1607,12 @@ function edDeliveryRecoverQuarantine(){
    return origins.some(p=>warehouseIds.includes(p.id)&&p.type!==product.origen_producto);
   }))return false;
   if(edDeliveryContextInvalidate('quarantine_recovery')===null)return false;
+  if(localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)!==observed.origins||
+   localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)!==observed.suppliers||
+   localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)!==observed.associations||
+   localStorage.getItem('enlace_demo_v1')!==observed.inventory||
+   edInventoryPendingSaves>0||
+   (Object.keys(associations).length&&JSON.stringify(state.products)!==edInventorySnapshot))return false;
   localStorage.removeItem(ED_DELIVERY_QUARANTINE_KEY);
   if(localStorage.getItem(ED_DELIVERY_QUARANTINE_KEY)!==null)return false;
   edDeliveryQuarantinedInSession=false;
