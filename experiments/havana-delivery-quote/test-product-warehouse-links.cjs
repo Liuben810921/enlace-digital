@@ -42,3 +42,32 @@ mutateDuringBasket=true;
 assert.equal(preparationContext.edDeliveryPrepareShipment(),false);
 assert.match(output.textContent,/dependencias cambiaron/);
 console.log('PASS: 2 focused shipment preparation cases (normal and changed dependencies)');
+
+
+const reconcileFrom=html.indexOf('function edDeliveryReconcileShipmentDraft(){');
+const reconcileTo=html.indexOf('function edDeliveryDeleteShipmentDraft(){',reconcileFrom);
+assert(reconcileFrom>=0&&reconcileTo>reconcileFrom,'Missing draft reconciliation');
+function testReconcile(changeDuringConfirmation){
+ const draft={version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'d1',warehouseIds:['old']};
+ const store={draft:JSON.stringify(draft),inventory:'v1',associations:'v1',origins:'v1',suppliers:'v1',destinations:'v1'};
+ const output={textContent:''},products={options:[{value:'p1',selected:false}]},destinations={options:[{value:'d1'}],value:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoProduct'?products:id==='edQuoteDemoDestination'?destinations:null},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_KEY:'draft',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',ED_PRODUCT_ORIGINS_KEY:'associations',
+  edDeliveryContextRevision:()=>1,edDeliveryIsQuarantined:()=>false,edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'new'}]}),
+  confirm:()=>{if(changeDuringConfirmation)store.origins='v2';return true},
+  edQuoteDemoSelectionRemember:()=>{}
+ };
+ vm.createContext(ctx);vm.runInContext(html.slice(reconcileFrom,reconcileTo),ctx,{timeout:1000});
+ const result=ctx.edDeliveryReconcileShipmentDraft();
+ return {result,stored:JSON.parse(store.draft).warehouseIds[0],message:output.textContent};
+}
+const normalReconcile=testReconcile(false),conflictedReconcile=testReconcile(true);
+assert.equal(normalReconcile.result,true);
+assert.equal(normalReconcile.stored,'new');
+assert.equal(conflictedReconcile.result,false);
+assert.equal(conflictedReconcile.stored,'old');
+assert.match(conflictedReconcile.message,/dependencias cambiaron/);
+console.log('PASS: 2 focused reconciliation cases (normal and changed during confirmation)');
