@@ -2184,6 +2184,29 @@ function edDeliveryDestinationsClearSelectedCoordinates(){
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,updated,'destinations_bulk_coordinates_cleared',snapshot))return false;
  adminTab('delivery');return true;
 }
+function edDeliveryDestinationsDuplicateSelected(){
+ if(edDeliveryIsQuarantined())return false;
+ const panel=document.getElementById('edDestinationBulkSelection');
+ if(!panel||panel.disabled)return false;
+ const ids=[...panel.querySelectorAll('.edDestinationBulkCheck:checked')].map(el=>el.value);
+ if(!ids.length||new Set(ids).size!==ids.length){alert('Selecciona destinos válidos para duplicar.');return false}
+ let snapshot,items;
+ try{snapshot=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY);items=edDeliveryDestinationsRead()}catch(e){alert('No se pudieron verificar los destinos.');return false}
+ const known=new Set(items.map(d=>d.id));
+ if(ids.some(id=>!known.has(id))){alert('Hay destinos seleccionados que ya no existen.');return false}
+ const selected=items.filter(d=>ids.includes(d.id));
+ if(!confirm('Crear '+selected.length+' destino(s) independientes a partir de los seleccionados? Se conservarán municipio, dirección y coordenadas.'))return false;
+ try{if(localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)!==snapshot){alert('Los destinos cambiaron durante la confirmación.');return false}}catch(e){return false}
+ const existingIds=new Set(items.map(d=>d.id));
+ const copies=selected.map(d=>{
+  let id;
+  do{id='destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,12)}while(existingIds.has(id));
+  existingIds.add(id);
+  return {...d,id,name:d.name+' (copia)'};
+ });
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,[...items,...copies],'destinations_bulk_duplicated',snapshot))return false;
+ adminTab('delivery');return true;
+}
 function edDeliveryDestinationsDeleteSelected(){
  if(edDeliveryIsQuarantined())return false;
  const panel=document.getElementById('edDestinationBulkSelection');
@@ -2215,7 +2238,7 @@ function edDeliveryLocationPreview(){
  svg+='</svg>';
  const municipalitySummary=[...new Set(points.map(p=>String(p.municipality||'Sin municipio').trim()||'Sin municipio'))].sort((a,b)=>a.localeCompare(b,'es')).map(m=>{const subset=points.filter(p=>(String(p.municipality||'Sin municipio').trim()||'Sin municipio')===m);return '<li>'+esc(m)+': '+subset.filter(p=>p.kind==='Almacén').length+' almacén(es), '+subset.filter(p=>p.kind==='Destino').length+' destino(s), '+subset.filter(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)).length+' sin coordenadas</li>'}).join('');
  const rows=points.map(p=>'<p>'+(p.kind==='Destino'?'<label><input type="checkbox" class="edDestinationBulkCheck" value="'+esc(p.id)+'"'+(edDeliveryIsQuarantined()?' disabled':'')+'> Seleccionar</label> ':'')+'<strong>'+esc(p.kind)+' · '+esc(p.name)+'</strong> — '+esc(p.municipality)+'<span class="note"> · '+esc(p.address)+' · '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'Con coordenadas':'Sin coordenadas')+'</span>'+(p.kind==='Destino'?'<span> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationEdit(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Editar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDuplicate(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Duplicar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDelete(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar</button></span>':'')+'</p>').join('');
- return '<div class="panel"><h3>Ubicaciones de referencia</h3><details><summary>Resumen por municipio ('+points.length+' ubicaciones)</summary><ul>'+municipalitySummary+'</ul></details><p class="note">Esquema local, no mapa de calles. No calcula rutas ni distancias viales. Turquesa: almacenes; ámbar: destinos. Las direcciones manuales se conservan.</p>'+svg+(edDeliveryDestinationsRead().length?'<fieldset id="edDestinationBulkSelection"'+(edDeliveryIsQuarantined()?' disabled':'')+'><legend>Operaciones masivas de destinos de referencia</legend><button type="button" class="secondary" onclick="edDeliveryDestinationsSelectionSet(true)">Seleccionar todos los destinos</button> <button type="button" class="secondary" onclick="edDeliveryDestinationsSelectionSet(false)">Deseleccionar destinos</button>'+rows+'<div class="field"><label for="edDestinationBulkMunicipality">Cambiar municipio de los destinos seleccionados</label><select id="edDestinationBulkMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select> <button type="button" class="secondary" onclick="edDeliveryDestinationsMoveSelected()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Actualizar municipio</button></div><button type="button" class="secondary" onclick="edDeliveryDestinationsDeleteSelected()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar destinos seleccionados</button> <button type="button" class="secondary" onclick="edDeliveryDestinationsClearSelectedCoordinates()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Quitar coordenadas de seleccionados</button></fieldset>':rows)+
+ return '<div class="panel"><h3>Ubicaciones de referencia</h3><details><summary>Resumen por municipio ('+points.length+' ubicaciones)</summary><ul>'+municipalitySummary+'</ul></details><p class="note">Esquema local, no mapa de calles. No calcula rutas ni distancias viales. Turquesa: almacenes; ámbar: destinos. Las direcciones manuales se conservan.</p>'+svg+(edDeliveryDestinationsRead().length?'<fieldset id="edDestinationBulkSelection"'+(edDeliveryIsQuarantined()?' disabled':'')+'><legend>Operaciones masivas de destinos de referencia</legend><button type="button" class="secondary" onclick="edDeliveryDestinationsSelectionSet(true)">Seleccionar todos los destinos</button> <button type="button" class="secondary" onclick="edDeliveryDestinationsSelectionSet(false)">Deseleccionar destinos</button>'+rows+'<div class="field"><label for="edDestinationBulkMunicipality">Cambiar municipio de los destinos seleccionados</label><select id="edDestinationBulkMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select> <button type="button" class="secondary" onclick="edDeliveryDestinationsMoveSelected()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Actualizar municipio</button></div><button type="button" class="secondary" onclick="edDeliveryDestinationsDuplicateSelected()">Duplicar destinos seleccionados</button> <button type="button" class="secondary" onclick="edDeliveryDestinationsDeleteSelected()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar destinos seleccionados</button> <button type="button" class="secondary" onclick="edDeliveryDestinationsClearSelectedCoordinates()"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Quitar coordenadas de seleccionados</button></fieldset>':rows)+
  '<h4 id="edDestinationFormTitle">Nuevo destino de referencia (La Habana)</h4><input id="edDestinationId" type="hidden"><div class="field"><label>Nombre</label><input id="edDestinationName"></div>'+
  '<div class="field"><label>Municipio</label><select id="edDestinationMunicipality"><option value="">Seleccionar</option>'+municipios.map(m=>'<option>'+esc(m)+'</option>').join('')+'</select></div>'+
  '<div class="field"><label>Dirección o referencia manual</label><textarea id="edDestinationAddress"></textarea></div>'+
