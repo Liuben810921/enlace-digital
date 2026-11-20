@@ -81,6 +81,12 @@ begin
   raise exception 'revision conflict' using errcode='40001';
  end if;
  -- Refuse inconsistent payload/link pairs; do not trust browser validation.
+ -- A malformed default flag must not bypass the single-default invariant.
+ -- The bridge sends JSON booleans, not strings or arbitrary values.
+ if p_kind='warehouse' and (
+   jsonb_typeof(p_payload->'defaultForSupplier') is distinct from 'boolean'
+   or jsonb_typeof(p_payload->'active') is distinct from 'boolean'
+ ) then raise exception 'warehouse flags must be booleans' using errcode='23514'; end if;
  if p_kind='warehouse' and (
    (p_payload->>'type'='proveedor' and
      (nullif(p_payload->>'supplierId','') is null or jsonb_array_length(p_links)<>1 or
