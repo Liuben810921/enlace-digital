@@ -2278,21 +2278,28 @@ function edDeliveryOriginToggle(id){
  const items=edDeliveryOriginsRead(),p=items.find(x=>x.id===id);
  if(!p)return false;
  if(p.active!==false){
-  const associations=edProductOriginsRead();
-  if(Object.values(associations).some(ids=>!Array.isArray(ids))){
-   alert('Hay asociaciones que requieren revisión. No se puede desactivar el almacén hasta resolverlas.');return false;
+  let raw,associations;
+  try{
+   raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+   associations=JSON.parse(raw===null?'{}':raw);
+  }catch(e){alert('No se pudieron verificar las asociaciones del almacén.');return false}
+  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(ids=>!Array.isArray(ids)||ids.some(value=>typeof value!=='string'))){
+   alert('Hay asociaciones inválidas. No se puede desactivar el almacén.');return false;
   }
   const affected=Object.values(associations).filter(ids=>ids.includes(id)).length;
-  if(affected&&!confirm('Este almacén tiene '+affected+' producto(s) asociado(s). Al desactivarlo dejará de estar disponible para esos productos. ¿Continuar?'))return false;
+  if(affected){
+   alert('Este almacén tiene '+affected+' producto(s) asociado(s). Reasigna o desvincula esos productos antes de desactivarlo.');
+   return false;
+  }
+  let same=false;
+  try{same=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===raw}catch(e){}
+  if(!same){alert('Las asociaciones cambiaron. Revisa antes de desactivar.');return false}
  }
  p.active=p.active===false;
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_status'))return false;
  adminTab('delivery');return true;
 }
 
-
-/* Local-only product-to-origin assignments. Never included in Supabase inventory payload. */
-const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 function edProductOriginsRead(){try{const v=JSON.parse(localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(e){return {}}}
 function edProductOriginsSave(productId,ids,expectedType=null){
  if(edDeliveryIsQuarantined()){alert('Asociaciones bloqueadas: revisa los almacenes y confirma la recuperación en Administración de entregas.');return false}
