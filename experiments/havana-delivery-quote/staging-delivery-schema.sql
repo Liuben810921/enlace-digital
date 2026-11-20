@@ -132,7 +132,28 @@ begin
   insert into ed_delivery_private.links(source_kind,source_id,target_kind,target_id)
   values(p_kind,p_id,v_target_kind,v_target_id);
  end loop;
- v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',v_revision);
+ if p_kind='product_origin' and (
+   exists(
+    select 1 from ed_delivery_private.links l
+    join ed_delivery_private.entities w on w.kind='warehouse' and w.id=l.target_id
+    where l.source_kind='product_origin' and l.source_id=p_id and l.target_kind='warehouse'
+     and (w.payload->>'active'='false'
+       or (w.payload->>'type'='proveedor' and not exists(
+        select 1 from ed_delivery_private.entities supplier
+        where supplier.kind='supplier' and supplier.id=w.payload->>'supplierId'
+         and supplier.payload->>'active' is distinct from 'false')))
+   ) or exists(
+    select 1 from ed_delivery_private.links a
+    join ed_delivery_private.entities wa on wa.kind='warehouse' and wa.id=a.target_id
+    join ed_delivery_private.links b on b.source_kind=a.source_kind and b.source_id=a.source_id
+      and b.target_kind='warehouse' and b.target_id>a.target_id
+    join ed_delivery_private.entities wb on wb.kind='warehouse' and wb.id=b.target_id
+    where a.source_kind='product_origin' and a.source_id=p_id and a.target_kind='warehouse'
+      and (wa.payload->>'type' is distinct from wb.payload->>'type'
+        or wa.payload->>'supplierId' is distinct from wb.payload->>'supplierId')
+   )
+ ) then raise exception 'incompatible product warehouses' using errcode='23514'; end if;
+  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',v_revision);
  insert into ed_delivery_private.operations(operation_id,actor_id,payload,response)
  values(p_operation_id,v_user,jsonb_build_object('kind',p_kind,'id',p_id,'payload',p_payload,'expected_revision',p_expected_revision,'links',p_links),v_result);
  return v_result;
