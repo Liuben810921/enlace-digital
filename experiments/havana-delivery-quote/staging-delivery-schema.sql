@@ -25,7 +25,7 @@ create table ed_delivery_private.links (
  foreign key(target_kind,target_id) references ed_delivery_private.entities(kind,id) on delete restrict,
  check (
  (source_kind='warehouse' and target_kind='supplier') or
- (source_kind='product_origin' and target_kind in ('warehouse','supplier')) or
+ (source_kind='product_origin' and target_kind='warehouse') or
  (source_kind='shipment_draft' and target_kind in ('destination','product_origin'))
  )
 );
@@ -162,7 +162,7 @@ begin
  on conflict(kind,id) do update set payload=excluded.payload,revision=excluded.revision,updated_at=now();
  delete from ed_delivery_private.links where source_kind=p_kind and source_id=p_id;
  for v_link in select value from jsonb_array_elements(p_links) loop
-  if v_link->>'target_kind' is null or v_link->>'target_id' is null or not ( (p_kind='warehouse' and v_link->>'target_kind'='supplier') or (p_kind='product_origin' and v_link->>'target_kind' in ('warehouse','supplier')) or (p_kind='shipment_draft' and v_link->>'target_kind' in ('destination','product_origin')) ) or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
+  if v_link->>'target_kind' is null or v_link->>'target_id' is null or not ( (p_kind='warehouse' and v_link->>'target_kind'='supplier') or (p_kind='product_origin' and v_link->>'target_kind'='warehouse') or (p_kind='shipment_draft' and v_link->>'target_kind' in ('destination','product_origin')) ) or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
   v_target_kind:=v_link->>'target_kind'; v_target_id:=v_link->>'target_id';
   -- Same transaction-scoped lock as deactivation and entity edits. The
   -- subsequent active-state check is protected against concurrent changes.
