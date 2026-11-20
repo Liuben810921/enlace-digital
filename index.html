@@ -3405,9 +3405,11 @@ function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
  const ids=map[productId];
  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length)return null;
  if(ids.some(id=>typeof id!=='string'||!id.trim()))return null;
- const selected=ids.map(id=>eligible.find(o=>o.id===id));
- if(selected.some(o=>!o||o.type!==products[0].origen_producto||o.type==='proveedor'&&o.supplierId!==selected[0]?.supplierId))return null;
- return selected;
+ const selected=ids.map(id=>eligible.filter(o=>o.id===id));
+ if(selected.some(matches=>matches.length!==1))return null;
+ const warehouses=selected.map(matches=>matches[0]);
+ if(warehouses.some(o=>o.type!==products[0].origen_producto||o.type==='proveedor'&&o.supplierId!==warehouses[0].supplierId))return null;
+ return warehouses;
 }
 function edDeliveryQuoteDemoBasket(productIds,origins,suppliers){
  if(!Array.isArray(productIds)||!productIds.length||productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(productIds).size!==productIds.length)return null;
