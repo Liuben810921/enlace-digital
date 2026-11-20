@@ -3626,6 +3626,46 @@ function edDeliveryReplaceArchivedDraftProducts(){
  output.textContent='PENDIENTE · Productos de «'+item.name+'» actualizados: '+productIds.length+' producto(s), '+basket.origins.length+' almacén(es). Destino conservado. Sin pedidos ni tarifas.';
  return true;
 }
+function edDeliveryBulkReassignArchivedDestinations(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output||edDeliveryIsQuarantined())return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ const destinationId=document.getElementById('edQuoteDemoDestination')?.value;
+ const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
+ if(!destination)return pending('Selecciona un destino válido para las versiones.');
+ let raw,archive;
+ try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return pending('No se pudo leer el archivo de versiones.')}
+ if(!Array.isArray(archive)||!archive.length||archive.length>30)return pending('El archivo debe contener entre 1 y 30 versiones.');
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const updates=[],skipped=[];
+ for(let i=0;i<archive.length;i++){
+  const draft=archive[i];
+  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length){skipped.push(i);updates.push(draft);continue}
+  const basket=edDeliveryQuoteDemoBasket(draft.productIds,origins,suppliers);
+  if(!basket){skipped.push(i);updates.push(draft);continue}
+  updates.push({...draft,destinationId,warehouseIds:basket.origins.map(o=>o.id)});
+ }
+ if(skipped.length===archive.length)return pending('Ninguna versión tiene productos y almacenes compatibles.');
+ if(!confirm('Reasignar el destino de '+(archive.length-skipped.length)+' versiones a «'+destination.name+'» y dejar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
+ let snapshot;
+ try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
+ const currentOrigins=edDeliveryOriginsRead(),currentSuppliers=edDeliverySuppliersRead();
+ if(!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('El destino dejó de estar disponible.');
+ for(let i=0;i<archive.length;i++){
+  if(skipped.includes(i))continue;
+  const fresh=edDeliveryQuoteDemoBasket(archive[i].productIds,currentOrigins,currentSuppliers);
+  if(!fresh||fresh.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Las asociaciones cambiaron. Reintenta.');
+ }
+ try{
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('El archivo cambió durante la confirmación.');
+  const now={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+  if(Object.keys(snapshot).some(k=>snapshot[k]!==now[k]))return pending('Las dependencias cambiaron durante la operación.');
+  const stamp=new Date().toISOString();
+  localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify(updates.map((d,i)=>skipped.includes(i)?d:{...d,snapshot,reconciledAt:stamp})));
+ }catch(e){return pending('No se pudo guardar la reasignación masiva.')}
+ output.textContent='PENDIENTE · '+(archive.length-skipped.length)+' versiones reasignadas a «'+destination.name+'»; '+skipped.length+' conservadas sin cambios. Sin tarifas ni pedidos.';
+ return true;
+}
 function edDeliveryReconcileAllArchivedDrafts(){
  const output=document.getElementById('edQuoteDemoResult');
  if(!output||edDeliveryIsQuarantined())return false;
@@ -3721,7 +3761,7 @@ function edDeliveryQuoteDemoPanel(){
  '<div class="field"><label>Versiones guardadas</label><select id="edQuoteDraftArchive"><option value="">Seleccionar versión</option>'+archiveOptions+'</select></div><button type="button" class="secondary" onclick="edDeliveryRestoreArchivedDraft()">Restaurar versión</button> <button type="button" class="secondary" onclick="edDeliveryDeleteArchivedDraft()">Eliminar versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReassignArchivedDraftDestination()">Cambiar destino de versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReplaceArchivedDraftProducts()">Actualizar productos de versión</button> '+
- '<button type="button" class="secondary" onclick="edDeliveryReconcileAllArchivedDrafts()">Reconciliar todas las versiones</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryReconcileAllArchivedDrafts()">Reconciliar todas las versiones</button> <button type="button" class="secondary" onclick="edDeliveryBulkReassignArchivedDestinations()">Cambiar destino de todas las versiones válidas</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryBulkAssignSelectedProducts()">Aplicar almacén a productos seleccionados</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
