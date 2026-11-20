@@ -15,7 +15,7 @@ def main():
     host=os.environ.get('PGHOST','')
     if host not in ('localhost','127.0.0.1','/var/run/postgresql'):
         raise SystemExit('BLOCKED: PGHOST must be local; remote Supabase prohibited')
-    for file in ('001_geoapify_ledger.sql','003_geoapify_minute_budget.sql','005_geoapify_lifecycle.sql','002_geoapify_ledger_tests.sql','004_geoapify_quota_tests.sql','006_geoapify_lifecycle_tests.sql'):
+    for file in ('001_geoapify_ledger.sql','003_geoapify_minute_budget.sql','005_geoapify_lifecycle.sql','007_geoapify_replay_dispatch_guard.sql','002_geoapify_ledger_tests.sql','004_geoapify_quota_tests.sql','006_geoapify_lifecycle_tests.sql','008_geoapify_guard_tests.sql'):
         p=subprocess.run(['psql','-X','-v','ON_ERROR_STOP=1','-f',str(ROOT/file)],capture_output=True,text=True,timeout=30)
         if p.returncode: raise RuntimeError(p.stderr)
         print('PASS',file)
@@ -29,7 +29,7 @@ def main():
         return run(q('a'),timeout=20)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         a=pool.submit(first); b=pool.submit(second); av=a.result();bv=b.result()
-    if 'RESERVED' not in av or 'REPLAY' not in bv: raise AssertionError((av,bv))
+    if 'RESERVED' not in av or 'REPLAY_RESERVED' not in bv: raise AssertionError((av,bv))
     n=run(f"SELECT count(*),sum(credits) FROM geoapify_disposable.reservation WHERE principal='synthetic-user' AND operation_id='{key}'")
     if n!='1|1': raise AssertionError(n)
     conflict=run(q('b'))
