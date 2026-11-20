@@ -360,8 +360,14 @@ begin
   if v_key collate "C" <= v_previous collate "C" then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
   v_previous:=v_key;
  end loop;
+ -- UUID equality is case-insensitive; grouping the raw JSON strings would
+ -- miss two textual spellings of the same operation_id.
  if exists(select 1 from jsonb_array_elements(p_items) i
-   group by i.value->>'operation_id' having count(*)>1) then
+   where nullif(i.value->>'operation_id','') is null) then
+  raise exception 'missing operation ID in batch' using errcode='22023';
+ end if;
+ if exists(select 1 from jsonb_array_elements(p_items) i
+   group by (i.value->>'operation_id')::uuid having count(*)>1) then
   raise exception 'duplicate operation IDs in batch' using errcode='23505';
  end if;
  -- Input remains canonically sorted, but execution must honor dependencies:
