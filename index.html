@@ -3401,6 +3401,7 @@ function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
   map=JSON.parse(raw===null?'{}':raw);
  }catch(e){return null}
  if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot||!map||typeof map!=='object'||Array.isArray(map)||Object.getPrototypeOf(map)!==Object.prototype)return null;
+ if(!Object.prototype.hasOwnProperty.call(map,productId))return null;
  const ids=map[productId];
  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length)return null;
  if(ids.some(id=>typeof id!=='string'||!id.trim()))return null;
