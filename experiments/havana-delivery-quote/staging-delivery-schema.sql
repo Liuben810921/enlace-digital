@@ -95,8 +95,10 @@ begin
     or (select count(distinct value) from jsonb_array_elements_text(p_payload->'warehouseIds'))
        <>jsonb_array_length(p_payload->'warehouseIds'))
  then raise exception 'duplicate or empty warehouse associations' using errcode='23514'; end if;
+ if p_kind='product_origin' and jsonb_typeof(p_payload->'warehouseIds') is distinct from 'array' then
+  raise exception 'association warehouses must be an array' using errcode='23514';
+ end if;
  if p_kind='product_origin' and (
-   jsonb_typeof(p_payload->'warehouseIds') is distinct from 'array' or
    jsonb_array_length(p_payload->'warehouseIds')<>jsonb_array_length(p_links) or
    exists(select 1 from jsonb_array_elements(p_links) l where l->>'target_kind' is distinct from 'warehouse') or
    exists(select 1 from jsonb_array_elements_text(p_payload->'warehouseIds') w
@@ -108,8 +110,10 @@ begin
        <>jsonb_array_length(p_payload->'productIds')
  then raise exception 'duplicate draft products' using errcode='23514'; end if;
  if p_kind='shipment_draft' then
+  if jsonb_typeof(p_payload->'productIds') is distinct from 'array' then
+   raise exception 'draft products must be an array' using errcode='23514';
+  end if;
   if nullif(p_payload->>'destinationId','') is null
-    or jsonb_typeof(p_payload->'productIds') is distinct from 'array'
     or jsonb_array_length(p_payload->'productIds')=0
     or jsonb_array_length(p_links)<>jsonb_array_length(p_payload->'productIds')+1
     or (select count(*) from jsonb_array_elements(p_links) l
@@ -278,7 +282,7 @@ begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
   raise exception 'not authorized' using errcode='42501';
  end if;
- if p_kind not in ('supplier','warehouse','destination') or p_id is null or p_expected_revision is null or p_expected_revision<1 or p_operation_id is null then
+ if p_kind is null or p_kind not in ('supplier','warehouse','destination') or p_id is null or p_expected_revision is null or p_expected_revision<1 or p_operation_id is null then
   raise exception 'invalid deactivation' using errcode='22023';
  end if;
  v_args:=jsonb_build_object('action','deactivate','kind',p_kind,'id',p_id,'expected_revision',p_expected_revision);
