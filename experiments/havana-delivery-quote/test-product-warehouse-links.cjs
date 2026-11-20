@@ -1042,3 +1042,40 @@ function testArchivedProductReplacementQuarantine(mode){
 for(const mode of ['normal','quarantine-confirm','archive-conflict'])
  testArchivedProductReplacementQuarantine(mode);
 console.log('PASS: 3 archived multiproduct replacement quarantine/conflict scenarios');
+
+
+function testBulkArchivedDestinationLateQuarantine(mode){
+ const store={archive:JSON.stringify([{id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'old',warehouseIds:['old']}]),
+  links:'{}',origins:'[]',suppliers:'[]',destinations:'[]','enlace_demo_v1':'{}'};
+ let quarantined=false,writes=0,archiveReads=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryIsQuarantined:()=>quarantined,
+  document:{getElementById:id=>id==='edQuoteDemoResult'?{textContent:''}:id==='edQuoteDemoDestination'?{value:'new'}:null},
+  edDeliveryDestinationsRead:()=>[{id:'new',name:'New'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'},{id:'w2'}]}),edDeliveryContextRevision:()=>1,
+  confirm:()=>{
+   if(mode==='quarantine-confirm')quarantined=true;
+   if(mode==='archive-conflict')store.archive='[]';
+   return true;
+  },
+  localStorage:{
+   getItem:k=>{
+    if(k==='archive'&&++archiveReads===2&&mode==='quarantine-final')quarantined=true;
+    return store[k]??null;
+   },
+   setItem:(k,v)=>{writes++;store[k]=v}
+  }
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryBulkReassignArchivedDestinations'),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryBulkReassignArchivedDestinations(),success,mode+' result');
+ assert.equal(writes,success?1:0,mode+' writes');
+ if(mode!=='archive-conflict')assert.equal(JSON.stringify(JSON.parse(store.archive)[0].warehouseIds),
+  JSON.stringify(success?['w1','w2']:['old']));
+}
+for(const mode of ['normal','quarantine-confirm','quarantine-final','archive-conflict'])
+ testBulkArchivedDestinationLateQuarantine(mode);
+console.log('PASS: 4 bulk archived destination late-quarantine/conflict scenarios');
