@@ -75,6 +75,7 @@ begin
   end if;
   return v_existing.response;
  end if;
+ perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
  select revision into v_old from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
  if p_expected_revision is distinct from coalesce(v_old,0) then
   raise exception 'revision conflict' using errcode='40001';
@@ -84,7 +85,7 @@ begin
  on conflict(kind,id) do update set payload=excluded.payload,revision=excluded.revision,updated_at=now();
  delete from ed_delivery_private.links where source_kind=p_kind and source_id=p_id;
  for v_link in select value from jsonb_array_elements(p_links) loop
-  if v_link->>'target_kind' is null or v_link->>'target_id' is null then raise exception 'invalid link' using errcode='22023'; end if;
+  if v_link->>'target_kind' is null or v_link->>'target_id' is null or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
   insert into ed_delivery_private.links(source_kind,source_id,target_kind,target_id)
   values(p_kind,p_id,v_link->>'target_kind',v_link->>'target_id');
  end loop;
