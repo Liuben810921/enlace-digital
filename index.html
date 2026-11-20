@@ -3417,7 +3417,7 @@ function edDeliveryQuoteDemo(synthetic){
  if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
  if(!synthetic)return pending('No hay distancias viales verificadas.');
  const origin=eligible.find(o=>o.id===quote.originId);
- result.textContent='SIMULACIÓN FICTICIA · '+(productId?'Producto '+productId+' · ':'')++(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
+ result.textContent='SIMULACIÓN FICTICIA · '+(productId?'Producto '+productId+' · ':'')+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
  return true;
 }
 
