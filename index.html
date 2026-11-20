@@ -3465,6 +3465,7 @@ function edDeliverySaveShipmentDraft(){
 function edDeliveryLoadShipmentDraft(){
  const output=document.getElementById('edQuoteDemoResult');
  if(!output)return false;
+ if(edDeliveryIsQuarantined()){output.textContent='PENDIENTE · Administración bloqueada.';return false}
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
  let draft;
  try{draft=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)||'null')}catch(e){return pending('Borrador local ilegible.')}
@@ -3480,6 +3481,7 @@ function edDeliveryLoadShipmentDraft(){
  if(!basket||basket.origins.length!==draft.warehouseIds?.length||basket.origins.some(o=>!draft.warehouseIds.includes(o.id)))return pending('Las asociaciones del borrador ya no son válidas.');
  for(const option of select.options)option.selected=draft.productIds.includes(option.value);
  destinationSelect.value=draft.destinationId;
+ edQuoteDemoSelectionRemember();
  output.textContent='PENDIENTE · Borrador recuperado: '+draft.productIds.length+' producto(s), '+basket.origins.length+' almacén(es). No se han calculado tarifas ni creado pedidos.';
  return true;
 }
