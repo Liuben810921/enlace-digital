@@ -101,4 +101,31 @@ grant execute on function public.ed_delivery_staging_write(uuid,text,text,jsonb,
 -- IMPORTANT: first admin_members row must be provisioned via a separately authorized
 -- owner-only action for an existing staging auth.users UUID; no anonymous bootstrap.
 -- This migration alone deliberately grants no administrator access.
+-- Non-bypass RPC owner; table ownership remains with migration owner.
+do $ begin
+ if not exists(select 1 from pg_roles where rolname='ed_delivery_staging_rpc') then
+  create role ed_delivery_staging_rpc nologin noinherit nobypassrls;
+ end if;
+end $;
+grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
+grant select on ed_delivery_private.admin_members to ed_delivery_staging_rpc;
+grant select,insert,update,delete on ed_delivery_private.entities to ed_delivery_staging_rpc;
+grant select,insert,delete on ed_delivery_private.links to ed_delivery_staging_rpc;
+grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc;
+create policy ed_admin_self_read on ed_delivery_private.admin_members
+ for select to ed_delivery_staging_rpc using (user_id = (select auth.uid()) and enabled);
+create policy ed_entities_admin on ed_delivery_private.entities
+ for all to ed_delivery_staging_rpc
+ using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
+ with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+create policy ed_links_admin on ed_delivery_private.links
+ for all to ed_delivery_staging_rpc
+ using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
+ with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+create policy ed_operations_admin on ed_delivery_private.operations
+ for all to ed_delivery_staging_rpc
+ using (actor_id=(select auth.uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
+ with check (actor_id=(select auth.uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+alter function public.ed_delivery_staging_read() owner to ed_delivery_staging_rpc;
+alter function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) owner to ed_delivery_staging_rpc;
 commit;
