@@ -1680,6 +1680,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  try{rawAssociations=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el almacenamiento de dependencias.');return false}
  let associations;
  try{associations=JSON.parse(rawAssociations===null?'{}':rawAssociations)}catch(e){alert('Las asociaciones almacenadas no son JSON válido.');return false}
+ if(new Set(origins.map(o=>o.id)).size!==origins.length||new Set(suppliers.map(p=>p.id)).size!==suppliers.length){alert('Identificadores duplicados de proveedores o almacenes. Transferencia cancelada.');return false}
  const knownOrigins=new Map(origins.map(o=>[o.id,o]));
  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>{
   if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!knownOrigins.has(id)))return true;
