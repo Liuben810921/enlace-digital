@@ -3663,6 +3663,44 @@ function edDeliveryReconcileAllArchivedDrafts(){
  output.textContent='PENDIENTE · '+(updates.length-skipped.length)+' versiones reconciliadas; '+skipped.length+' sin cambios por dependencias inválidas. Sin pedidos ni tarifas.';
  return true;
 }
+function edDeliveryBulkAssignSelectedProducts(){
+ if(edDeliveryIsQuarantined())return false;
+ if(!edInventoryLoaded||edInventoryPendingSaves>0||!Array.isArray(state.products)||JSON.stringify(state.products)!==edInventorySnapshot){alert('Sincroniza el inventario antes de modificar asociaciones.');return false}
+ const selected=document.getElementById('edQuoteDemoProduct');
+ const ids=selected?[...selected.selectedOptions].map(o=>o.value):[];
+ const warehouseId=document.getElementById('edAssignWarehouse')?.value;
+ const operation=document.getElementById('edAssignOperation')?.value;
+ if(!ids.length||new Set(ids).size!==ids.length||!['add','remove','replace'].includes(operation)){alert('Selecciona productos y una operación válida.');return false}
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),warehouse=origins.find(o=>o.id===warehouseId);
+ if(!warehouse){alert('Selecciona un almacén existente.');return false}
+ if(operation!=='remove'&&(warehouse.active===false||warehouse.type==='proveedor'&&!suppliers.some(p=>p.id===warehouse.supplierId&&p.active!==false))){alert('El almacén o proveedor no está activo.');return false}
+ let snapshot,originSnapshot,supplierSnapshot,inventorySnapshot,map;
+ try{
+  snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  originSnapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);
+  supplierSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
+  inventorySnapshot=localStorage.getItem('enlace_demo_v1');
+  map=JSON.parse(snapshot===null?'{}':snapshot);
+  const shared=JSON.parse(inventorySnapshot||'null');
+  if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot)throw Error('Inventario desincronizado');
+ }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.entries(map).some(([id,links])=>!Array.isArray(links)||new Set(links).size!==links.length||!state.products.some(p=>String(p.id)===id&&links.every(link=>{const o=origins.find(x=>x.id===link);return o&&o.active!==false&&o.type===p.origen_producto&&(o.type!=='proveedor'||suppliers.some(q=>q.id===o.supplierId&&q.active!==false))})&&links.every(link=>{const first=origins.find(o=>o.id===links[0]),o=origins.find(o=>o.id===link);return !first||o.type===first.type&&(o.type!=='proveedor'||o.supplierId===first.supplierId)}) ))){alert('Existen asociaciones inválidas. Corrígelas antes de la operación masiva.');return false}
+ const next={...map};
+ for(const id of ids){
+  const matches=state.products.filter(p=>String(p.id)===id);
+  if(matches.length!==1||matches[0].origen_producto!==warehouse.type){alert('Producto incompatible con el almacén: '+id);return false}
+  const current=map[id]||[];
+  if(operation==='add'&&(current.includes(warehouseId)||current.some(link=>{const o=origins.find(x=>x.id===link);return o.type!==warehouse.type||o.type==='proveedor'&&o.supplierId!==warehouse.supplierId}))){alert('Una asociación existente es incompatible: '+id);return false}
+  if(operation==='remove'&&!current.includes(warehouseId)){alert('El producto no tiene el almacén indicado: '+id);return false}
+  next[id]=operation==='replace'?[warehouseId]:operation==='remove'?current.filter(link=>link!==warehouseId):[...current,warehouseId];
+ }
+ if(!confirm('Aplicar '+operation+' sobre '+ids.length+' productos en '+warehouse.name+'?'+(operation==='remove'?' Algunos podrían quedar sin almacén.':'')))return false;
+ let same=false;
+ try{same=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===supplierSnapshot&&localStorage.getItem('enlace_demo_v1')===inventorySnapshot&&edInventoryPendingSaves===0&&JSON.stringify(state.products)===edInventorySnapshot}catch(e){}
+ if(!same){alert('Los datos cambiaron durante la confirmación.');return false}
+ if(!edDeliveryPersistAndInvalidate(ED_PRODUCT_ORIGINS_KEY,next,'product_warehouse_bulk_'+operation,snapshot))return false;
+ adminTab('delivery');return true;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -3684,6 +3722,7 @@ function edDeliveryQuoteDemoPanel(){
  '<button type="button" class="secondary" onclick="edDeliveryReassignArchivedDraftDestination()">Cambiar destino de versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReplaceArchivedDraftProducts()">Actualizar productos de versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReconcileAllArchivedDrafts()">Reconciliar todas las versiones</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryBulkAssignSelectedProducts()">Aplicar almacén a productos seleccionados</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
