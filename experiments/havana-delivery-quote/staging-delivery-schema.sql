@@ -206,6 +206,15 @@ grant usage on schema public to ed_delivery_staging_rpc;
 grant select,insert,update,delete on ed_delivery_private.entities to ed_delivery_staging_rpc;
 grant select,insert,delete on ed_delivery_private.links to ed_delivery_staging_rpc;
 grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc;
+-- SECURITY DEFINER owner also needs sequence permissions if serial IDs are added later; none exist here.
+-- The owner of SECURITY DEFINER RPCs must have only the required grants.
+-- Do not grant BYPASSRLS, login, table ownership, or direct privileges to API roles.
+do $ begin
+ if exists(select 1 from pg_roles where rolname='ed_delivery_staging_rpc' and
+   (rolbypassrls or rolcanlogin or rolsuper or rolcreaterole or rolcreatedb)) then
+  raise exception 'unsafe RPC owner role' using errcode='42501';
+ end if;
+end $;
 create policy ed_admin_self_read on ed_delivery_private.admin_members
  for select to ed_delivery_staging_rpc using (user_id = (select auth.uid()) and enabled);
 create policy ed_entities_admin on ed_delivery_private.entities
