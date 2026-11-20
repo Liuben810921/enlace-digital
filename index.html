@@ -2206,11 +2206,11 @@ function edDeliveryOriginsDuplicateSelected(){
  const byId=new Map(items.map(o=>[o.id,o]));
  if(ids.some(id=>!byId.has(id))){alert('La selección contiene almacenes inexistentes.');return false}
  if(ids.some(id=>{const o=byId.get(id);return o.type==='proveedor'&&!suppliers.some(s=>s.id===o.supplierId&&s.active!==false)})){alert('Activa el proveedor de origen antes de duplicar sus almacenes.');return false}
- if(!confirm('Duplicar '+ids.length+' almacén(es) como nuevos registros inactivos, sin copiar asociaciones de productos ni asignaciones predeterminadas?'))return false;
+ if(!confirm('Duplicar '+ids.length+' almacén(es) como nuevos registros inactivos, sin copiar coordenadas GPS, asociaciones de productos ni asignaciones predeterminadas?'))return false;
  let same=false;
  try{same=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===supplierSnapshot}catch(e){}
  if(!same){alert('Los almacenes o proveedores cambiaron durante la confirmación.');return false}
- const stamp=Date.now().toString(36),copies=ids.map((id,i)=>({...byId.get(id),id:'origin-copy-'+stamp+'-'+i+'-'+Math.random().toString(36).slice(2,8),name:byId.get(id).name+' (copia)',active:false,defaultForSupplier:false,version:1}));
+ const stamp=Date.now().toString(36),copies=ids.map((id,i)=>({...byId.get(id),id:'origin-copy-'+stamp+'-'+i+'-'+Math.random().toString(36).slice(2,8),name:byId.get(id).name+' (copia)',active:false,defaultForSupplier:false,lat:null,lng:null,version:1}));
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,[...items,...copies],'warehouses_bulk_duplicated',snapshot))return false;
  adminTab('delivery');return true;
 }
