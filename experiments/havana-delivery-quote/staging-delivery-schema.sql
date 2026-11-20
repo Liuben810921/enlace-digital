@@ -79,6 +79,26 @@ begin
  if p_expected_revision is distinct from coalesce(v_old,0) then
   raise exception 'revision conflict' using errcode='40001';
  end if;
+ -- Refuse inconsistent payload/link pairs; do not trust browser validation.
+ if p_kind='warehouse' and (
+   (p_payload->>'type'='proveedor' and
+     (p_payload->>'supplierId' is null or
+      not exists(select 1 from jsonb_array_elements(p_links) x where x->>'target_kind'='supplier' and x->>'target_id'=p_payload->>'supplierId')))
+   or (p_payload->>'type'='propio' and jsonb_array_length(p_links)<>0)
+   or p_payload->>'type' not in ('propio','proveedor')
+ ) then raise exception 'warehouse links inconsistent' using errcode='23514'; end if;
+ if p_kind='product_origin' and (
+   jsonb_typeof(p_payload->'warehouseIds')<>'array' or
+   jsonb_array_length(p_payload->'warehouseIds')<>jsonb_array_length(p_links) or
+   exists(select 1 from jsonb_array_elements_text(p_payload->'warehouseIds') w
+     where not exists(select 1 from jsonb_array_elements(p_links) l
+       where l->>'target_kind'='warehouse' and l->>'target_id'=w.value))
+ ) then raise exception 'association links inconsistent' using errcode='23514'; end if;
+ if p_kind='shipment_draft' and (
+   p_payload->>'destinationId' is null or
+   not exists(select 1 from jsonb_array_elements(p_links) l
+    where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')
+ ) then raise exception 'draft destination missing' using errcode='23514'; end if;
  v_revision:=coalesce(v_old,0)+1;
  insert into ed_delivery_private.entities(kind,id,payload,revision) values(p_kind,p_id,p_payload,v_revision)
  on conflict(kind,id) do update set payload=excluded.payload,revision=excluded.revision,updated_at=now();
