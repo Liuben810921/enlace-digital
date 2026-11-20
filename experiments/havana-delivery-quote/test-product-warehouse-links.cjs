@@ -1079,3 +1079,39 @@ function testBulkArchivedDestinationLateQuarantine(mode){
 for(const mode of ['normal','quarantine-confirm','quarantine-final','archive-conflict'])
  testBulkArchivedDestinationLateQuarantine(mode);
 console.log('PASS: 4 bulk archived destination late-quarantine/conflict scenarios');
+
+
+function testArchivedDraftQuarantineAndPersistence(mode){
+ const store={draft:JSON.stringify({version:1,status:'PENDIENTE',productIds:['p1','p2'],warehouseIds:['w1','w2']}),archive:'[]'};
+ let quarantined=false,writes=0,reads=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_KEY:'draft',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',
+  edDeliveryIsQuarantined:()=>quarantined,
+  document:{getElementById:id=>id==='edQuoteDemoResult'?{textContent:''}:{value:'Version'}},
+  localStorage:{
+   getItem:k=>{
+    reads++;
+    if(mode==='quarantine-before-write'&&reads===4)quarantined=true;
+    if(mode==='archive-conflict'&&reads===4)store.archive='[{"id":"other"}]';
+    return store[k]??null;
+   },
+   setItem:(k,v)=>{
+    writes++;
+    if(mode==='throw-write')throw Error('quota');
+    if(mode!=='silent-write')store[k]=v;
+   }
+  }
+ };
+ if(mode==='quarantine-during-serialize')ctx.JSON={
+  parse:JSON.parse,stringify:v=>{quarantined=true;return JSON.stringify(v)}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryArchiveShipmentDraft'),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryArchiveShipmentDraft(),success,mode+' result');
+ assert.equal(writes,['normal','silent-write','throw-write'].includes(mode)?1:0,mode+' writes');
+ assert.equal(JSON.parse(store.archive).length,mode==='normal'||mode==='archive-conflict'?1:0,mode+' archived count');
+}
+for(const mode of ['normal','quarantine-before-write','quarantine-during-serialize','silent-write','throw-write','archive-conflict'])
+ testArchivedDraftQuarantineAndPersistence(mode);
+console.log('PASS: 6 archived draft quarantine, conflict and persistence scenarios');
