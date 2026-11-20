@@ -417,3 +417,47 @@ function testReconcileAllArchivedAfterWarehouseTransfer(mode){
 testReconcileAllArchivedAfterWarehouseTransfer('success');
 testReconcileAllArchivedAfterWarehouseTransfer('conflict');
 console.log('PASS: 2 archived multiproduct reconciliation cases with unchanged draft preservation');
+
+
+function testSupplierTransferArchivedChain(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true,version:1},{id:'w2',type:'proveedor',supplierId:'s1',active:true,version:1}];
+ const suppliers=[{id:'s1',active:true},{id:'s2',active:true}],links={p1:['w1','w2'],p2:['w2']};
+ const drafts=[{id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'old',warehouseIds:['obsolete']},{id:'b',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'new',warehouseIds:['w2']}];
+ const store={origins:JSON.stringify(origins),suppliers:JSON.stringify(suppliers),links:JSON.stringify(links),archive:JSON.stringify(drafts),destinations:'d','enlace_demo_v1':JSON.stringify({products})};
+ const output={textContent:''};let currentOrigins=origins,writes=0;
+ const ctx={
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},edDeliveryIsQuarantined:()=>false,
+  edDeliveryOriginsRead:()=>currentOrigins,edDeliverySuppliersRead:()=>suppliers,edDeliveryDestinationsRead:()=>[{id:'old'},{id:'new',name:'Nuevo'}],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),edDeliveryContextRevision:()=>1,
+  document:{getElementById:id=>id==='edOriginBulkSelection'?{disabled:false,querySelectorAll:()=>[{value:'w1'},{value:'w2'}]}:id==='edOriginBulkSupplier'?{value:'s2'}:id==='edQuoteDemoResult'?output:id==='edQuoteDemoDestination'?{value:'new'}:null},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v;writes++}},
+  confirm:()=>{if(mode==='conflict')store.links='changed';return mode!=='reject'},
+  alert:()=>{},adminTab:()=>{},edDeliveryPersistAndInvalidate:(k,v)=>{store[k]=JSON.stringify(v);currentOrigins=v;writes++;return true}
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryOriginsTransferSelectedSupplier','edDeliveryReconcileAllArchivedDrafts','edDeliveryBulkReassignArchivedDestinations'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const transferred=ctx.edDeliveryOriginsTransferSelectedSupplier();
+ if(mode!=='success'){
+  assert.equal(transferred,false);assert.equal(writes,0);
+  assert.equal(store.origins,JSON.stringify(origins));assert.equal(store.archive,JSON.stringify(drafts));
+  return;
+ }
+ assert.equal(transferred,true);
+ assert.equal(JSON.stringify(JSON.parse(store.origins).map(o=>o.supplierId)),JSON.stringify(['s2','s2']));
+ assert.equal(store.links,JSON.stringify(links));
+ assert.equal(ctx.edDeliveryReconcileAllArchivedDrafts(),true);
+ const afterReconcile=JSON.parse(store.archive);
+ assert.equal(JSON.stringify(afterReconcile[0].warehouseIds),JSON.stringify(['w1','w2']));
+ assert.equal(JSON.stringify(afterReconcile[1]),JSON.stringify(drafts[1]));
+ assert.equal(ctx.edDeliveryBulkReassignArchivedDestinations(),true);
+ const afterDestination=JSON.parse(store.archive);
+ assert.equal(afterDestination[0].destinationId,'new');
+ assert.equal(JSON.stringify(afterDestination[0].warehouseIds),JSON.stringify(['w1','w2']));
+ assert.equal(JSON.stringify(afterDestination[1]),JSON.stringify(drafts[1]));
+ assert.equal(store.links,JSON.stringify(links));assert.equal(writes,3);
+}
+for(const mode of ['success','reject','conflict'])testSupplierTransferArchivedChain(mode);
+console.log('PASS: 3 chained supplier/warehouse/multiproduct/archive scenarios (success, rejection, conflict)');
