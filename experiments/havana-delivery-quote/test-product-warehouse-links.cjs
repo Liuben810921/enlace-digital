@@ -557,3 +557,43 @@ function testInventoryTransferAndMultiproductAssociations(mode){
 for(const mode of ['partial-reject','full-success','inventory-stale','inventory-race','association-race','assign-success','assign-race'])
  testInventoryTransferAndMultiproductAssociations(mode);
 console.log('PASS: 7 focused supplier transfer, inventory integrity, multiproduct association and conflict cases');
+
+
+function testPartialTransferRecoveryWithArchivedReconciliation(){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',name:'Uno',type:'proveedor',supplierId:'s1',active:true},{id:'w2',name:'Dos',type:'proveedor',supplierId:'s1',active:true},{id:'w3',name:'Tres',type:'proveedor',supplierId:'s2',active:true}];
+ const archived=[{id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'d',warehouseIds:['w1','w2']}];
+ const store={origins:JSON.stringify(origins),suppliers:JSON.stringify([{id:'s1',active:true},{id:'s2',active:true}]),links:JSON.stringify({p1:['w1','w2'],p2:['w2']}),archive:JSON.stringify(archived),destinations:'d','enlace_demo_v1':JSON.stringify({products})};
+ let writes=0;const alerts=[];
+ const ctx={
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},edDeliveryIsQuarantined:()=>false,
+  edDeliveryOriginsRead:()=>JSON.parse(store.origins),edDeliverySuppliersRead:()=>JSON.parse(store.suppliers),edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryContextRevision:()=>1,
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.flatMap(id=>(JSON.parse(store.links)[id]||[]).map(id=>({id})))}),
+  document:{getElementById:id=>id==='edOriginBulkSelection'?{disabled:false,querySelectorAll:()=>[{value:'w2'}]}:
+   id==='edOriginBulkSupplier'?{value:'s2'}:id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'}]}:
+   id==='edAssignWarehouse'?{value:'w3'}:id==='edAssignOperation'?{value:'replace'}:
+   id==='edQuoteDemoResult'?{textContent:''}:null},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v;writes++}},
+  edDeliveryPersistAndInvalidate:(k,v)=>{store[k]=JSON.stringify(v);writes++;return true},
+  confirm:()=>true,alert:m=>alerts.push(m),adminTab:()=>{}
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryOriginsTransferSelectedSupplier','edDeliveryBulkAssignSelectedProducts','edDeliveryReconcileAllArchivedDrafts'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ assert.equal(ctx.edDeliveryOriginsTransferSelectedSupplier(),false,'reject partial transfer with incompatible multiproduct links');
+ assert.equal(writes,0);assert.equal(store.archive,JSON.stringify(archived));
+ assert.equal(ctx.edDeliveryBulkAssignSelectedProducts(),true,'reassign incompatible product first');
+ assert.equal(JSON.stringify(JSON.parse(store.links)),JSON.stringify({p1:['w3'],p2:['w2']}));
+ assert.equal(ctx.edDeliveryOriginsTransferSelectedSupplier(),true,'transfer remaining warehouse after reassociation');
+ assert.equal(JSON.stringify(JSON.parse(store.origins).map(o=>o.supplierId)),JSON.stringify(['s1','s2','s2']));
+ assert.equal(ctx.edDeliveryReconcileAllArchivedDrafts(),true,'reconcile archived multiproduct draft');
+ const updated=JSON.parse(store.archive)[0];
+ assert.equal(JSON.stringify(updated.productIds),JSON.stringify(['p1','p2']));
+ assert.equal(JSON.stringify(updated.warehouseIds),JSON.stringify(['w3','w2']));
+ assert.equal(updated.destinationId,'d');assert.equal(writes,3);
+ assert.equal(JSON.stringify(JSON.parse(store['enlace_demo_v1']).products),JSON.stringify(products));
+ assert(alerts.length>0,'partial rejection must explain conflict');
+}
+testPartialTransferRecoveryWithArchivedReconciliation();
+console.log('PASS: partial supplier transfer rejection, multiproduct reassociation, retry and archived reconciliation chain');
