@@ -511,3 +511,49 @@ for(const action of ['reconcile','reassign'])
  for(const mode of ['success','cancel','conflict-links','conflict-inventory','conflict-archive','invalid-destination'])
   testArchivedDependencyConflictMatrix(action,mode);
 console.log('PASS: 12 archived dependency scenarios: success, cancellation, inventory/association/archive conflicts, destination validation');
+
+
+function testInventoryTransferAndMultiproductAssociations(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true,name:'Uno'},{id:'w2',type:'proveedor',supplierId:'s1',active:true,name:'Dos'},{id:'w3',type:'proveedor',supplierId:'s2',active:true,name:'Tres'}];
+ const links={p1:['w1','w2'],p2:['w2']};
+ const store={origins:JSON.stringify(origins),suppliers:JSON.stringify([{id:'s1',active:true},{id:'s2',active:true}]),links:JSON.stringify(links),'enlace_demo_v1':JSON.stringify({products})};
+ let writes=0;const alerts=[];
+ const ctx={
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_PRODUCT_ORIGINS_KEY:'links',
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},
+  edDeliveryIsQuarantined:()=>false,edDeliveryOriginsRead:()=>JSON.parse(store.origins),edDeliverySuppliersRead:()=>JSON.parse(store.suppliers),
+  document:{getElementById:id=>id==='edOriginBulkSelection'?{disabled:false,querySelectorAll:()=>mode==='partial-reject'?[{value:'w1'}]:[{value:'w1'},{value:'w2'}]}:
+   id==='edOriginBulkSupplier'?{value:'s2'}:id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'},{value:'p2'}]}:
+   id==='edAssignWarehouse'?{value:'w3'}:id==='edAssignOperation'?{value:'replace'}:null},
+  localStorage:{getItem:k=>store[k]??null},
+  confirm:()=>{
+   if(mode==='inventory-race'||mode==='assign-race')store.enlace_demo_v1='modified';
+   if(mode==='association-race')store.links='modified';
+   return true;
+  },
+  alert:msg=>alerts.push(msg),adminTab:()=>{},
+  edDeliveryPersistAndInvalidate:(k,v)=>{store[k]=JSON.stringify(v);writes++;return true}
+ };
+ if(mode==='inventory-stale')store.enlace_demo_v1=JSON.stringify({products:[]});
+ vm.createContext(ctx);
+ const name=mode.startsWith('assign')?'edDeliveryBulkAssignSelectedProducts':'edDeliveryOriginsTransferSelectedSupplier';
+ vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const result=ctx[name](),success=mode==='full-success'||mode==='assign-success';
+ assert.equal(result,success,mode+' result');
+ assert.equal(writes,success?1:0,mode+' writes');
+ if(!success)assert(alerts.length>0,mode+' rejection message');
+ if(mode==='full-success'){
+  assert.equal(JSON.stringify(JSON.parse(store.origins).map(o=>o.supplierId)),JSON.stringify(['s2','s2','s2']));
+  assert.equal(store.links,JSON.stringify(links),'transfer preserves multiproduct links');
+ }else if(mode==='assign-success'){
+  assert.equal(JSON.stringify(JSON.parse(store.links)),JSON.stringify({p1:['w3'],p2:['w3']}));
+  assert.equal(store.origins,JSON.stringify(origins),'assignment preserves warehouse records');
+ }else{
+  assert.equal(store.origins,JSON.stringify(origins),'rejection preserves warehouses');
+  if(mode!=='association-race')assert.equal(store.links,JSON.stringify(links),'rejection preserves associations');
+ }
+}
+for(const mode of ['partial-reject','full-success','inventory-stale','inventory-race','association-race','assign-success','assign-race'])
+ testInventoryTransferAndMultiproductAssociations(mode);
+console.log('PASS: 7 focused supplier transfer, inventory integrity, multiproduct association and conflict cases');
