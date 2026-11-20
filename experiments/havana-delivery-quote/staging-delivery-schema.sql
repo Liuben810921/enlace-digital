@@ -99,6 +99,17 @@ begin
    not exists(select 1 from jsonb_array_elements(p_links) l
     where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')
  ) then raise exception 'draft destination missing' using errcode='23514'; end if;
+ -- A warehouse with product associations cannot silently change supplier/type.
+ -- Product reassignment must first remove or replace those associations.
+ if p_kind='warehouse' and v_old is not null and exists(
+  select 1 from ed_delivery_private.links l
+  where l.target_kind='warehouse' and l.target_id=p_id and l.source_kind='product_origin'
+ ) and exists(
+  select 1 from ed_delivery_private.entities old
+  where old.kind='warehouse' and old.id=p_id and
+   (old.payload->>'type' is distinct from p_payload->>'type'
+    or old.payload->>'supplierId' is distinct from p_payload->>'supplierId')
+ ) then raise exception 'reassign product associations before warehouse supplier/type change' using errcode='23503'; end if;
  -- Guard the ordinary write RPC against bypassing the dedicated deactivation
  -- dependency checks by simply setting payload.active=false.
  if p_kind='warehouse' and p_payload->>'active'='false' and exists(
