@@ -271,7 +271,7 @@ grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc
 -- Do not grant BYPASSRLS, login, table ownership, or direct privileges to API roles.
 do $$ begin
  if exists(select 1 from pg_roles where rolname='ed_delivery_staging_rpc' and
-   (rolbypassrls or rolcanlogin or rolsuper or rolcreaterole or rolcreatedb)) then
+   (rolbypassrls or rolcanlogin or rolsuper or rolcreaterole or rolcreatedb or rolinherit or rolreplication)) then
   raise exception 'unsafe RPC owner role' using errcode='42501';
  end if;
 end $$;
