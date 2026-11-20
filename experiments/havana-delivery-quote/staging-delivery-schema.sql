@@ -66,6 +66,7 @@ begin
  if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
   raise exception 'invalid request' using errcode='22023';
  end if;
+ perform pg_advisory_xact_lock(672045900001::bigint); -- global staging write lock: serialize all mutation paths
  perform pg_advisory_xact_lock(hashtextextended(p_operation_id::text,0));
  select * into v_existing from ed_delivery_private.operations where operation_id=p_operation_id;
  if found then
@@ -202,7 +203,7 @@ grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
 grant usage on schema auth to ed_delivery_staging_rpc;
 grant execute on function auth.uid() to ed_delivery_staging_rpc;
 grant select on ed_delivery_private.admin_members to ed_delivery_staging_rpc;
-grant usage on schema public to ed_delivery_staging_rpc;
+grant usage,create on schema public to ed_delivery_staging_rpc; -- temporary, revoked before commit
 grant select,insert,update,delete on ed_delivery_private.entities to ed_delivery_staging_rpc;
 grant select,insert,delete on ed_delivery_private.links to ed_delivery_staging_rpc;
 grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc;
@@ -244,12 +245,14 @@ begin
   raise exception 'invalid deactivation' using errcode='22023';
  end if;
  v_args:=jsonb_build_object('action','deactivate','kind',p_kind,'id',p_id,'expected_revision',p_expected_revision);
+ perform pg_advisory_xact_lock(672045900001::bigint); -- global staging write lock: serialize all mutation paths
  perform pg_advisory_xact_lock(hashtextextended(p_operation_id::text,0));
  select * into v_previous from ed_delivery_private.operations where operation_id=p_operation_id;
  if found then
   if v_previous.actor_id<>v_actor or v_previous.payload<>v_args then raise exception 'idempotency conflict' using errcode='23505'; end if;
   return v_previous.response;
  end if;
+ perform pg_advisory_xact_lock(672045900001::bigint);
  perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
  select * into v_entity from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
  if not found or v_entity.revision<>p_expected_revision then raise exception 'revision conflict' using errcode='40001'; end if;
@@ -286,6 +289,8 @@ begin
  if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 100 then
   raise exception 'invalid batch size' using errcode='22023';
  end if;
+ perform pg_advisory_xact_lock(672045900001::bigint);
+ -- Validate the complete input before any mutation.
  for v_item in select value from jsonb_array_elements(p_items) loop
   if jsonb_typeof(v_item)<>'object' or v_item->>'kind' is null or v_item->>'id' is null then
    raise exception 'invalid batch item' using errcode='22023';
@@ -293,16 +298,30 @@ begin
   v_key:=(v_item->>'kind')||':'||(v_item->>'id');
   if v_key<=v_previous then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
   v_previous:=v_key;
-  v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
-   (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
-   v_item->'payload',(v_item->>'expected_revision')::bigint,
-   coalesce(v_item->'links','[]'::jsonb)
-  ));
+ end loop;
+ -- Clear existing defaults before assigning replacements; all changes are
+ -- one transaction, invisible to concurrent readers until commit.
+ for v_item in select value from jsonb_array_elements(p_items) loop
+  if v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false' then
+   v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
+    (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
+    v_item->'payload',(v_item->>'expected_revision')::bigint,
+    coalesce(v_item->'links','[]'::jsonb)));
+  end if;
+ end loop;
+ for v_item in select value from jsonb_array_elements(p_items) loop
+  if not (v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false') then
+   v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
+    (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
+    v_item->'payload',(v_item->>'expected_revision')::bigint,
+    coalesce(v_item->'links','[]'::jsonb)));
+  end if;
  end loop;
  return v_results;
 end $$;
 revoke all on function public.ed_delivery_staging_batch(jsonb) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticated;
 alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
+revoke create on schema public from ed_delivery_staging_rpc;
 
 commit;
