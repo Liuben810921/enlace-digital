@@ -15,7 +15,7 @@ def main():
     host=os.environ.get('PGHOST','')
     if host not in ('localhost','127.0.0.1','/var/run/postgresql'):
         raise SystemExit('BLOCKED: PGHOST must be local; remote Supabase prohibited')
-    for file in ('001_geoapify_ledger.sql','002_geoapify_ledger_tests.sql'):
+    for file in ('001_geoapify_ledger.sql','003_geoapify_minute_budget.sql','002_geoapify_ledger_tests.sql','004_geoapify_quota_tests.sql'):
         p=subprocess.run(['psql','-X','-v','ON_ERROR_STOP=1','-f',str(ROOT/file)],capture_output=True,text=True,timeout=30)
         if p.returncode: raise RuntimeError(p.stderr)
         print('PASS',file)
