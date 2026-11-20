@@ -1726,6 +1726,7 @@ function edDeliverySupplierToggle(id){
  adminTab('delivery');return true;
 }
 function edDeliverySupplierAdd(){
+ if(edDeliveryIsQuarantined())return false;
  const name=document.getElementById('edSupplierName').value.trim();
  if(!name){alert('Introduce el nombre del proveedor.');return}
  const list=edDeliverySuppliersRead();
@@ -2065,6 +2066,7 @@ function edDeliveryOriginEdit(id){
  document.getElementById('edOriginFormTitle').scrollIntoView({block:'center',behavior:'smooth'});document.getElementById('edOriginName').focus();
 }
 function edDeliveryOriginSave(){
+ if(edDeliveryIsQuarantined())return false;
  const val=id=>document.getElementById(id).value.trim();
  const id=val('edOriginId'),name=val('edOriginName'),type=val('edOriginType'),municipality=val('edOriginMunicipality'),address=val('edOriginAddress');
  const supplierId=type==='proveedor'?val('edOriginSupplier'):null;
