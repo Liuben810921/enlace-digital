@@ -3478,8 +3478,8 @@ function edDeliveryLoadShipmentDraft(){
  if(!output)return false;
  if(edDeliveryIsQuarantined()){output.textContent='PENDIENTE · Administración bloqueada.';return false}
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
- let draft;
- try{draft=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)||'null')}catch(e){return pending('Borrador local ilegible.')}
+ let draft,raw;
+ try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);draft=JSON.parse(raw||'null')}catch(e){return pending('Borrador local ilegible.')}
  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No hay un borrador válido.');
  const select=document.getElementById('edQuoteDemoProduct'),destinationSelect=document.getElementById('edQuoteDemoDestination');
  if(!select||!destinationSelect)return pending('No están disponibles los selectores.');
@@ -3493,6 +3493,7 @@ function edDeliveryLoadShipmentDraft(){
  let unchanged=false;
  try{unchanged=Object.keys(current).every(k=>current[k]=== (k==='revision'?edDeliveryContextRevision():localStorage.getItem(({inventory:'enlace_demo_v1',associations:ED_PRODUCT_ORIGINS_KEY,origins:ED_DELIVERY_ORIGINS_KEY,suppliers:ED_DELIVERY_SUPPLIERS_KEY,destinations:ED_DELIVERY_DESTINATIONS_KEY})[k])))}catch(e){}
  if(!unchanged)return pending('Dependencias modificadas durante la recuperación. Reintenta.');
+ try{if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('El borrador cambió durante la recuperación. Reintenta.')}catch(e){return pending('No se pudo comprobar el borrador durante la recuperación.')}
  for(const option of select.options)option.selected=draft.productIds.includes(option.value);
  destinationSelect.value=draft.destinationId;
  edQuoteDemoSelectionRemember();
