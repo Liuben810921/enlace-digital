@@ -371,19 +371,20 @@ begin
   raise exception 'duplicate operation IDs in batch' using errcode='23505';
  end if;
  -- Input remains canonically sorted, but execution must honor dependencies:
- -- warehouse default demotions, active suppliers, destinations, active warehouses,
+ -- existing warehouse default demotions, active suppliers, destinations, active warehouses (including new nondefaults),
  -- product associations, drafts, warehouse deactivations, then supplier
  -- deactivations. Each dependency guard remains enforced. Deferring
  -- deactivation permits product reassignment in the same atomic batch.
  -- All phases share one transaction.
  for v_phase in 1..8 loop
   for v_item in select value from jsonb_array_elements(p_items) loop
-   if (v_phase=1 and v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false' and v_item->'payload'->>'active' is distinct from 'false')
+   if (v_phase=1 and v_item->>'kind'='warehouse' and (v_item->>'expected_revision')::bigint>0 and v_item->'payload'->>'defaultForSupplier'='false' and v_item->'payload'->>'active' is distinct from 'false')
     or (v_phase=2 and v_item->>'kind'='supplier' and v_item->'payload'->>'active' is distinct from 'false')
     or (v_phase=3 and v_item->>'kind'='destination')
     or (v_phase=4 and v_item->>'kind'='warehouse' and
         v_item->'payload'->>'active' is distinct from 'false' and
-        (v_item->'payload'->>'defaultForSupplier'='false') is not true)
+        ((v_item->'payload'->>'defaultForSupplier'='false') is not true
+         or (v_item->>'expected_revision')::bigint=0))
     or (v_phase=5 and v_item->>'kind'='product_origin')
     or (v_phase=6 and v_item->>'kind'='shipment_draft')
     or (v_phase=7 and v_item->>'kind'='warehouse' and v_item->'payload'->>'active'='false')
