@@ -52,7 +52,88 @@ RETURNS TABLE(claimed boolean,state text,reason text)
 LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,geoapify_disposable AS $$
 DECLARE o geoapify_disposable.dispatch_outbox%ROWTYPE;
 BEGIN
- IF p_reservation_id IS NULL OR p_claim_token IS NULL OR p_claim_token !~ '^[A-Za-z0-9_-]{12,80}$' THEN
+ IF p_reservation_id IS NULL OR p_claim_token IS NULL OR p_claim_token !~ '^[A-Za-z0-9_-]{12,73} THEN
+  RETURN QUERY SELECT false,NULL::text,'INVALID_INPUT'::text; RETURN;
+ END IF;
+ PERFORM pg_advisory_xact_lock(7342291,1);
+ SELECT * INTO o FROM geoapify_disposable.dispatch_outbox WHERE reservation_id=p_reservation_id FOR UPDATE;
+ IF NOT FOUND THEN RETURN QUERY SELECT false,NULL::text,'NOT_FOUND'::text; RETURN; END IF;
+ IF o.state<>'READY' THEN
+  RETURN QUERY SELECT false,o.state,'ALREADY_CLAIMED_OR_FINAL'::text; RETURN;
+ END IF;
+ UPDATE geoapify_disposable.dispatch_outbox SET state='CLAIMED',claim_token=p_claim_token,claimed_at=clock_timestamp()
+ WHERE reservation_id=p_reservation_id;
+ RETURN QUERY SELECT true,'CLAIMED'::text,'CLAIMED'::text;
+END $$;
+CREATE OR REPLACE FUNCTION geoapify_disposable.finish_dispatch(
+ p_reservation_id uuid,p_claim_token text,p_outcome text
+) RETURNS TABLE(applied boolean,state text,reason text)
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,geoapify_disposable AS $$
+DECLARE o geoapify_disposable.dispatch_outbox%ROWTYPE; DECLARE t record;
+BEGIN
+ IF p_reservation_id IS NULL OR p_claim_token IS NULL OR p_claim_token !~ '^[A-Za-z0-9_-]{12,73}
+ OR p_outcome NOT IN ('SUCCEEDED','FAILED_CHARGED','UNKNOWN') THEN
+  RETURN QUERY SELECT false,NULL::text,'INVALID_INPUT'::text; RETURN;
+ END IF;
+ PERFORM pg_advisory_xact_lock(7342291,1);
+ SELECT * INTO o FROM geoapify_disposable.dispatch_outbox WHERE reservation_id=p_reservation_id FOR UPDATE;
+ IF NOT FOUND OR o.claim_token IS DISTINCT FROM p_claim_token THEN
+  RETURN QUERY SELECT false,NULL::text,'NOT_FOUND_OR_TOKEN_MISMATCH'::text; RETURN;
+ END IF;
+ IF o.state=p_outcome THEN
+  RETURN QUERY SELECT false,o.state,'REPLAY'::text; RETURN;
+ END IF;
+ IF NOT (o.state='CLAIMED' OR (o.state='UNKNOWN' AND p_outcome IN ('SUCCEEDED','FAILED_CHARGED'))) THEN
+  RETURN QUERY SELECT false,o.state,'INVALID_TRANSITION'::text; RETURN;
+ END IF;
+ IF p_outcome IN ('SUCCEEDED','FAILED_CHARGED') THEN
+  SELECT * INTO t FROM geoapify_disposable.transition(o.principal,o.operation_id,o.context_digest,
+   ('outbox-'||p_claim_token),CASE WHEN p_outcome='SUCCEEDED' THEN 'CONSUMED' ELSE 'FAILED_CHARGED' END);
+  IF t.applied IS DISTINCT FROM true OR t.reason<>'APPLIED' THEN
+   RETURN QUERY SELECT false,o.state,'LEDGER_REJECTED'::text; RETURN;
+  END IF;
+ END IF;
+ UPDATE geoapify_disposable.dispatch_outbox SET state=p_outcome,
+  finalized_at=CASE WHEN p_outcome='UNKNOWN' THEN NULL ELSE clock_timestamp() END
+ WHERE reservation_id=p_reservation_id;
+ RETURN QUERY SELECT true,p_outcome,'APPLIED'::text;
+END $$;
+REVOKE ALL ON FUNCTION geoapify_disposable.authorize_dispatch_contract(text,text,text,uuid,bigint,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION geoapify_disposable.claim_dispatch(uuid,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION geoapify_disposable.finish_dispatch(uuid,text,text) FROM PUBLIC;
+COMMIT;
+ OR p_outcome IS NULL
+ OR p_outcome NOT IN ('SUCCEEDED','FAILED_CHARGED','UNKNOWN') THEN
+  RETURN QUERY SELECT false,NULL::text,'INVALID_INPUT'::text; RETURN;
+ END IF;
+ PERFORM pg_advisory_xact_lock(7342291,1);
+ SELECT * INTO o FROM geoapify_disposable.dispatch_outbox WHERE reservation_id=p_reservation_id FOR UPDATE;
+ IF NOT FOUND OR o.claim_token IS DISTINCT FROM p_claim_token THEN
+  RETURN QUERY SELECT false,NULL::text,'NOT_FOUND_OR_TOKEN_MISMATCH'::text; RETURN;
+ END IF;
+ IF o.state=p_outcome THEN
+  RETURN QUERY SELECT false,o.state,'REPLAY'::text; RETURN;
+ END IF;
+ IF NOT (o.state='CLAIMED' OR (o.state='UNKNOWN' AND p_outcome IN ('SUCCEEDED','FAILED_CHARGED'))) THEN
+  RETURN QUERY SELECT false,o.state,'INVALID_TRANSITION'::text; RETURN;
+ END IF;
+ IF p_outcome IN ('SUCCEEDED','FAILED_CHARGED') THEN
+  SELECT * INTO t FROM geoapify_disposable.transition(o.principal,o.operation_id,o.context_digest,
+   ('outbox-'||p_claim_token),CASE WHEN p_outcome='SUCCEEDED' THEN 'CONSUMED' ELSE 'FAILED_CHARGED' END);
+  IF t.applied IS DISTINCT FROM true OR t.reason<>'APPLIED' THEN
+   RETURN QUERY SELECT false,o.state,'LEDGER_REJECTED'::text; RETURN;
+  END IF;
+ END IF;
+ UPDATE geoapify_disposable.dispatch_outbox SET state=p_outcome,
+  finalized_at=CASE WHEN p_outcome='UNKNOWN' THEN NULL ELSE clock_timestamp() END
+ WHERE reservation_id=p_reservation_id;
+ RETURN QUERY SELECT true,p_outcome,'APPLIED'::text;
+END $$;
+REVOKE ALL ON FUNCTION geoapify_disposable.authorize_dispatch_contract(text,text,text,uuid,bigint,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION geoapify_disposable.claim_dispatch(uuid,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION geoapify_disposable.finish_dispatch(uuid,text,text) FROM PUBLIC;
+COMMIT;
+ THEN
   RETURN QUERY SELECT false,NULL::text,'INVALID_INPUT'::text; RETURN;
  END IF;
  PERFORM pg_advisory_xact_lock(7342291,1);
