@@ -3409,6 +3409,25 @@ function edDeliveryQuoteDemoBasket(productIds,origins,suppliers){
  for(const group of grouped)for(const origin of group.origins)unique.set(origin.id,origin);
  return {groups:grouped,origins:[...unique.values()]};
 }
+function edDeliveryPrepareShipment(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output)return false;
+ const pending=message=>{output.textContent='PENDIENTE · '+message;return false};
+ if(edDeliveryIsQuarantined())return pending('Administración de entregas bloqueada.');
+ const select=document.getElementById('edQuoteDemoProduct');
+ const destinationId=document.getElementById('edQuoteDemoDestination')?.value;
+ const ids=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
+ if(!ids.length)return pending('Selecciona al menos un producto para preparar la entrega.');
+ const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
+ if(!destination)return pending('Selecciona un destino de referencia existente.');
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const basket=edDeliveryQuoteDemoBasket(ids,origins,suppliers);
+ if(!basket)return pending('Uno o más productos carecen de almacenes válidos y sincronizados.');
+ const names=new Map(state.products.map(p=>[String(p.id),p.name||p.nombre||String(p.id)]));
+ const lines=basket.groups.map(g=>(names.get(g.productId)||g.productId)+': '+g.origins.map(o=>o.name).join(', '));
+ output.textContent='PENDIENTE · Preparación offline para '+destination.name+' ('+destination.municipality+'). '+ids.length+' producto(s), '+basket.origins.length+' almacén(es) distintos. '+lines.join(' | ')+'. Faltan distancias viales verificadas; no se ha calculado ni autorizado ninguna tarifa o pedido.';
+ return true;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -3420,6 +3439,7 @@ function edDeliveryQuoteDemoPanel(){
  '<div class="field"><label for="edQuoteDemoProduct">Productos para simular (selección múltiple)</label><select id="edQuoteDemoProduct" multiple size="5">'+productOptions+'</select><p class="note">Sin selección: demostración general. Con varios productos: se incluyen todos sus almacenes asociados; la distancia mayor determina el ejemplo de mensajería.</p></div>'+
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
+ '<button type="button" class="secondary" onclick="edDeliveryPrepareShipment()">Preparar entrega multiproducto</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
