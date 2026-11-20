@@ -2545,7 +2545,7 @@ function edDeliveryReassignWarehouse(sourceId){
   suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
   map=JSON.parse(snapshot===null?'{}':snapshot);
  }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
- if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length||ids.some(id=>!origins.some(o=>o.id===id)))){alert('Asociaciones inválidas o con almacenes inexistentes.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length||ids.some(id=>!origins.some(o=>o.id===id))||ids.some(id=>origins.find(o=>o.id===id).active===false)||ids.some(id=>{const o=origins.find(x=>x.id===id),first=origins.find(x=>x.id===ids[0]);return o.type!==first.type||(o.type==='proveedor'&&o.supplierId!==first.supplierId)}))){alert('Asociaciones inválidas o con almacenes inexistentes.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
  // Reassign only dependencies of verified, currently synchronized products.
@@ -2599,7 +2599,7 @@ function edDeliveryUnlinkWarehouseProducts(sourceId){
   suppliersSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
   map=JSON.parse(snapshot===null?'{}':snapshot);
  }catch(e){alert('No se pudieron verificar las asociaciones.');return false}
- if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(o=>o.id===id)))){alert('Asociaciones inválidas o con almacenes inexistentes.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length||ids.some(id=>!edDeliveryOriginsRead().some(o=>o.id===id))||ids.some(id=>edDeliveryOriginsRead().find(o=>o.id===id).active===false)||ids.some(id=>{const origins=edDeliveryOriginsRead(),o=origins.find(x=>x.id===id),first=origins.find(x=>x.id===ids[0]);return o.type!==first.type||(o.type==='proveedor'&&o.supplierId!==first.supplierId)}))){alert('Asociaciones inválidas o con almacenes inexistentes.');return false}
  if(Object.values(map).some(ids=>!Array.isArray(ids))){alert('Hay asociaciones que requieren revisión.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
