@@ -3626,6 +3626,42 @@ function edDeliveryReplaceArchivedDraftProducts(){
  output.textContent='PENDIENTE · Productos de «'+item.name+'» actualizados: '+productIds.length+' producto(s), '+basket.origins.length+' almacén(es). Destino conservado. Sin pedidos ni tarifas.';
  return true;
 }
+function edDeliveryReconcileAllArchivedDrafts(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output||edDeliveryIsQuarantined())return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ let raw,archive;
+ try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return pending('Archivo de versiones ilegible.')}
+ if(!Array.isArray(archive)||!archive.length||archive.length>30)return pending('No hay versiones válidas para procesar.');
+ const destinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const updates=[],skipped=[];
+ for(const draft of archive){
+  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length||!destinations.has(draft.destinationId)){skipped.push(draft?.name||'Versión inválida');updates.push(draft);continue}
+  const basket=edDeliveryQuoteDemoBasket(draft.productIds,origins,suppliers);
+  if(!basket){skipped.push(draft.name||draft.id);updates.push(draft);continue}
+  updates.push({...draft,warehouseIds:basket.origins.map(o=>o.id)});
+ }
+ if(updates.length===skipped.length)return pending('Ninguna versión puede reconciliarse. Corrige productos, destinos y almacenes.');
+ if(!confirm('Reconciliar '+(updates.length-skipped.length)+' versiones y conservar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
+ let snapshot;
+ try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
+ const latestOrigins=edDeliveryOriginsRead(),latestSuppliers=edDeliverySuppliersRead(),latestDestinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
+ for(let i=0;i<archive.length;i++){
+  if(skipped.includes(archive[i]?.name||'Versión inválida'))continue;
+  const fresh=edDeliveryQuoteDemoBasket(archive[i].productIds,latestOrigins,latestSuppliers);
+  if(!fresh||!latestDestinations.has(archive[i].destinationId)||fresh.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Cambios detectados durante la confirmación.');
+ }
+ try{
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('El archivo cambió.');
+  const now={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+  if(Object.keys(snapshot).some(k=>snapshot[k]!==now[k]))return pending('Las dependencias cambiaron.');
+  const stamp=new Date().toISOString();
+  localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify(updates.map((d,i)=>skipped.includes(archive[i]?.name||'Versión inválida')?d:{...d,snapshot,reconciledAt:stamp})));
+ }catch(e){return pending('No se pudieron guardar las versiones.')}
+ output.textContent='PENDIENTE · '+(updates.length-skipped.length)+' versiones reconciliadas; '+skipped.length+' sin cambios por dependencias inválidas. Sin pedidos ni tarifas.';
+ return true;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -3646,6 +3682,7 @@ function edDeliveryQuoteDemoPanel(){
  '<div class="field"><label>Versiones guardadas</label><select id="edQuoteDraftArchive"><option value="">Seleccionar versión</option>'+archiveOptions+'</select></div><button type="button" class="secondary" onclick="edDeliveryRestoreArchivedDraft()">Restaurar versión</button> <button type="button" class="secondary" onclick="edDeliveryDeleteArchivedDraft()">Eliminar versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReassignArchivedDraftDestination()">Cambiar destino de versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReplaceArchivedDraftProducts()">Actualizar productos de versión</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryReconcileAllArchivedDrafts()">Reconciliar todas las versiones</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
