@@ -9,7 +9,7 @@ BEGIN
  SELECT * INTO x FROM geoapify_disposable.reserve('minute-test','operation-minute-0001',h,8,d);
  IF NOT x.committed OR x.reason<>'RESERVED' THEN RAISE EXCEPTION 'first reserve: %',x.reason; END IF;
  SELECT * INTO y FROM geoapify_disposable.reserve('minute-test','operation-minute-0001',h,8,d-1);
- IF NOT y.committed OR y.reason<>'REPLAY' OR y.reservation_id<>x.reservation_id THEN RAISE EXCEPTION 'cross-day replay failed'; END IF;
+ IF NOT y.committed OR y.reason<>'REPLAY_RESERVED' OR y.reservation_id<>x.reservation_id THEN RAISE EXCEPTION 'cross-day replay failed'; END IF;
  SELECT * INTO y FROM geoapify_disposable.reserve('minute-test','operation-minute-0001',repeat('e',64),8,d);
  IF y.committed OR y.reason<>'IDEMPOTENCY_CONFLICT' THEN RAISE EXCEPTION 'hash conflict'; END IF;
  UPDATE geoapify_disposable.minute_budget SET spent=29 WHERE minute_utc=m;
