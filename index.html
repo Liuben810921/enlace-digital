@@ -2280,8 +2280,18 @@ function edDeliveryOriginsTransferSelectedSupplier(){
  const changed=origins.filter(o=>selected.has(o.id)&&o.supplierId!==targetId);
  if(!changed.length)return false;
  const changedIds=new Set(changed.map(o=>o.id));
- if(Object.values(associations).some(v=>v.some(id=>changedIds.has(id)))){alert('Hay productos asociados a almacenes seleccionados. Reasigna o desvincula esos productos antes de transferirlos.');return false}
- if(!confirm('Transferir '+changed.length+' almacén(es) sin productos asociados al proveedor seleccionado?'))return false;
+ const affectedProducts=Object.entries(associations).filter(([,warehouseIds])=>warehouseIds.some(id=>changedIds.has(id)));
+ if(affectedProducts.length){
+  if(!edInventoryLoaded||edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot){alert('Carga y sincroniza el inventario antes de transferir almacenes con productos.');return false}
+  let shared;
+  try{shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null')}catch(e){}
+  if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot){alert('El inventario compartido no está verificado.');return false}
+  const products=new Map(state.products.map(p=>[String(p.id),p]));
+  if(products.size!==state.products.length||affectedProducts.some(([productId,warehouseIds])=>!products.has(productId)||products.get(productId).origen_producto!=='proveedor'||warehouseIds.some(id=>!changedIds.has(id)))){
+   alert('Hay productos asociados también a almacenes que no se transfieren, o asociaciones incompatibles. Selecciona todos sus almacenes o reasigna esos productos primero.');return false;
+  }
+ }
+ if(!confirm('Transferir '+changed.length+' almacén(es) al proveedor seleccionado, conservando '+affectedProducts.length+' producto(s) asociado(s)?'))return false;
  let same=false;
  try{same=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers&&localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations}catch(e){}
  if(!same){alert('Las dependencias cambiaron durante la confirmación.');return false}
