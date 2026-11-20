@@ -2045,6 +2045,7 @@ function edDeliveryOriginsPanel(){
  (assignedCount(p.id)?'<div class="field"><fieldset id="edReassignProducts-'+esc(p.id)+'"'+(locked?' disabled':'')+'><legend>Productos a reasignar</legend>'+Object.entries(associations).filter(([key,ids])=>Array.isArray(ids)&&ids.includes(p.id)).map(([key])=>{const product=Array.isArray(state.products)?state.products.find(item=>String(item.id)===key):null;return '<label style="display:block;padding:5px"><input type="checkbox" value="'+esc(key)+'" checked> '+esc(product?.nombre||product?.name||key)+' ('+esc(key)+')</label>'}).join('')+'</fieldset></div>':'')+
  (assignedCount(p.id)?'<div class="field"><label>Reasignar productos a otro almacén compatible</label><select id="edReassignTarget-'+esc(p.id)+'"><option value="">Selecciona almacén destino</option>'+items.filter(o=>o.id!==p.id&&o.active!==false&&o.type===p.type&&(p.type==='propio'||o.supplierId===p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryReassignWarehouse('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Reasignar productos</button> <button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryUnlinkWarehouseProducts('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Desvincular productos</button></div>':'')+
  '<button type="button" class="secondary" aria-label="Editar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
+ '<button type="button" class="secondary" aria-label="Duplicar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginDuplicate('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Duplicar</button> '+
  (p.type==='proveedor'?'<button type="button" class="secondary" aria-label="Establecer almacén predeterminado '+esc(p.name)+'"'+lockAttribute+(p.active===false||!edDeliverySuppliersRead().some(x=>x.id===p.supplierId&&x.active!==false)?' disabled':'')+' onclick="edDeliveryOriginSetDefault('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.defaultForSupplier===true?'Predeterminado':'Hacer predeterminado')+'</button> ':'')+
  '<button type="button" class="secondary" aria-label="Cambiar estado del punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginToggle('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.active===false?'Activar':'Desactivar')+'</button> '+
  '<button type="button" class="secondary" aria-label="Eliminar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginDelete('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Eliminar</button></div>').join('');
@@ -2071,6 +2072,25 @@ function edDeliveryOriginReset(){
  document.getElementById('edOriginName').focus();
 }
 const edDeliveryEditSnapshots={origin:null,destination:null};
+function edDeliveryOriginDuplicate(id){
+ if(edDeliveryIsQuarantined())return false;
+ const item=edDeliveryOriginsRead().find(o=>o.id===id);
+ if(!item)return false;
+ edDeliveryOriginReset();
+ document.getElementById('edOriginId').value='';
+ document.getElementById('edOriginName').value=item.name+' (copia)';
+ document.getElementById('edOriginType').value=item.type;
+ document.getElementById('edOriginMunicipality').value=item.municipality;
+ edDeliveryOriginTypeChange();
+ document.getElementById('edOriginSupplier').value=item.supplierId||'';
+ document.getElementById('edOriginAddress').value=item.address;
+ document.getElementById('edOriginLat').value=item.lat??'';
+ document.getElementById('edOriginLng').value=item.lng??'';
+ document.getElementById('edOriginFormTitle').textContent='Nuevo punto de salida a partir de '+item.name;
+ document.getElementById('edOriginFormTitle').scrollIntoView({block:'center',behavior:'smooth'});
+ document.getElementById('edOriginName').focus();
+ return true;
+}
 function edDeliveryOriginEdit(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
 
