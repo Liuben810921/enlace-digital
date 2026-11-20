@@ -854,3 +854,37 @@ function testQuarantineDependencyChangeDuringInvalidation(mode){
 for(const mode of ['normal','links-change','inventory-change','suppliers-change','origins-change'])
  testQuarantineDependencyChangeDuringInvalidation(mode);
 console.log('PASS: 5 quarantine recovery dependency-change scenarios');
+
+
+function testMultiproductArchivedReconciliationConflicts(mode){
+ const draft={id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'d',warehouseIds:['old']};
+ const store={archive:JSON.stringify([draft]),links:'{}',origins:'[]',suppliers:'[]',destinations:'[]','enlace_demo_v1':'{}'};
+ let writes=0;const output={textContent:''};
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryIsQuarantined:()=>false,document:{getElementById:()=>output},
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'},{id:'w2'}]}),edDeliveryContextRevision:()=>1,
+  confirm:()=>{
+   if(mode==='archive-conflict')store.archive=JSON.stringify([draft,{id:'other'}]);
+   if(mode==='links-conflict')store.links='changed';
+   return true;
+  },
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{
+   writes++;if(mode==='throw-write')throw Error('quota');
+   if(mode==='success')store[k]=v;
+  }}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryReconcileAllArchivedDrafts'),ctx,{timeout:1000});
+ assert.equal(ctx.edDeliveryReconcileAllArchivedDrafts(),mode==='success',mode+' reconciliation result');
+ assert.equal(writes,['archive-conflict','links-conflict'].includes(mode)?0:1,mode+' writes');
+ const saved=JSON.parse(store.archive);
+ assert.equal(JSON.stringify(saved[0].warehouseIds),JSON.stringify(mode==='success'?['w1','w2']:['old']));
+ if(mode==='archive-conflict')assert.equal(saved.length,2);
+ if(mode==='silent-write')assert.match(output.textContent,/No se pudo confirmar la persistencia/);
+}
+for(const mode of ['success','archive-conflict','links-conflict','silent-write','throw-write'])
+ testMultiproductArchivedReconciliationConflicts(mode);
+console.log('PASS: 5 multiproduct archived reconciliation conflicts and persistence failures');
