@@ -3837,6 +3837,11 @@ function edDeliveryRouteReadiness(){
  const ids=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
  const destinationId=document.getElementById('edQuoteDemoDestination')?.value||'';
  if(!ids.length||!destinationId){result.textContent='PENDIENTE · Selecciona productos y destino para comprobar coordenadas.';return false}
+ const revision=edDeliveryContextRevision();
+ if(revision===null){result.textContent='PENDIENTE · Versión local inválida.';return false}
+ const keys=[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'];
+ let snapshot;
+ try{snapshot=keys.map(k=>localStorage.getItem(k))}catch(e){result.textContent='PENDIENTE · Almacenamiento local inaccesible.';return false}
  const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
  const basket=edDeliveryQuoteDemoBasket(ids,origins,suppliers);
@@ -3846,6 +3851,9 @@ function edDeliveryRouteReadiness(){
  if(!coordinate(destination.lat,destination.lng??destination.lon))issues.push('Destino sin coordenadas válidas para La Habana');
  for(const o of basket.origins)if(!coordinate(o.lat,o.lng??o.lon))issues.push('Almacén sin coordenadas válidas: '+o.name);
  if(edDeliveryContextRevision()===null)issues.push('Versión de contexto ilegible');
+ let unchanged=false;
+ try{unchanged=revision===edDeliveryContextRevision()&&keys.every((k,i)=>localStorage.getItem(k)===snapshot[i])}catch(e){}
+ if(!unchanged){result.textContent='PENDIENTE · Los datos cambiaron durante el diagnóstico; repite la comprobación.';return false}
  result.textContent='PENDIENTE · Diagnóstico local: '+(issues.length?issues.join(' | '):'Coordenadas de origen y destino completas; faltan autorización de operador, reserva de cuota, rutas Geoapify verificadas y servicio staging aprobado.')+' · No se ha enviado ninguna solicitud externa ni generado una tarifa real.';
  return issues.length===0;
 }
