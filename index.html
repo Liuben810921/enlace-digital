@@ -1658,7 +1658,12 @@ function edDeliveryPersistAndInvalidate(key,items,reason,expectedPrevious){
   }catch(rollbackError){edDeliveryQuarantine()}
   alert('No se pudo confirmar el guardado de entregas.');return false
  }
- if(edDeliveryContextInvalidate(reason)!==null)return true;
+ if(edDeliveryContextInvalidate(reason)!==null){
+  try{if(localStorage.getItem(key)===serialized)return true}catch(e){}
+  edDeliveryQuarantine();
+  alert('El guardado cambió durante la invalidación. Revisa la configuración.');
+  return false;
+ }
  try{
   if(localStorage.getItem(key)!==serialized)edDeliveryQuarantine();
   else{
