@@ -3857,6 +3857,7 @@ function edDeliveryReconcileAllArchivedDrafts(){
  if(!confirm('Reconciliar '+(updates.length-skipped.length)+' versiones y conservar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
+ if(edDeliveryIsQuarantined())return pending('La cuarentena se activó durante la confirmación.');
  if(snapshot.revision===null||Object.keys(before).some(k=>before[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación.');
  const latestOrigins=edDeliveryOriginsRead(),latestSuppliers=edDeliverySuppliersRead(),latestDestinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
  for(let i=0;i<archive.length;i++){
@@ -3865,9 +3866,11 @@ function edDeliveryReconcileAllArchivedDrafts(){
   if(!fresh||!latestDestinations.has(archive[i].destinationId)||fresh.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Cambios detectados durante la confirmación.');
  }
  try{
+  if(edDeliveryIsQuarantined())return pending('La cuarentena se activó antes del guardado.');
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('El archivo cambió.');
   const now={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(Object.keys(snapshot).some(k=>snapshot[k]!==now[k]))return pending('Las dependencias cambiaron.');
+  if(edDeliveryIsQuarantined())return pending('La cuarentena se activó antes de escribir.');
   const stamp=new Date().toISOString();
   const serialized=JSON.stringify(updates.map((d,i)=>skipped.includes(i)?d:{...d,snapshot,reconciledAt:stamp}));
   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,serialized);
