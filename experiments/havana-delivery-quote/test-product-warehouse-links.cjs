@@ -669,3 +669,30 @@ function testQuarantineRecoveryAndArchivedDrafts(mode){
 for(const mode of ['valid','invalid-links','inventory-unloaded','invalidate-fails','remove-fails'])
  testQuarantineRecoveryAndArchivedDrafts(mode);
 console.log('PASS: 5 quarantine recovery and multiproduct archive reconciliation scenarios');
+
+
+function testArchivedReconciliationReadback(mode){
+ const draft={id:'a',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'d',warehouseIds:['old']};
+ const store={archive:JSON.stringify([draft]),'enlace_demo_v1':'i',links:'l',origins:'o',suppliers:'s',destinations:'d'};
+ const output={textContent:''};let writes=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',
+  ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  document:{getElementById:()=>output},edDeliveryIsQuarantined:()=>false,
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'}]}),edDeliveryContextRevision:()=>1,confirm:()=>true,
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{
+   writes++;if(mode==='write-throws')throw Error('quota');
+   if(mode==='persisted')store[k]=v;
+  }}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryReconcileAllArchivedDrafts'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryReconcileAllArchivedDrafts();
+ assert.equal(result,mode==='persisted',mode+' must not report false persistence');
+ assert.equal(writes,1);
+ assert.equal(JSON.stringify(JSON.parse(store.archive)[0].warehouseIds),JSON.stringify(mode==='persisted'?['w1']:['old']));
+ if(mode==='silent-noop')assert.match(output.textContent,/No se pudo confirmar la persistencia/);
+}
+for(const mode of ['persisted','silent-noop','write-throws'])testArchivedReconciliationReadback(mode);
+console.log('PASS: 3 archived reconciliation readback cases (persisted, silent write failure, thrown write)');
