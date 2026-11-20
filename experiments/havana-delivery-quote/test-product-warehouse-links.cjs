@@ -979,3 +979,34 @@ function testPersistInvalidationFinalReadback(mode){
 for(const mode of ['normal','mutate-invalidate','throw-final-read','invalidate-fails','write-silent'])
  testPersistInvalidationFinalReadback(mode);
 console.log('PASS: 5 persistence and invalidation final-readback scenarios');
+
+
+function testArchivedReconciliationQuarantineActivation(mode){
+ const store={archive:JSON.stringify([{id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'d',warehouseIds:['old']}]),
+  links:'{}',origins:'[]',suppliers:'[]',destinations:'[]','enlace_demo_v1':'{}'};
+ let quarantined=false,writes=0,checks=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryIsQuarantined:()=>{checks++;if(mode==='quarantine-final-check'&&checks===3)quarantined=true;return quarantined},
+  document:{getElementById:()=>({textContent:''})},
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'},{id:'w2'}]}),edDeliveryContextRevision:()=>1,
+  confirm:()=>{
+   if(mode==='quarantine-confirm')quarantined=true;
+   if(mode==='archive-conflict')store.archive='[]';
+   return true;
+  },
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{writes++;store[k]=v}}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryReconcileAllArchivedDrafts'),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryReconcileAllArchivedDrafts(),success,mode+' result');
+ assert.equal(writes,success?1:0,mode+' writes');
+ const saved=JSON.parse(store.archive);
+ if(mode!=='archive-conflict')assert.equal(JSON.stringify(saved[0].warehouseIds),JSON.stringify(success?['w1','w2']:['old']));
+}
+for(const mode of ['normal','quarantine-confirm','quarantine-final-check','archive-conflict'])
+ testArchivedReconciliationQuarantineActivation(mode);
+console.log('PASS: 4 archived multiproduct reconciliation quarantine/conflict scenarios');
