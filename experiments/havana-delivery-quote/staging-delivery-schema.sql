@@ -81,6 +81,11 @@ begin
   raise exception 'revision conflict' using errcode='40001';
  end if;
  -- Refuse inconsistent payload/link pairs; do not trust browser validation.
+ -- Supplier activity controls warehouse eligibility and batch dependency ordering.
+ -- Require a JSON boolean rather than relying on text coercion.
+ if p_kind='supplier' and jsonb_typeof(p_payload->'active') is distinct from 'boolean' then
+  raise exception 'supplier active must be boolean' using errcode='23514';
+ end if;
  -- A malformed default flag must not bypass the single-default invariant.
  -- The bridge sends JSON booleans, not strings or arbitrary values.
  if p_kind='warehouse' and (
