@@ -2492,6 +2492,7 @@ function edDeliveryOriginReset(){
  for(const id of ['edOriginId','edOriginName','edOriginAddress','edOriginLat','edOriginLng'])document.getElementById(id).value='';
  document.getElementById('edOriginType').value='propio';
  document.getElementById('edOriginSupplier').value='';
+ document.getElementById('edOriginMakeDefault').checked=false;
  document.getElementById('edOriginMunicipality').value='';edDeliveryOriginTypeChange();
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
  document.getElementById('edOriginName').focus();
@@ -2529,6 +2530,7 @@ function edDeliveryOriginEdit(id){
  document.getElementById('edOriginType').value=p.type;
  document.getElementById('edOriginMunicipality').value=p.municipality;
  edDeliveryOriginTypeChange();document.getElementById('edOriginSupplier').value=p.supplierId||'';
+ document.getElementById('edOriginMakeDefault').checked=p.defaultForSupplier===true;
  document.getElementById('edOriginAddress').value=p.address;
  document.getElementById('edOriginLat').value=p.lat??'';
  document.getElementById('edOriginLng').value=p.lng??'';
