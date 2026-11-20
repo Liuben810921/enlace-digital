@@ -1,17 +1,18 @@
 -- Disposable PostgreSQL only, after 027. Rollback-only.
 BEGIN;
 DO $$
-DECLARE n integer; DECLARE def text;
+DECLARE n integer;
 BEGIN
  SELECT count(*) INTO n FROM geoapify_disposable.reconciliation_privilege_policy
  WHERE policy_id=1 AND enabled=false AND owner_role IS NULL;
  IF n<>1 THEN RAISE EXCEPTION 'unsafe default privilege policy'; END IF;
  SELECT count(*) INTO n FROM geoapify_disposable.inspect_reviewer_table_access();
  IF n<>0 THEN RAISE EXCEPTION 'reviewer direct DML privilege found'; END IF;
- SELECT pg_get_functiondef('geoapify_disposable.record_reconciliation_evidence(uuid,text,text,text,text)'::regprocedure) INTO def;
- IF position('SECURITY INVOKER' IN def)=0 THEN RAISE EXCEPTION 'unexpected reviewer function security mode'; END IF;
- SELECT pg_get_functiondef('geoapify_disposable.reconcile_dispatch(uuid,text,text,text,text)'::regprocedure) INTO def;
- IF position('SECURITY INVOKER' IN def)=0 THEN RAISE EXCEPTION 'unexpected reconcile function security mode'; END IF;
+ SELECT count(*) INTO n FROM pg_catalog.pg_proc WHERE oid IN (
+  'geoapify_disposable.record_reconciliation_evidence(uuid,text,text,text,text)'::regprocedure,
+  'geoapify_disposable.reconcile_dispatch(uuid,text,text,text,text)'::regprocedure)
+  AND prosecdef=false;
+ IF n<>2 THEN RAISE EXCEPTION 'unexpected reviewer function security mode'; END IF;
  RAISE NOTICE 'PASS default-deny policy, no reviewer direct DML, invoker functions not activated';
 END $$;
 ROLLBACK;
