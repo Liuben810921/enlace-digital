@@ -3360,13 +3360,35 @@ function deleteCategory(name){if(!state.categories.includes(name))return;const c
 let edQuoteDemoRateDraft='200';
 function edQuoteDemoRateRemember(input){edQuoteDemoRateDraft=input.value;}
 
+function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
+ const activeSuppliers=new Set(suppliers.filter(p=>p.active!==false).map(p=>p.id));
+ const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&activeSuppliers.has(o.supplierId)));
+ if(!productId)return eligible;
+ if(!edInventoryLoaded||edInventoryPendingSaves>0||!Array.isArray(state.products)||JSON.stringify(state.products)!==edInventorySnapshot)return null;
+ const products=state.products.filter(p=>String(p.id)===productId);
+ if(products.length!==1)return null;
+ let shared,raw,map;
+ try{
+  shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');
+  raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  map=JSON.parse(raw===null?'{}':raw);
+ }catch(e){return null}
+ if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot||!map||typeof map!=='object'||Array.isArray(map))return null;
+ const ids=map[productId];
+ if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length)return null;
+ const selected=ids.map(id=>eligible.find(o=>o.id===id));
+ if(selected.some(o=>!o||o.type!==products[0].origen_producto||o.type==='proveedor'&&o.supplierId!==selected[0]?.supplierId))return null;
+ return selected;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
+ const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'">'+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
  const options=destinations.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
  return '<section class="panel" aria-labelledby="edQuoteDemoTitle"><h3 id="edQuoteDemoTitle">Simulador local de mensajería · NO OPERATIVO</h3>'+
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
  '<p class="note">Almacenes elegibles: '+eligible.length+'. Destinos de prueba: '+destinations.length+'.</p>'+
+ '<div class="field"><label for="edQuoteDemoProduct">Producto para simular</label><select id="edQuoteDemoProduct"><option value="">Todos los almacenes activos (demostración general)</option>'+productOptions+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
@@ -3381,20 +3403,21 @@ function edDeliveryQuoteDemo(synthetic){
  const rateInput=document.getElementById('edQuoteDemoRate')?.value;
  const rateCupPerKm=rateInput===''?NaN:Number(rateInput);
  if(!destinationId||!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('Selecciona un destino de referencia.');
+ const productId=document.getElementById('edQuoteDemoProduct')?.value||'';
  const revision=edDeliveryContextRevision();
  const origins=edDeliveryOriginsRead();
  const suppliers=edDeliverySuppliersRead();
- const activeSuppliers=new Set(suppliers.filter(s=>s.active!==false).map(s=>s.id));
- const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&activeSuppliers.has(o.supplierId)));
+ const eligible=edDeliveryQuoteDemoEligible(productId,origins,suppliers);
+ if(!eligible||!eligible.length)return pending(productId?'Producto sin asociaciones verificadas y compatibles. Revisa el inventario y sus almacenes.':'No hay almacenes activos disponibles.');
  // These ephemeral fixtures are NEVER road measurements. They exist solely for demonstration.
  const routes=synthetic?eligible.map((o,i)=>({originId:o.id,destinationId,km:2+i*3,status:'verified',contextRevision:revision})):[];
  const contract=window.EDOfflineQuote?.quoteDelivery;
  if(typeof contract!=='function')return pending('Contrato offline no disponible; no se puede simular.');
- const quote=contract({origins,suppliers,routes,destinationId,rateCupPerKm,contextRevision:revision,quarantined:edDeliveryIsQuarantined()});
+ const quote=contract({origins:eligible,suppliers,routes,destinationId,rateCupPerKm,contextRevision:revision,quarantined:edDeliveryIsQuarantined()});
  if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
  if(!synthetic)return pending('No hay distancias viales verificadas.');
  const origin=eligible.find(o=>o.id===quote.originId);
- result.textContent='SIMULACIÓN FICTICIA · '+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
+ result.textContent='SIMULACIÓN FICTICIA · '+(productId?'Producto '+productId+' · ':'')++(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
  return true;
 }
 
