@@ -273,3 +273,28 @@ function testBulkSupplierTransfer(mode){
 }
 for(const mode of ['success','partial','duplicate','conflict'])testBulkSupplierTransfer(mode);
 console.log('PASS: 4 bulk supplier transfer cases with two products and preserved associations');
+
+
+function testArchivedSingleEdit(name,conflict){
+ const draft={id:'a',name:'Version',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'old',warehouseIds:['w1']};
+ const store={archive:JSON.stringify([draft]),'enlace_demo_v1':'inventory',links:'{}',origins:'[]',suppliers:'[]',destinations:'[]'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDraftArchive'?{value:'a'}:id==='edQuoteDemoDestination'?{value:'new'}:id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'},{value:'p2'}]}:null},
+  edDeliveryIsQuarantined:()=>false,edDeliveryDestinationsRead:()=>[{id:'old'},{id:'new',name:'Nuevo'}],
+  edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'}]}),
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryContextRevision:()=>1,confirm:()=>{if(conflict)store.links='changed';return true}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const result=ctx[name](),updated=JSON.parse(store.archive)[0];
+ assert.equal(result,!conflict);
+ if(conflict){assert.equal(updated.destinationId,'old');assert.equal(JSON.stringify(updated.productIds),JSON.stringify(['p1']));}
+ else if(name==='edDeliveryReplaceArchivedDraftProducts'){assert.equal(updated.destinationId,'old');assert.equal(JSON.stringify(updated.productIds),JSON.stringify(['p1','p2']));}
+ else{assert.equal(updated.destinationId,'new');assert.equal(JSON.stringify(updated.productIds),JSON.stringify(['p1']));}
+}
+for(const name of ['edDeliveryReplaceArchivedDraftProducts','edDeliveryReassignArchivedDraftDestination']){
+ testArchivedSingleEdit(name,false);testArchivedSingleEdit(name,true);
+}
+console.log('PASS: 4 archived single-edit cases (success and confirmation-time dependency conflict)');
