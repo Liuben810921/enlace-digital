@@ -117,8 +117,8 @@ begin
   and (exists(select 1 from jsonb_array_elements(p_payload->'productIds') p
       where jsonb_typeof(p.value)<>'string' or p.value#>>'{}'='')
     or (select count(distinct value) from jsonb_array_elements_text(p_payload->'productIds'))
-       <>jsonb_array_length(p_payload->'productIds')
- then raise exception 'duplicate draft products' using errcode='23514'; end if;
+       <>jsonb_array_length(p_payload->'productIds'))
+ then raise exception 'invalid or duplicate draft products' using errcode='23514'; end if;
  if p_kind='shipment_draft' then
   if jsonb_typeof(p_payload->'productIds') is distinct from 'array' then
    raise exception 'draft products must be an array' using errcode='23514';
