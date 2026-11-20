@@ -3615,6 +3615,7 @@ function edDeliveryQuoteDemoPanel(){
  '<button type="button" class="secondary" onclick="edDeliveryReconcileShipmentDraft()">Reconciliar dependencias</button> <button type="button" class="secondary" onclick="edDeliveryDeleteShipmentDraft()">Eliminar borrador</button> '+
  '<div class="field"><label>Nombre de versión del borrador</label><input id="edQuoteDraftName" maxlength="80" placeholder="Ej. Entrega Vedado"></div><button type="button" class="secondary" onclick="edDeliveryArchiveShipmentDraft()">Guardar versión</button> '+
  '<div class="field"><label>Versiones guardadas</label><select id="edQuoteDraftArchive"><option value="">Seleccionar versión</option>'+archiveOptions+'</select></div><button type="button" class="secondary" onclick="edDeliveryRestoreArchivedDraft()">Restaurar versión</button> <button type="button" class="secondary" onclick="edDeliveryDeleteArchivedDraft()">Eliminar versión</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryReassignArchivedDraftDestination()">Cambiar destino de versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
