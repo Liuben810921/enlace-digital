@@ -19,9 +19,13 @@ BEGIN
  OR has_table_privilege('ed_reconcile_executor','geoapify_disposable.trusted_context','UPDATE')
  OR has_table_privilege('ed_reconcile_executor','geoapify_disposable.dispatch_outbox','DELETE') THEN
   RAISE EXCEPTION 'executor overprivileged'; END IF;
- IF has_function_privilege('public','geoapify_disposable.reviewer_attest_guarded(uuid,text,text,text,text)','EXECUTE')
- OR has_function_privilege('public','geoapify_disposable.reviewer_reconcile_guarded(uuid,text,text,text,text)','EXECUTE') THEN
-  RAISE EXCEPTION 'public wrapper execution'; END IF;
+ SELECT count(*) INTO n FROM pg_catalog.pg_proc p
+ CROSS JOIN LATERAL pg_catalog.aclexplode(coalesce(p.proacl,pg_catalog.acldefault('f',p.proowner))) a
+ WHERE p.oid IN (
+ 'geoapify_disposable.reviewer_attest_guarded(uuid,text,text,text,text)'::regprocedure,
+ 'geoapify_disposable.reviewer_reconcile_guarded(uuid,text,text,text,text)'::regprocedure)
+ AND a.grantee=0 AND a.privilege_type='EXECUTE';
+ IF n<>0 THEN RAISE EXCEPTION 'public wrapper execution'; END IF;
  RAISE NOTICE 'PASS no-login definer, no bypassrls, disabled wrappers, minimum privilege assertions';
 END $$;
 ROLLBACK;
