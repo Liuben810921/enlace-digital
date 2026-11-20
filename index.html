@@ -3515,10 +3515,65 @@ function edDeliveryDeleteShipmentDraft(){
  output.textContent='PENDIENTE · Borrador local eliminado. No se modificaron productos, almacenes ni pedidos.';
  return true;
 }
+const ED_DELIVERY_DRAFT_COLLECTION_KEY='ed_delivery_shipment_drafts_offline_v1';
+function edDeliveryArchiveShipmentDraft(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output||edDeliveryIsQuarantined())return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ let draft,raw,collectionRaw,collection;
+ try{
+  raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);
+  draft=JSON.parse(raw||'null');
+  collectionRaw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);
+  collection=JSON.parse(collectionRaw||'[]');
+ }catch(e){return pending('No se pudieron leer los borradores.')}
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!Array.isArray(draft.warehouseIds)||!Array.isArray(collection)||collection.length>=30)return pending('Borrador inválido o límite de 30 versiones alcanzado.');
+ const name=document.getElementById('edQuoteDraftName')?.value.trim();
+ if(!name||name.length>80)return pending('Introduce un nombre de hasta 80 caracteres.');
+ const id='draft-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);
+ const item={...draft,id,name,archivedAt:new Date().toISOString()};
+ try{
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==collectionRaw)return pending('Los borradores cambiaron. Reintenta.');
+  localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify([...collection,item]));
+ }catch(e){return pending('No se pudo guardar la versión.')}
+ output.textContent='PENDIENTE · Versión «'+name+'» guardada localmente. No crea pedidos ni cotizaciones.';
+ return true;
+}
+function edDeliveryRestoreArchivedDraft(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output||edDeliveryIsQuarantined())return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ const id=document.getElementById('edQuoteDraftArchive')?.value;
+ let archive,raw;
+ try{archive=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)||'[]');raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY)}catch(e){return pending('Archivo de borradores ilegible.')}
+ const item=Array.isArray(archive)?archive.find(d=>d.id===id):null;
+ if(!item||item.version!==1||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length)return pending('Selecciona una versión válida.');
+ if(!confirm('Restaurar «'+item.name+'» como borrador de trabajo? Sustituirá el borrador actual; las dependencias se verificarán al recuperarlo.'))return false;
+ try{
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('El borrador de trabajo cambió.');
+  const {id:archiveId,name,archivedAt,...draft}=item;
+  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft));
+ }catch(e){return pending('No se pudo restaurar la versión.')}
+ return edDeliveryLoadShipmentDraft();
+}
+function edDeliveryDeleteArchivedDraft(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output||edDeliveryIsQuarantined())return false;
+ const id=document.getElementById('edQuoteDraftArchive')?.value;
+ let raw,archive;
+ try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return false}
+ if(!Array.isArray(archive)||!archive.some(d=>d.id===id)||!confirm('Eliminar esta versión archivada?'))return false;
+ try{if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return false;localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify(archive.filter(d=>d.id!==id)))}catch(e){return false}
+ output.textContent='PENDIENTE · Versión archivada eliminada. El borrador de trabajo se conserva.';
+ adminTab('delivery');
+ return true;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
  const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'">'+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
+ let archives=[];try{const stored=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)||'[]');if(Array.isArray(stored))archives=stored.filter(d=>d&&typeof d.id==='string'&&typeof d.name==='string')}catch(e){}
+ const archiveOptions=archives.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
  const options=destinations.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
  return '<section class="panel" aria-labelledby="edQuoteDemoTitle"><h3 id="edQuoteDemoTitle">Simulador local de mensajería · NO OPERATIVO</h3>'+
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
@@ -3529,6 +3584,8 @@ function edDeliveryQuoteDemoPanel(){
  '<button type="button" class="secondary" onclick="edDeliveryPrepareShipment()">Preparar entrega multiproducto</button> '+
  '<button type="button" class="secondary" onclick="edDeliverySaveShipmentDraft()">Guardar borrador offline</button> <button type="button" class="secondary" onclick="edDeliveryLoadShipmentDraft()">Recuperar borrador</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReconcileShipmentDraft()">Reconciliar dependencias</button> <button type="button" class="secondary" onclick="edDeliveryDeleteShipmentDraft()">Eliminar borrador</button> '+
+ '<div class="field"><label>Nombre de versión del borrador</label><input id="edQuoteDraftName" maxlength="80" placeholder="Ej. Entrega Vedado"></div><button type="button" class="secondary" onclick="edDeliveryArchiveShipmentDraft()">Guardar versión</button> '+
+ '<div class="field"><label>Versiones guardadas</label><select id="edQuoteDraftArchive"><option value="">Seleccionar versión</option>'+archiveOptions+'</select></div><button type="button" class="secondary" onclick="edDeliveryRestoreArchivedDraft()">Restaurar versión</button> <button type="button" class="secondary" onclick="edDeliveryDeleteArchivedDraft()">Eliminar versión</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
