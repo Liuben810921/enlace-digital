@@ -412,12 +412,17 @@ begin
    end if;
   end loop;
  end loop;
+ -- Every input must have been executed exactly once, including idempotent
+ -- retries. A pre-existing UUID must never fill in for a skipped item.
+ if jsonb_array_length(v_results)<>jsonb_array_length(p_items) then
+  raise exception 'batch execution count mismatch' using errcode='22023';
+ end if;
  -- Return results in the caller's canonical input order, not execution-phase
  -- order. Operation IDs are unique per request and identify each response.
  select jsonb_agg(o.response order by i.ordinality) into v_results
  from jsonb_array_elements(p_items) with ordinality as i(value,ordinality)
  join ed_delivery_private.operations o
-   on o.operation_id=(i.value->>'operation_id')::uuid;
+   on o.operation_id=(i.value->>'operation_id')::uuid and o.actor_id=v_actor;
  -- Never report an atomic batch as successful if any input item was skipped.
  if coalesce(jsonb_array_length(v_results),0)<>jsonb_array_length(p_items) then
   raise exception 'batch result count mismatch' using errcode='22023';
