@@ -2301,11 +2301,11 @@ function edDeliveryOriginsMoveSelected(){
  if(ids.some(id=>!known.has(id))){alert('La selección contiene almacenes inexistentes.');return false}
  const selected=new Set(ids),affected=items.filter(o=>selected.has(o.id)&&o.municipality!==target);
  if(!affected.length){alert('Los almacenes seleccionados ya pertenecen a ese municipio.');return false}
- if(!confirm('Actualizar municipio de '+affected.length+' almacén(es) a '+target+'? Verifica direcciones, coordenadas y cotizaciones antes de utilizar estos puntos.'))return false;
+ if(!confirm('Actualizar municipio de '+affected.length+' almacén(es) a '+target+'? Se borrarán las coordenadas anteriores de los almacenes trasladados. Revisa sus direcciones manuales.'))return false;
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot}catch(e){}
  if(!unchanged){alert('Los almacenes cambiaron durante la confirmación.');return false}
- const updated=items.map(o=>selected.has(o.id)&&o.municipality!==target?{...o,municipality:target,version:(o.version||0)+1}:o);
+ const updated=items.map(o=>selected.has(o.id)&&o.municipality!==target?{...o,municipality:target,lat:null,lng:null,version:(o.version||0)+1}:o);
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,updated,'warehouses_bulk_municipality',snapshot))return false;
  adminTab('delivery');return true;
 }
@@ -2397,6 +2397,7 @@ function edDeliveryOriginSave(){
  if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){document.getElementById('edOriginSupplier').focus();alert('Selecciona un proveedor activo.');return}
  const latRaw=val('edOriginLat'),lngRaw=val('edOriginLng');
  if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){const first=!name?'edOriginName':!['propio','proveedor'].includes(type)?'edOriginType':!municipality?'edOriginMunicipality':'edOriginAddress';document.getElementById(first).focus();alert('Completa nombre, tipo, municipio y dirección.');return}
+ if(!municipios.includes(municipality)){alert('Selecciona un municipio válido de La Habana.');return false}
  if(Boolean(latRaw)!==Boolean(lngRaw)){document.getElementById(latRaw?'edOriginLng':'edOriginLat').focus();alert('Indica ambas coordenadas o deja las dos vacías.');return}
  const lat=latRaw===''?null:Number(latRaw),lng=lngRaw===''?null:Number(lngRaw);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){document.getElementById(!Number.isFinite(lat)||lat< -90||lat>90?'edOriginLat':'edOriginLng').focus();alert('Coordenadas fuera de rango.');return}
@@ -2408,6 +2409,7 @@ function edDeliveryOriginSave(){
  }
  const existing=id?items.find(x=>x.id===id):null;
  if(id&&!existing){alert('El punto de salida ya no existe.');return}
+ if(existing&&existing.municipality!==municipality&&lat!==null&&lat===existing.lat&&lng===existing.lng){alert('El municipio cambió: elimina o actualiza las coordenadas anteriores del almacén.');return false}
  let associationSnapshot=null,dependencyChange=false;
  if(existing&&(existing.type!==type||(type==='proveedor'&&existing.supplierId!==supplierId))){
   let associations;
