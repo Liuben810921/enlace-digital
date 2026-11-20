@@ -631,3 +631,41 @@ function testPersistRollbackFailureMatrix(mode){
 for(const mode of ['success','write-throws','readback-mismatch','invalidate-fails','rollback-fails','expected-mismatch'])
  testPersistRollbackFailureMatrix(mode);
 console.log('PASS: 6 persistence scenarios with write failure, readback mismatch, invalidation failure, rollback and quarantine');
+
+
+function testQuarantineRecoveryAndArchivedDrafts(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true},{id:'w2',type:'proveedor',supplierId:'s1',active:true}];
+ const links=mode==='invalid-links'?{p1:['w1','w2'],p2:['missing']}:{p1:['w1','w2'],p2:['w2']};
+ const drafts=[{id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'d',warehouseIds:['old']}];
+ const store={q:'1',origins:JSON.stringify(origins),suppliers:JSON.stringify([{id:'s1',active:true}]),links:JSON.stringify(links),archive:JSON.stringify(drafts),destinations:'d','enlace_demo_v1':JSON.stringify({products})};
+ let writes=0;
+ const ctx={
+  ED_DELIVERY_QUARANTINE_KEY:'q',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryQuarantinedInSession:true,edInventoryLoaded:mode!=='inventory-unloaded',state:{products},
+  edDeliveryContextInvalidate:()=>mode==='invalidate-fails'?null:1,
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>origins,
+  edDeliverySuppliersRead:()=>[{id:'s1',active:true}],edDeliveryContextRevision:()=>1,
+  edDeliveryQuoteDemoBasket:ids=>({origins:[...new Set(ids.flatMap(id=>(links[id]||[])))].map(id=>({id}))}),
+  document:{getElementById:()=>({textContent:''})},
+  localStorage:{
+   getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v;writes++},
+   removeItem:k=>{if(mode==='remove-fails')throw Error('remove');delete store[k]}
+  },
+  confirm:()=>true,alert:()=>{}
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryIsQuarantined','edDeliveryQuarantine','edDeliveryRecoverQuarantine','edDeliveryReconcileAllArchivedDrafts'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const success=mode==='valid';
+ assert.equal(ctx.edDeliveryRecoverQuarantine(),success,mode+' recovery');
+ assert.equal(ctx.edDeliveryIsQuarantined(),!success,mode+' quarantine state');
+ assert.equal(ctx.edDeliveryReconcileAllArchivedDrafts(),success,mode+' archived reconciliation');
+ assert.equal(writes,success?1:0,mode+' archive writes');
+ assert.equal(JSON.stringify(JSON.parse(store.archive)[0].warehouseIds),JSON.stringify(success?['w1','w2']:['old']));
+ assert.equal(JSON.stringify(JSON.parse(store['enlace_demo_v1']).products),JSON.stringify(products));
+}
+for(const mode of ['valid','invalid-links','inventory-unloaded','invalidate-fails','remove-fails'])
+ testQuarantineRecoveryAndArchivedDrafts(mode);
+console.log('PASS: 5 quarantine recovery and multiproduct archive reconciliation scenarios');
