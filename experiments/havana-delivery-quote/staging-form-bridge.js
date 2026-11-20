@@ -126,6 +126,61 @@ function archive(){
  if(!latest){tell('No hay borrador remoto pendiente para archivar');return false}
  return save('shipment_draft',latest.id,{...latest.payload,name,archivedAt:new Date().toISOString(),status:'ARCHIVADO'},links.filter(l=>l.source_kind==='shipment_draft'&&l.source_id===latest.id).map(l=>({target_kind:l.target_kind,target_id:l.target_id})));
 }
+async function batch(changes){
+ if(busy||!changes.length||changes.length>100)return false;
+ busy=true;
+ try{
+  const result=await api.batch(changes.map(c=>{
+   const old=get(c.kind,c.id);if(!old)throw Error('Entidad inexistente: '+c.id);
+   return {collection:map[c.kind],id:c.id,payload:c.payload,expectedRevision:old.revision,
+    links:c.links??links.filter(l=>l.source_kind===c.kind&&l.source_id===c.id).map(l=>({target_kind:l.target_kind,target_id:l.target_id})),operationId:crypto.randomUUID()};
+  }));
+  try{await refresh()}catch(e){tell('Lote confirmado por staging; actualización de pantalla pendiente');return true}
+  adminTab('delivery');tell('Staging confirmó '+result.length+' cambios atómicos');return true;
+ }catch(e){tell('Lote rechazado sin aplicar cambios: '+e.message);return false}finally{busy=false}
+}
+function selected(className,panelId){
+ const panel=document.getElementById(panelId);
+ if(!panel||panel.disabled)return [];
+ const ids=[...panel.querySelectorAll('.'+className+':checked')].map(e=>e.value);
+ return ids.length===new Set(ids).size?ids:[];
+}
+function bulkSupplierActive(active){
+ const ids=selected('edSupplierBulkCheck','edSupplierBulkSelection');
+ if(!ids.length||ids.some(id=>!get('supplier',id))){tell('Selecciona proveedores válidos');return false}
+ const affected=rows('warehouse').filter(w=>ids.includes(w.payload.supplierId));
+ if(!active&&affected.some(w=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===w.id))){tell('Reasigna los productos dependientes antes de desactivar');return false}
+ return batch(ids.filter(id=>(get('supplier',id).payload.active!==false)!==active).map(id=>({kind:'supplier',id,payload:{...get('supplier',id).payload,active}})));
+}
+function bulkWarehouseActive(active){
+ const ids=selected('edOriginBulkCheck','edOriginBulkSelection');
+ if(!ids.length||ids.some(id=>!get('warehouse',id))){tell('Selecciona almacenes válidos');return false}
+ if(!active&&ids.some(id=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===id))){tell('Hay productos asociados; reasigna antes de desactivar');return false}
+ if(active&&ids.some(id=>{const w=get('warehouse',id).payload;return w.supplierId&&get('supplier',w.supplierId)?.payload.active===false})){tell('Activa primero el proveedor');return false}
+ return batch(ids.filter(id=>(get('warehouse',id).payload.active!==false)!==active).map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,active}})));
+}
+function bulkMunicipality(){
+ const municipality=field('edOriginBulkMunicipality'),ids=selected('edOriginBulkCheck','edOriginBulkSelection');
+ if(!municipios.includes(municipality)||!ids.length||ids.some(id=>!get('warehouse',id))){tell('Municipio o almacenes inválidos');return false}
+ const changed=ids.filter(id=>get('warehouse',id).payload.municipality!==municipality);
+ if(!changed.length)return false;
+ if(!confirm('Trasladar '+changed.length+' almacenes y borrar sus coordenadas anteriores?'))return false;
+ return batch(changed.map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,municipality,lat:null,lng:null}})));
+}
+function setDefault(id){
+ const chosen=get('warehouse',id);if(!chosen||chosen.payload.type!=='proveedor'||chosen.payload.active===false||get('supplier',chosen.payload.supplierId)?.payload.active===false){tell('Almacén o proveedor inválido');return false}
+ const group=rows('warehouse').filter(w=>w.payload.type==='proveedor'&&w.payload.supplierId===chosen.payload.supplierId);
+ const changed=group.filter(w=>(w.payload.defaultForSupplier===true)!==(w.id===id));
+ return batch(changed.map(w=>({kind:'warehouse',id:w.id,payload:{...w.payload,defaultForSupplier:w.id===id}})));
+}
+function bulkTransferSupplier(){
+ const targetId=field('edOriginBulkSupplier'),ids=selected('edOriginBulkCheck','edOriginBulkSelection');
+ if(!get('supplier',targetId)||get('supplier',targetId).payload.active===false||!ids.length){tell('Proveedor destino o selección inválidos');return false}
+ if(ids.some(id=>!get('warehouse',id)||get('warehouse',id).payload.type!=='proveedor')){tell('Solo se admiten almacenes de proveedor');return false}
+ const changed=ids.filter(id=>get('warehouse',id).payload.supplierId!==targetId);
+ if(changed.some(id=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===id))){tell('Reasigna productos asociados antes de transferir almacenes');return false}
+ return batch(changed.map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,supplierId:targetId,defaultForSupplier:false},links:[{target_kind:'supplier',target_id:targetId}]})));
+}
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
@@ -144,12 +199,15 @@ function init(){
  wrap('edDeliveryDestinationSave',destination);
  wrap('edProductOriginsSave',association);
  wrap('edDeliverySaveShipmentDraft',draft);
+ wrap(bulkSupplierActive);
+ wrap(bulkWarehouseActive);
+ wrap(bulkMunicipality);
+ wrap(setDefault);
+ wrap(bulkTransferSupplier);
  // Prevent unsupported local-only mutations from being mistaken for remote saves.
  const unsupported=['edDeliveryPersistAndInvalidate',
- 'edDeliverySuppliersDeleteSelected','edDeliverySuppliersSetSelectedActive','edDeliverySupplierTransferWarehouses',
- 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsSetSelectedActive','edDeliveryOriginsTransferSelectedSupplier',
- 'edDeliveryOriginsMoveSelected','edDeliveryOriginSetDefault',
- 'edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
+ 'edDeliverySuppliersDeleteSelected','edDeliverySupplierTransferWarehouses',
+ 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsMoveSelected','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
  for(const name of unsupported){
   if(typeof window[name]!=='function')continue;
   const original=window[name];
