@@ -328,3 +328,37 @@ function testBulkArchivedProductReconciliation(mode){
 }
 for(const mode of ['success','stale','conflict'])testBulkArchivedProductReconciliation(mode);
 console.log('PASS: 3 bulk archived multiproduct edit cases including stale warehouse reconciliation');
+
+
+function testBulkArchivedDestinationReconciliation(mode){
+ const drafts=[
+  {id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'old',warehouseIds:['w1','w2']},
+  {id:'b',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'new',warehouseIds:['w2']},
+  {id:'c',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'new',warehouseIds:['stale']}
+ ];
+ const store={archive:JSON.stringify(drafts),links:'links',origins:'origins',suppliers:'suppliers',destinations:'destinations','enlace_demo_v1':'inventory'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoDestination'?{value:'new'}:null},
+  edDeliveryIsQuarantined:()=>false,edDeliveryDestinationsRead:()=>[{id:'new',name:'Nuevo'}],
+  edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryContextRevision:()=>1,confirm:()=>{if(mode==='conflict')store.links='changed';return true}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryBulkReassignArchivedDestinations'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryBulkReassignArchivedDestinations(),updated=JSON.parse(store.archive);
+ if(mode==='conflict'){
+  assert.equal(result,false);assert.equal(JSON.stringify(updated),JSON.stringify(drafts));
+ }else{
+  assert.equal(result,true);
+  assert.equal(updated[0].destinationId,'new');assert.equal(JSON.stringify(updated[0].warehouseIds),JSON.stringify(['w1','w2']));
+  assert.equal(JSON.stringify(updated[1]),JSON.stringify(drafts[1]));
+  assert.equal(JSON.stringify(updated[2].warehouseIds),JSON.stringify(['w1']));
+  assert(updated[0].snapshot&&updated[2].snapshot);
+ }
+}
+testBulkArchivedDestinationReconciliation('success');
+testBulkArchivedDestinationReconciliation('conflict');
+console.log('PASS: 2 bulk archived destination scenarios with multiproduct preservation and stale warehouse reconciliation');
