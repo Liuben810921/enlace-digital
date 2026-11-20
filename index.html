@@ -2336,7 +2336,7 @@ function edDeliveryOriginsTransferSelectedSupplier(){
  if(!suppliers.some(s=>s.id===targetId&&s.active!==false)){alert('Selecciona un proveedor de destino activo.');return false}
  const selected=new Set(ids),known=new Map(origins.map(o=>[o.id,o]));
  if(ids.some(id=>!known.has(id)||known.get(id).type!=='proveedor')){alert('Solo puedes transferir almacenes de proveedores existentes.');return false}
- if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'))){alert('Asociaciones inválidas.');return false}
+ if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(v=>!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!known.has(id))||v.some(id=>known.get(id).active===false)||v.some(id=>known.get(id).type!==known.get(v[0])?.type||(known.get(id).type==='proveedor'&&known.get(id).supplierId!==known.get(v[0])?.supplierId)))){alert('Asociaciones inválidas o con dependencias inconsistentes.');return false}
  const changed=origins.filter(o=>selected.has(o.id)&&o.supplierId!==targetId);
  if(!changed.length)return false;
  const changedIds=new Set(changed.map(o=>o.id));
