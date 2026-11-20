@@ -89,7 +89,7 @@ begin
  ) then raise exception 'warehouse flags must be booleans' using errcode='23514'; end if;
  if p_kind='warehouse' and (
    (p_payload->>'type'='proveedor' and
-     (nullif(p_payload->>'supplierId','') is null or jsonb_array_length(p_links)<>1 or
+     (jsonb_typeof(p_payload->'supplierId') is distinct from 'string' or nullif(p_payload->>'supplierId','') is null or jsonb_array_length(p_links)<>1 or
       not exists(select 1 from jsonb_array_elements(p_links) x where x->>'target_kind'='supplier' and x->>'target_id'=p_payload->>'supplierId')))
    or (p_payload->>'type'='propio' and (jsonb_array_length(p_links)<>0 or nullif(p_payload->>'supplierId','') is not null))
    or p_payload->>'type' is null or p_payload->>'type' not in ('propio','proveedor')
@@ -98,6 +98,8 @@ begin
  -- encode the same relationship more than once.
  if p_kind='product_origin' and jsonb_typeof(p_payload->'warehouseIds')='array'
   and (jsonb_array_length(p_payload->'warehouseIds')=0
+    or exists(select 1 from jsonb_array_elements(p_payload->'warehouseIds') w
+      where jsonb_typeof(w.value)<>'string' or w.value#>>'{}'='')
     or (select count(distinct value) from jsonb_array_elements_text(p_payload->'warehouseIds'))
        <>jsonb_array_length(p_payload->'warehouseIds'))
  then raise exception 'duplicate or empty warehouse associations' using errcode='23514'; end if;
@@ -112,14 +114,17 @@ begin
        where l->>'target_kind'='warehouse' and l->>'target_id'=w.value))
  ) then raise exception 'association links inconsistent' using errcode='23514'; end if;
  if p_kind='shipment_draft' and jsonb_typeof(p_payload->'productIds')='array'
-  and (select count(distinct value) from jsonb_array_elements_text(p_payload->'productIds'))
+  and (exists(select 1 from jsonb_array_elements(p_payload->'productIds') p
+      where jsonb_typeof(p.value)<>'string' or p.value#>>'{}'='')
+    or (select count(distinct value) from jsonb_array_elements_text(p_payload->'productIds'))
        <>jsonb_array_length(p_payload->'productIds')
  then raise exception 'duplicate draft products' using errcode='23514'; end if;
  if p_kind='shipment_draft' then
   if jsonb_typeof(p_payload->'productIds') is distinct from 'array' then
    raise exception 'draft products must be an array' using errcode='23514';
   end if;
-  if nullif(p_payload->>'destinationId','') is null
+  if jsonb_typeof(p_payload->'destinationId') is distinct from 'string'
+    or nullif(p_payload->>'destinationId','') is null
     or jsonb_array_length(p_payload->'productIds')=0
     or jsonb_array_length(p_links)<>jsonb_array_length(p_payload->'productIds')+1
     or (select count(*) from jsonb_array_elements(p_links) l
@@ -136,7 +141,9 @@ begin
  if exists(select 1 from jsonb_array_elements(p_links) l
     where jsonb_typeof(l.value) is distinct from 'object'
       or nullif(l.value->>'target_kind','') is null
-      or nullif(l.value->>'target_id','') is null)
+      or nullif(l.value->>'target_id','') is null
+      or jsonb_typeof(l.value->'target_kind') is distinct from 'string'
+      or jsonb_typeof(l.value->'target_id') is distinct from 'string')
     or (select count(*) from (
       select l.value->>'target_kind' as kind,l.value->>'target_id' as id
       from jsonb_array_elements(p_links) l
