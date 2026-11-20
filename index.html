@@ -1815,9 +1815,12 @@ const ED_DELIVERY_DESTINATIONS_KEY='ed_delivery_destinations_demo_v1';
 function edDeliveryDestinationsRead(){try{const a=JSON.parse(localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
 function edDeliveryDestinationEdit(id){
  if(edDeliveryIsQuarantined())return false;
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)}catch(e){alert('No se pudo verificar el destino.');return false}
  const item=edDeliveryDestinationsRead().find(d=>d.id===id);
  if(!item)return false;
- try{edDeliveryEditSnapshots.destination=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)}catch(e){alert('No se pudo verificar el destino.');return false}
+ try{if(localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)!==snapshot){alert('El destino cambió mientras se abría la edición. Vuelve a intentar.');return false}}catch(e){return false}
+ edDeliveryEditSnapshots.destination=snapshot;
  const fields={edDestinationId:item.id,edDestinationName:item.name,edDestinationMunicipality:item.municipality,edDestinationAddress:item.address,edDestinationLat:item.lat??'',edDestinationLng:item.lng??''};
  for(const [key,value] of Object.entries(fields)){const el=document.getElementById(key);if(el)el.value=String(value)}
  document.getElementById('edDestinationFormTitle').textContent='Editar destino de referencia';
@@ -2126,8 +2129,11 @@ function edDeliveryOriginDuplicate(id){
 function edDeliveryOriginEdit(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return}
 
- const p=edDeliveryOriginsRead().find(x=>x.id===id);if(!p)return;
- try{edDeliveryEditSnapshots.origin=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){alert('No se pudo verificar el almacén.');return}
+ let snapshot;
+ try{snapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)}catch(e){alert('No se pudo verificar el almacén.');return false}
+ const p=edDeliveryOriginsRead().find(x=>x.id===id);if(!p)return false;
+ try{if(localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)!==snapshot){alert('El almacén cambió mientras se abría la edición. Vuelve a intentar.');return false}}catch(e){return false}
+ edDeliveryEditSnapshots.origin=snapshot;
  document.getElementById('edOriginId').value=p.id;
  document.getElementById('edOriginName').value=p.name;
  document.getElementById('edOriginType').value=p.type;
