@@ -3499,7 +3499,7 @@ function edDeliveryReconcileShipmentDraft(){
  if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
  let raw,draft;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);draft=JSON.parse(raw||'null')}catch(e){return pending('Borrador ilegible.')}
- if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length)return pending('No existe un borrador recuperable.');
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No existe un borrador recuperable.');
  const products=document.getElementById('edQuoteDemoProduct'),destinations=document.getElementById('edQuoteDemoDestination');
  if(!products||!destinations||draft.productIds.some(id=>![...products.options].some(o=>o.value===id))||![...destinations.options].some(o=>o.value===draft.destinationId))return pending('El destino o algún producto fue eliminado. Reconfigura la entrega manualmente.');
  const basket=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
@@ -3521,6 +3521,7 @@ function edDeliveryReconcileShipmentDraft(){
  }catch(e){return pending('No se pudo actualizar el borrador.')}
  for(const option of products.options)option.selected=draft.productIds.includes(option.value);
  destinations.value=draft.destinationId;
+ edQuoteDemoSelectionRemember();
  output.textContent='PENDIENTE · Borrador reconciliado con '+newWarehouses.length+' almacén(es). Revisa el destino y los productos antes de continuar. No es un pedido.';
  return true;
 }
