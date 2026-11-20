@@ -461,3 +461,53 @@ function testSupplierTransferArchivedChain(mode){
 }
 for(const mode of ['success','reject','conflict'])testSupplierTransferArchivedChain(mode);
 console.log('PASS: 3 chained supplier/warehouse/multiproduct/archive scenarios (success, rejection, conflict)');
+
+
+function testArchivedDependencyConflictMatrix(action,mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s2',active:true},{id:'w2',type:'proveedor',supplierId:'s2',active:true}];
+ const links={p1:['w1','w2'],p2:['w2']};
+ const archive=[
+  {id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'old',warehouseIds:['obsolete']},
+  {id:'b',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'new',warehouseIds:['w2']}
+ ];
+ const store={archive:JSON.stringify(archive),links:JSON.stringify(links),origins:JSON.stringify(origins),suppliers:JSON.stringify([{id:'s2',active:true}]),destinations:'d','enlace_demo_v1':JSON.stringify({products})};
+ let writes=0;const output={textContent:''};
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryIsQuarantined:()=>false,
+  edDeliveryDestinationsRead:()=>mode==='invalid-destination'?[{id:'old'}]:[{id:'old'},{id:'new',name:'Nuevo'}],
+  edDeliveryOriginsRead:()=>origins,edDeliverySuppliersRead:()=>[{id:'s2',active:true}],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),
+  edDeliveryContextRevision:()=>1,
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoDestination'?{value:'new'}:null},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v;writes++}},
+  confirm:()=>{
+   if(mode==='conflict-links')store.links='changed';
+   if(mode==='conflict-inventory')store.enlace_demo_v1='changed';
+   if(mode==='conflict-archive')store.archive=JSON.stringify([...archive,{id:'external'}]);
+   return mode!=='cancel';
+  }
+ };
+ vm.createContext(ctx);
+ const name=action==='reconcile'?'edDeliveryReconcileAllArchivedDrafts':'edDeliveryBulkReassignArchivedDestinations';
+ vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const result=ctx[name](),updated=JSON.parse(store.archive);
+ const success=mode==='success'||(action==='reconcile'&&mode==='invalid-destination');
+ assert.equal(result,success,action+' '+mode+' return');
+ assert.equal(writes,success?1:0,action+' '+mode+' writes');
+ assert.equal(JSON.stringify(updated[1]),JSON.stringify(archive[1]),action+' '+mode+' unaffected draft');
+ if(success){
+  assert.equal(JSON.stringify(updated[0].warehouseIds),JSON.stringify(['w1','w2']));
+  assert.equal(updated[0].destinationId,action==='reassign'?'new':'old');
+  assert(updated[0].snapshot&&updated[0].reconciledAt);
+ }else{
+  assert.equal(JSON.stringify(updated[0]),JSON.stringify(archive[0]));
+  if(mode==='conflict-archive')assert.equal(updated.length,3);
+  else assert.equal(store.archive,JSON.stringify(archive));
+ }
+}
+for(const action of ['reconcile','reassign'])
+ for(const mode of ['success','cancel','conflict-links','conflict-inventory','conflict-archive','invalid-destination'])
+  testArchivedDependencyConflictMatrix(action,mode);
+console.log('PASS: 12 archived dependency scenarios: success, cancellation, inventory/association/archive conflicts, destination validation');
