@@ -18,3 +18,27 @@ assert.equal(eligible('p1',[origins[0],{...origins[0]}],suppliers),null);
 assert.equal(eligible('missing',origins,suppliers),null);
 assert.equal(eligible('p1',origins,suppliers).length,1);
 console.log('PASS: 6 focused product/warehouse/supplier cases (exact index.html)');
+
+
+const prepareFrom=html.indexOf('function edDeliveryPrepareShipment(){');
+const prepareTo=html.indexOf('const ED_DELIVERY_DRAFT_KEY=',prepareFrom);
+assert(prepareFrom>=0&&prepareTo>prepareFrom,'Missing shipment preparation');
+const output={textContent:''},shipmentStore={origins:'v1',suppliers:'v1',destinations:'v1',links:'v1','enlace_demo_v1':'v1'};
+let mutateDuringBasket=false;
+const preparationContext={
+ document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'}]}:id==='edQuoteDemoDestination'?{value:'d1'}:null},
+ localStorage:{getItem:k=>shipmentStore[k]??null},
+ ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',ED_PRODUCT_ORIGINS_KEY:'links',
+ edDeliveryContextRevision:()=>1,edDeliveryIsQuarantined:()=>false,
+ edDeliveryDestinationsRead:()=>[{id:'d1',name:'Habana',municipality:'Plaza'}],
+ edDeliveryOriginsRead:()=>[{id:'w1',name:'Central'}],edDeliverySuppliersRead:()=>[],
+ edDeliveryQuoteDemoBasket:()=>{if(mutateDuringBasket)shipmentStore.origins='v2';return {groups:[{productId:'p1',origins:[{id:'w1',name:'Central'}]}],origins:[{id:'w1',name:'Central'}]};},
+ state:{products:[{id:'p1',name:'Laptop'}]}
+};
+vm.createContext(preparationContext);
+vm.runInContext(html.slice(prepareFrom,prepareTo),preparationContext,{timeout:1000});
+assert.equal(preparationContext.edDeliveryPrepareShipment(),true);
+mutateDuringBasket=true;
+assert.equal(preparationContext.edDeliveryPrepareShipment(),false);
+assert.match(output.textContent,/dependencias cambiaron/);
+console.log('PASS: 2 focused shipment preparation cases (normal and changed dependencies)');
