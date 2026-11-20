@@ -1667,7 +1667,11 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  })){
   alert('Las asociaciones no coinciden con el inventario o el tipo de producto. Revisa los productos antes de transferir.');return false;
  }
- const ids=new Set(affected.map(o=>o.id));
+ const warehouseSelection=prompt('Almacenes a transferir (IDs separados por coma; vacío = todos):\\n'+affected.map(o=>o.id+' — '+o.name).join('\\n'),'');
+ if(warehouseSelection===null)return false;
+ const selectedIds=warehouseSelection.trim()?warehouseSelection.split(',').map(id=>id.trim()):affected.map(o=>o.id);
+ const allowedIds=new Set(affected.map(o=>o.id)),ids=new Set(selectedIds);
+ if(!ids.size||ids.size!==selectedIds.length||selectedIds.some(id=>!allowedIds.has(id))){alert('Selecciona IDs únicos y válidos de los almacenes del proveedor.');return false}
  if(Object.values(associations).some(v=>v.some(id=>ids.has(id)))){
   alert('Hay productos asociados a estos almacenes. Reasigna o desvincula primero esos productos para evitar dependencias inconsistentes.');return false;
  }
@@ -1676,7 +1680,7 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  if(selection===null)return false;
  const target=candidates.find(s=>s.id===selection.trim());
  if(!target){alert('Selecciona un ID válido de proveedor activo.');return false}
- if(!confirm('Transferir '+affected.length+' almacén(es) de '+source.name+' a '+target.name+'? No se cambiarán productos.'))return false;
+ if(!confirm('Transferir '+ids.size+' almacén(es) de '+source.name+' a '+target.name+'? No se cambiarán productos.'))return false;
  const freshOrigins=edDeliveryOriginsRead(),freshSuppliers=edDeliverySuppliersRead();
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
