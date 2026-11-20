@@ -339,7 +339,7 @@ alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owne
 create or replace function public.ed_delivery_staging_batch(p_items jsonb)
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_actor uuid:=auth.uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb;
+declare v_actor uuid:=auth.uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb; v_phase integer;
 begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
   raise exception 'not authorized' using errcode='42501';
@@ -360,23 +360,25 @@ begin
   if v_key collate "C" <= v_previous collate "C" then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
   v_previous:=v_key;
  end loop;
- -- Clear existing defaults before assigning replacements; all changes are
- -- one transaction, invisible to concurrent readers until commit.
- for v_item in select value from jsonb_array_elements(p_items) loop
-  if v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false' then
-   v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
-    (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
-    v_item->'payload',(v_item->>'expected_revision')::bigint,
-    coalesce(v_item->'links','[]'::jsonb)));
-  end if;
- end loop;
- for v_item in select value from jsonb_array_elements(p_items) loop
-  if (v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false') is not true then
-   v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
-    (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
-    v_item->'payload',(v_item->>'expected_revision')::bigint,
-    coalesce(v_item->'links','[]'::jsonb)));
-  end if;
+ -- Input remains canonically sorted, but execution must honor dependencies:
+ -- warehouse default demotions, suppliers, destinations, warehouses,
+ -- product associations, then drafts. All phases share one transaction.
+ for v_phase in 1..6 loop
+  for v_item in select value from jsonb_array_elements(p_items) loop
+   if (v_phase=1 and v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false')
+    or (v_phase=2 and v_item->>'kind'='supplier')
+    or (v_phase=3 and v_item->>'kind'='destination')
+    or (v_phase=4 and v_item->>'kind'='warehouse' and
+        (v_item->'payload'->>'defaultForSupplier'='false') is not true)
+    or (v_phase=5 and v_item->>'kind'='product_origin')
+    or (v_phase=6 and v_item->>'kind'='shipment_draft')
+   then
+    v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
+     (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
+     v_item->'payload',(v_item->>'expected_revision')::bigint,
+     coalesce(v_item->'links','[]'::jsonb)));
+   end if;
+  end loop;
  end loop;
  -- Never report an atomic batch as successful if any input item was skipped.
  if jsonb_array_length(v_results)<>jsonb_array_length(p_items) then
