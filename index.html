@@ -1967,6 +1967,7 @@ function edDeliveryDestinationSave(){
  const id=val('edDestinationId'),name=val('edDestinationName'),municipality=val('edDestinationMunicipality'),address=val('edDestinationAddress');
  const a=val('edDestinationLat'),b=val('edDestinationLng');
  if(!name||!municipality||!address){alert('Completa nombre, municipio y referencia manual.');return false}
+ if(!municipios.includes(municipality)){alert('Selecciona un municipio válido de La Habana.');return false}
  if(Boolean(a)!==Boolean(b)){alert('Indica ambas coordenadas o ninguna.');return false}
  const lat=a===''?null:Number(a),lng=b===''?null:Number(b);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){alert('Coordenadas fuera de rango.');return false}
@@ -1978,6 +1979,7 @@ function edDeliveryDestinationSave(){
  }
  const existing=id?items.find(d=>d.id===id):null;
  if(id&&!existing){alert('El destino ya no existe.');return false}
+ if(existing&&existing.municipality!==municipality&&lat!==null&&lat===existing.lat&&lng===existing.lng){alert('El municipio cambió: elimina o actualiza las coordenadas anteriores antes de guardar.');return false}
  const item={id:existing?.id||'destination-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,municipality,address,lat,lng};
  if(existing)items.splice(items.indexOf(existing),1,item);else items.push(item);
  if(!(id?edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_edited',edDeliveryEditSnapshots.destination):edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,items,'destination_added')))return false;
