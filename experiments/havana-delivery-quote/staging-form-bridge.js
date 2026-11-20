@@ -204,6 +204,20 @@ function transferSupplierWarehouses(sourceId){
  if(makeDefault)for(const w of rows('warehouse'))if(w.payload.supplierId===targetId&&w.payload.defaultForSupplier===true)changes.push({kind:'warehouse',id:w.id,payload:{...w.payload,defaultForSupplier:false}});
  return batch(changes);
 }
+function bulkDeleteSuppliers(){
+ const ids=selected('edSupplierBulkCheck','edSupplierBulkSelection');
+ if(!ids.length||ids.some(id=>!get('supplier',id))){tell('Proveedores seleccionados inválidos');return false}
+ if(ids.some(id=>rows('warehouse').some(w=>w.payload.supplierId===id&&w.payload.active!==false))){tell('Hay almacenes activos asociados. Reasígnalos o desactívalos antes');return false}
+ if(!confirm('Desactivar '+ids.length+' proveedores en staging? Se conservará el historial.'))return false;
+ return batch(ids.filter(id=>get('supplier',id).payload.active!==false).map(id=>({kind:'supplier',id,payload:{...get('supplier',id).payload,active:false}})));
+}
+function bulkDeleteWarehouses(){
+ const ids=selected('edOriginBulkCheck','edOriginBulkSelection');
+ if(!ids.length||ids.some(id=>!get('warehouse',id))){tell('Almacenes seleccionados inválidos');return false}
+ if(ids.some(id=>links.some(l=>l.target_kind==='warehouse'&&l.target_id===id&&l.source_kind==='product_origin'))){tell('Existen productos asociados. Reasígnalos antes');return false}
+ if(!confirm('Desactivar '+ids.length+' almacenes en staging? Se conservará el historial.'))return false;
+ return batch(ids.filter(id=>get('warehouse',id).payload.active!==false).map(id=>({kind:'warehouse',id,payload:{...get('warehouse',id).payload,active:false,defaultForSupplier:false}})));
+}
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
@@ -230,10 +244,10 @@ function init(){
  wrap('edDeliverySuppliersDuplicateSelected',duplicateSuppliers);
  wrap('edDeliveryOriginsDuplicateSelected',duplicateWarehouses);
  wrap('edDeliverySupplierTransferWarehouses',transferSupplierWarehouses);
+ wrap('edDeliverySuppliersDeleteSelected',bulkDeleteSuppliers);
+ wrap('edDeliveryOriginsDeleteSelected',bulkDeleteWarehouses);
  // Prevent unsupported local-only mutations from being mistaken for remote saves.
- const unsupported=['edDeliveryPersistAndInvalidate',
- 'edDeliverySuppliersDeleteSelected',
- 'edDeliveryOriginsDeleteSelected'];
+ const unsupported=['edDeliveryPersistAndInvalidate'];
  for(const name of unsupported){
   if(typeof window[name]!=='function')continue;
   const original=window[name];
