@@ -1819,6 +1819,7 @@ function edDeliveryDestinationDelete(id){
  adminTab('delivery');return true;
 }
 function edDeliveryDestinationSave(){
+ if(edDeliveryIsQuarantined())return false;
  const val=id=>document.getElementById(id).value.trim();
  const id=val('edDestinationId'),name=val('edDestinationName'),municipality=val('edDestinationMunicipality'),address=val('edDestinationAddress');
  const a=val('edDestinationLat'),b=val('edDestinationLng');
