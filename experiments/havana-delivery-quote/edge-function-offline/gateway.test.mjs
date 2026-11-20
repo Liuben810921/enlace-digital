@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {handleGateway,validate,responseOf} from './gateway.mjs';
+const body={contextRevision:2,mode:'drive',operationId:'op-123456789012',destination:{lat:23.12,lon:-82.37},origins:[{id:'almacen_1',lat:23.14,lon:-82.4}]};
+const req=(b=body,method='POST',type='application/json')=>new Request('https://example.invalid/route',{method,headers:{'content-type':type},body:method==='POST'?(typeof b==='string'?b:JSON.stringify(b)):undefined});
+let reserves=0;const deps={authenticate:async()=>({verified:true,authorized:true,role:'routing-tester',subject:'tester-1'}),reserveAtomic:async()=>{reserves++;return {committed:true,reservationId:'test-reservation'}}};
+let count=0;async function check(name,fn){await fn();count++;console.log('PASS',name)}
+await check('disabled by default',async()=>assert.equal((await handleGateway(req())).body.reason,'GATEWAY_NOT_CONFIGURED'));
+await check('wrong method',async()=>assert.equal((await handleGateway(req(body,'GET'),deps)).httpStatus,405));
+await check('valid still pending',async()=>{const r=await handleGateway(req(),deps);assert.equal(r.body.status,'PENDIENTE');assert.equal(r.body.feeCup,null);assert.equal(r.body.routes.length,0);assert.equal(r.body.reason,'PROVIDER_NOT_CONNECTED')});
+await check('unverified identity',async()=>assert.equal((await handleGateway(req(),{...deps,authenticate:async()=>({authorized:true,role:'routing-tester',subject:'x'})})).httpStatus,401));
+await check('wrong role',async()=>assert.equal((await handleGateway(req(),{...deps,authenticate:async()=>({verified:true,authorized:true,role:'client',subject:'x'})})).httpStatus,401));
+await check('bad json',async()=>assert.equal((await handleGateway(req('{bad'),deps)).body.reason,'INVALID_JSON'));
+await check('wrong content type',async()=>assert.equal((await handleGateway(req(body,'POST','text/plain'),deps)).httpStatus,415));
+await check('oversized body',async()=>assert.equal((await handleGateway(req(' '.repeat(8193)),deps)).httpStatus,413));
+await check('extra field rejected',async()=>assert.equal(validate({...body,feeCup:999}),'INVALID_REQUEST'));
+await check('outside Havana',async()=>assert.equal(validate({...body,destination:{lat:25,lon:-82.37}}),'INVALID_ROUTE_SCOPE'));
+await check('duplicate warehouses',async()=>assert.equal(validate({...body,origins:[body.origins[0],body.origins[0]]}),'INVALID_ROUTE_SCOPE'));
+await check('invalid revision',async()=>assert.equal(validate({...body,contextRevision:-1}),'INVALID_REVISION'));
+await check('invalid operation id',async()=>assert.equal(validate({...body,operationId:'a'}),'INVALID_OPERATION_ID'));
+await check('budget reject',async()=>assert.equal((await handleGateway(req(),{...deps,reserveAtomic:async()=>({committed:false})})).body.reason,'BUDGET_NOT_RESERVED'));
+await check('budget throws',async()=>assert.equal((await handleGateway(req(),{...deps,reserveAtomic:async()=>{throw Error('collision')}})).body.reason,'GATEWAY_ERROR'));
+await check('auth before budget',async()=>{const n=reserves;await handleGateway(req(),{...deps,authenticate:async()=>null});assert.equal(reserves,n)});
+await check('concurrent attempts remain pending',async()=>{let committed=0;const atomic={...deps,reserveAtomic:async()=>{if(committed++)return {committed:false};return {committed:true,reservationId:'one'}}};const out=await Promise.all(Array.from({length:10},()=>handleGateway(req(),atomic)));assert.equal(out.filter(r=>r.body.reason==='PROVIDER_NOT_CONNECTED').length,1);assert.equal(out.filter(r=>r.body.reason==='BUDGET_NOT_RESERVED').length,9)});
+await check('headers prohibit caching',async()=>{const r=responseOf(await handleGateway(req()));assert.equal(r.headers.get('cache-control'),'no-store')});
+console.log(count+'/18 PASS');
