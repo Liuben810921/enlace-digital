@@ -91,7 +91,7 @@ begin
    (p_payload->>'type'='proveedor' and
      (nullif(p_payload->>'supplierId','') is null or jsonb_array_length(p_links)<>1 or
       not exists(select 1 from jsonb_array_elements(p_links) x where x->>'target_kind'='supplier' and x->>'target_id'=p_payload->>'supplierId')))
-   or (p_payload->>'type'='propio' and jsonb_array_length(p_links)<>0)
+   or (p_payload->>'type'='propio' and (jsonb_array_length(p_links)<>0 or nullif(p_payload->>'supplierId','') is not null))
    or p_payload->>'type' is null or p_payload->>'type' not in ('propio','proveedor')
  ) then raise exception 'warehouse links inconsistent' using errcode='23514'; end if;
  -- Enforce a nonempty, duplicate-free warehouse set. JSON arrays must not
