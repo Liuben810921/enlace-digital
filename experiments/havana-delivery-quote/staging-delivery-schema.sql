@@ -360,6 +360,10 @@ begin
   if v_key collate "C" <= v_previous collate "C" then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
   v_previous:=v_key;
  end loop;
+ if exists(select 1 from jsonb_array_elements(p_items) i
+   group by i.value->>'operation_id' having count(*)>1) then
+  raise exception 'duplicate operation IDs in batch' using errcode='23505';
+ end if;
  -- Input remains canonically sorted, but execution must honor dependencies:
  -- warehouse default demotions, suppliers, destinations, warehouses,
  -- product associations, then drafts. All phases share one transaction.
@@ -382,10 +386,6 @@ begin
  end loop;
  -- Return results in the caller's canonical input order, not execution-phase
  -- order. Operation IDs are unique per request and identify each response.
- if exists(select 1 from jsonb_array_elements(p_items) i
-   group by i.value->>'operation_id' having count(*)>1) then
-  raise exception 'duplicate operation IDs in batch' using errcode='23505';
- end if;
  select jsonb_agg(o.response order by i.ordinality) into v_results
  from jsonb_array_elements(p_items) with ordinality as i(value,ordinality)
  join ed_delivery_private.operations o
