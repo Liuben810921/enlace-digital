@@ -302,7 +302,7 @@ begin
    select 1 from ed_delivery_private.links l
    where l.target_kind='warehouse' and l.target_id=p_id and l.source_kind='product_origin'
  ) then raise exception 'warehouse has product associations' using errcode='23503'; end if;
- update ed_delivery_private.entities set payload=jsonb_set(payload,'{active}','false'::jsonb,true),revision=revision+1,updated_at=now()
+ update ed_delivery_private.entities set payload=case when p_kind='warehouse' then jsonb_set(jsonb_set(payload,'{active}','false'::jsonb,true),'{defaultForSupplier}','false'::jsonb,true) else jsonb_set(payload,'{active}','false'::jsonb,true) end,revision=revision+1,updated_at=now()
  where kind=p_kind and id=p_id;
  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',p_expected_revision+1,'active',false);
  insert into ed_delivery_private.operations(operation_id,actor_id,payload,response) values(p_operation_id,v_actor,v_args,v_result);
