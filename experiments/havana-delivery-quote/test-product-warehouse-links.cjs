@@ -696,3 +696,25 @@ function testArchivedReconciliationReadback(mode){
 }
 for(const mode of ['persisted','silent-noop','write-throws'])testArchivedReconciliationReadback(mode);
 console.log('PASS: 3 archived reconciliation readback cases (persisted, silent write failure, thrown write)');
+
+
+function testArchiveCreationReadback(mode){
+ const draft={version:1,status:'PENDIENTE',productIds:['p1'],warehouseIds:['w1']};
+ const store={draft:JSON.stringify(draft),archive:'[]'},output={textContent:''};
+ const ctx={
+  ED_DELIVERY_DRAFT_KEY:'draft',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',
+  edDeliveryIsQuarantined:()=>false,
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:{value:'Prueba'}},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{
+   if(mode==='throws')throw Error('quota');
+   if(mode==='persist')store[k]=v;
+  }}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryArchiveShipmentDraft'),ctx,{timeout:1000});
+ assert.equal(ctx.edDeliveryArchiveShipmentDraft(),mode==='persist',mode+' archive return');
+ assert.equal(JSON.parse(store.archive).length,mode==='persist'?1:0,mode+' archive persistence');
+ if(mode==='silent')assert.match(output.textContent,/No se pudo confirmar la persistencia/);
+}
+for(const mode of ['persist','silent','throws'])testArchiveCreationReadback(mode);
+console.log('PASS: 3 archived draft creation persistence/readback scenarios');
