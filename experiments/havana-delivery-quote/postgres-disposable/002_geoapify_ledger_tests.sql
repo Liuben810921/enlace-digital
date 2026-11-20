@@ -9,7 +9,7 @@ BEGIN
  SELECT * INTO x FROM geoapify_disposable.reserve('tester','operation-00001',h,3,d);
  IF NOT x.committed OR x.reason<>'RESERVED' OR x.reservation_id IS NULL THEN RAISE EXCEPTION 'reserve failed'; END IF;
  SELECT * INTO y FROM geoapify_disposable.reserve('tester','operation-00001',h,3,d);
- IF NOT y.committed OR y.reason<>'REPLAY' OR y.reservation_id<>x.reservation_id THEN RAISE EXCEPTION 'idempotency replay failed'; END IF;
+ IF NOT y.committed OR y.reason<>'REPLAY_RESERVED' OR y.reservation_id<>x.reservation_id THEN RAISE EXCEPTION 'idempotency replay failed'; END IF;
  SELECT * INTO z FROM geoapify_disposable.reserve('tester','operation-00001',repeat('b',64),3,d);
  IF z.committed OR z.reason<>'IDEMPOTENCY_CONFLICT' THEN RAISE EXCEPTION 'payload conflict not rejected'; END IF;
  SELECT spent INTO spent_now FROM geoapify_disposable.budget WHERE day_utc=d;
