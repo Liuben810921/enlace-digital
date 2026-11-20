@@ -16,7 +16,7 @@ export function validate(b){
 export async function handleGateway(request,deps={}){
  try{
   if(request.method!=='POST')return {httpStatus:405,body:pending('METHOD_NOT_ALLOWED')};
-  if(typeof deps.authenticate!=='function'||typeof deps.reserveAtomic!=='function'||typeof deps.authorizeDispatch!=='function')return {httpStatus:503,body:pending('GATEWAY_NOT_CONFIGURED')};
+  if(typeof deps.authenticate!=='function'||typeof deps.reserveAtomic!=='function'||typeof deps.authorizeDispatch!=='function'||typeof deps.resolveTrustedContext!=='function')return {httpStatus:503,body:pending('GATEWAY_NOT_CONFIGURED')};
   const identity=await deps.authenticate(request);
   if(!identity||identity.verified!==true||identity.authorized!==true||identity.role!=='routing-tester'||typeof identity.subject!=='string'||!identity.subject)return {httpStatus:401,body:pending('UNAUTHORIZED')};
   if(!/^application\/json(?:\s*;|\s*$)/i.test(request.headers?.get?.('content-type')||''))return {httpStatus:415,body:pending('UNSUPPORTED_MEDIA_TYPE')};
@@ -24,12 +24,19 @@ export async function handleGateway(request,deps={}){
   if(raw.length>8192)return {httpStatus:413,body:pending('BODY_TOO_LARGE')};
   let body;try{body=JSON.parse(raw)}catch{return {httpStatus:400,body:pending('INVALID_JSON')}};
   const error=validate(body);if(error)return {httpStatus:400,body:pending(error)};
+  // Resolve authoritative context; never trust a client-supplied revision or coordinates.
+  const trusted=await deps.resolveTrustedContext({principal:identity.subject,operationId:body.operationId});
+  if(!trusted||trusted.verified!==true||!Number.isSafeInteger(trusted.contextRevision)||trusted.contextRevision!==body.contextRevision||trusted.mode!==body.mode||!trusted.destination||!Array.isArray(trusted.origins))return {httpStatus:409,body:pending('CONTEXT_NOT_CURRENT')};
+  const trustedBody={operationId:body.operationId,contextRevision:trusted.contextRevision,mode:trusted.mode,destination:trusted.destination,origins:trusted.origins};
+  if(validate(trustedBody)!==null)return {httpStatus:409,body:pending('CONTEXT_NOT_CURRENT')};
   const digest=await contextDigest(identity.subject,body);
+  const trustedDigest=await contextDigest(identity.subject,trustedBody);
+  if(digest!==trustedDigest)return {httpStatus:409,body:pending('CONTEXT_NOT_CURRENT')};
   const receipt=await deps.reserveAtomic({contextDigest:digest,principal:identity.subject,operationId:body.operationId,revision:body.contextRevision,credits:body.origins.length,scope:body.origins.map(o=>o.id).join(','),destination:body.destination});
   if(!reservationAccepted(receipt,digest))return {httpStatus:409,body:pending('RESERVATION_NOT_DISPATCHABLE')};
   // Offline contract check only: never dispatch to a provider. The trusted adapter
   // must enforce the SQL transition atomically and reject released/review/expired records.
-  const gate=await deps.authorizeDispatch({contextDigest:digest,principal:identity.subject,operationId:body.operationId,reservationId:receipt.reservationId,expectedLifecycle:'RESERVED',contextRevision:body.contextRevision});
+  const gate=await deps.authorizeDispatch({contextDigest:digest,principal:identity.subject,operationId:body.operationId,reservationId:receipt.reservationId,expectedLifecycle:'RESERVED',contextRevision:body.contextRevision,expectedContextDigest:trustedDigest});
   if(!dispatchAccepted(gate,receipt,body,digest))return {httpStatus:409,body:pending('DISPATCH_NOT_AUTHORIZED')};
   return {httpStatus:503,body:pending('PROVIDER_NOT_CONNECTED')};
  }catch{return {httpStatus:503,body:pending('GATEWAY_ERROR')}}
