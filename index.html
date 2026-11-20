@@ -3764,9 +3764,11 @@ function edDeliveryBulkReassignArchivedDestinations(){
   if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length){skipped.push(i);updates.push(draft);continue}
   const basket=edDeliveryQuoteDemoBasket(draft.productIds,origins,suppliers);
   if(!basket){skipped.push(i);updates.push(draft);continue}
-  updates.push({...draft,destinationId,warehouseIds:basket.origins.map(o=>o.id)});
+  const warehouseIds=basket.origins.map(o=>o.id);
+  if(draft.destinationId===destinationId&&Array.isArray(draft.warehouseIds)&&draft.warehouseIds.length===warehouseIds.length&&draft.warehouseIds.every((id,j)=>id===warehouseIds[j])){skipped.push(i);updates.push(draft);continue}
+  updates.push({...draft,destinationId,warehouseIds});
  }
- if(skipped.length===archive.length)return pending('Ninguna versión tiene productos y almacenes compatibles.');
+ if(skipped.length===archive.length)return pending('Ninguna versión requiere reasignación o reconciliación de almacenes.');
  if(!confirm('Reasignar el destino de '+(archive.length-skipped.length)+' versiones a «'+destination.name+'» y dejar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
