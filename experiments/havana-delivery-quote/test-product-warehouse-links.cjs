@@ -643,7 +643,7 @@ function testQuarantineRecoveryAndArchivedDrafts(mode){
  const ctx={
   ED_DELIVERY_QUARANTINE_KEY:'q',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
   ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
-  edDeliveryQuarantinedInSession:true,edInventoryLoaded:mode!=='inventory-unloaded',state:{products},
+  edDeliveryQuarantinedInSession:true,edInventoryLoaded:mode!=='inventory-unloaded',edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},
   edDeliveryContextInvalidate:()=>mode==='invalidate-fails'?null:1,
   edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>origins,
   edDeliverySuppliersRead:()=>[{id:'s1',active:true}],edDeliveryContextRevision:()=>1,
@@ -768,3 +768,29 @@ for(const operation of ['edDeliveryBulkReassignArchivedDestinations','edDelivery
  for(const mode of ['success','silent','throws','archive-conflict','dependency-conflict'])
   testArchivedBulkPersistenceAndConflicts(operation,mode);
 console.log('PASS: 10 archived destination/product replacement persistence and conflict scenarios');
+
+
+function testQuarantineRequiresSynchronizedInventory(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'}];
+ const shared=mode==='stale-shared'?[{id:'p1',origen_producto:'propio'}]:products;
+ const store={q:'1',origins:JSON.stringify([{id:'w1',type:'proveedor',supplierId:'s1',active:true}]),
+  suppliers:JSON.stringify([{id:'s1',active:true}]),links:JSON.stringify({p1:['w1']}),
+  'enlace_demo_v1':JSON.stringify({products:shared})};
+ const ctx={
+  ED_DELIVERY_QUARANTINE_KEY:'q',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  ED_PRODUCT_ORIGINS_KEY:'links',edDeliveryQuarantinedInSession:true,
+  edInventoryLoaded:true,edInventoryPendingSaves:mode==='pending-save'?1:0,
+  edInventorySnapshot:mode==='stale-memory'?'old':JSON.stringify(products),
+  state:{products},edDeliveryContextInvalidate:()=>1,
+  localStorage:{getItem:k=>store[k]??null,removeItem:k=>{delete store[k]}}
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryIsQuarantined','edDeliveryRecoverQuarantine'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const success=mode==='matched';
+ assert.equal(ctx.edDeliveryRecoverQuarantine(),success,mode+' recovery');
+ assert.equal(ctx.edDeliveryIsQuarantined(),!success,mode+' quarantine');
+}
+for(const mode of ['matched','stale-shared','pending-save','stale-memory'])
+ testQuarantineRequiresSynchronizedInventory(mode);
+console.log('PASS: 4 synchronized-inventory quarantine recovery cases');
