@@ -3839,21 +3839,19 @@ function edDeliveryQuoteDemo(synthetic){
  if(!synthetic)return pending('Sin distancias viales verificadas. La cotización real continúa desactivada.');
  // Deterministic synthetic fixture per distinct origin. Never stored or used for checkout.
  const fictitiousKm=new Map(basket.origins.map((o,i)=>[o.id,2+i*3]));
- const lines=[];
- let total=0;
- for(const group of basket.groups){
-  const distances=group.origins.map(o=>({id:o.id,name:o.name,km:fictitiousKm.get(o.id)}));
-  if(distances.some(d=>!Number.isFinite(d.km)))return pending('Distancia ficticia incompleta.');
-  distances.sort((a,b)=>b.km-a.km||a.id.localeCompare(b.id));
-  const farthest=distances[0],fee=Math.ceil(Math.max(3,farthest.km)*rateCupPerKm);
-  if(!Number.isSafeInteger(fee)||!Number.isSafeInteger(total+fee))return pending('Importe de simulación fuera de rango.');
-  total+=fee;
-  lines.push(group.productId+': '+farthest.name+' ('+farthest.km+' km ficticios; '+fee+' CUP)');
- }
+ // One shipment: the farthest eligible warehouse across all selected products.
+ // Never add a separate delivery fee for every cart line.
+ const candidates=basket.origins.map(o=>({id:o.id,name:o.name,km:fictitiousKm.get(o.id)}));
+ if(candidates.some(d=>!Number.isFinite(d.km)))return pending('Distancia ficticia incompleta.');
+ candidates.sort((a,b)=>b.km-a.km||String(a.id).localeCompare(String(b.id)));
+ const farthest=candidates[0];
+ const fee=Math.ceil(Math.max(3,farthest.km)*rateCupPerKm);
+ if(!Number.isSafeInteger(fee))return pending('Importe de simulación fuera de rango.');
+ const lines=basket.groups.map(g=>g.productId+': '+g.origins.map(o=>o.name).join(', '));
  let unchanged=false;
  try{unchanged=edDeliveryContextRevision()===revision&&[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'].every((k,i)=>localStorage.getItem(k)===snapshot[i])}catch(e){}
  if(!unchanged)return pending('Los datos cambiaron durante la simulación; vuelve a calcular.');
- result.textContent='SIMULACIÓN FICTICIA MULTIPRODUCTO · '+basket.groups.length+' producto(s) · '+basket.origins.length+' almacén(es) · '+lines.join(' | ')+' · TOTAL DE EJEMPLO: '+total+' CUP. NO ES TARIFA REAL NI AUTORIZA PEDIDOS.';
+ result.textContent='SIMULACIÓN FICTICIA MULTIPRODUCTO · '+basket.groups.length+' producto(s) · '+basket.origins.length+' almacén(es) · '+lines.join(' | ')+' · Almacén más lejano: '+farthest.name+' ('+farthest.km+' km ficticios) · TARIFA ÚNICA DE EJEMPLO: '+fee+' CUP. No incluye recargos especiales por producto. NO ES TARIFA REAL NI AUTORIZA PEDIDOS.';
  return true;
 }
 
