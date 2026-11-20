@@ -3428,6 +3428,50 @@ function edDeliveryPrepareShipment(){
  output.textContent='PENDIENTE · Preparación offline para '+destination.name+' ('+destination.municipality+'). '+ids.length+' producto(s), '+basket.origins.length+' almacén(es) distintos. '+lines.join(' | ')+'. Faltan distancias viales verificadas; no se ha calculado ni autorizado ninguna tarifa o pedido.';
  return true;
 }
+const ED_DELIVERY_DRAFT_KEY='ed_delivery_shipment_draft_offline_v1';
+function edDeliverySaveShipmentDraft(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output)return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
+ const select=document.getElementById('edQuoteDemoProduct');
+ const productIds=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
+ const destinationId=document.getElementById('edQuoteDemoDestination')?.value;
+ if(!productIds.length||new Set(productIds).size!==productIds.length)return pending('Selecciona productos únicos.');
+ const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
+ if(!destination)return pending('Selecciona un destino registrado.');
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const basket=edDeliveryQuoteDemoBasket(productIds,origins,suppliers);
+ if(!basket)return pending('Hay productos sin almacenes verificados.');
+ let snapshot;
+ try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
+ if(snapshot.revision===null)return pending('Revisión de entregas inválida.');
+ const draft={version:1,status:'PENDIENTE',productIds,destinationId,warehouseIds:basket.origins.map(o=>o.id),snapshot,createdAt:new Date().toISOString()};
+ try{localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft))}catch(e){return pending('No se pudo guardar el borrador local.')}
+ output.textContent='PENDIENTE · Borrador offline guardado: '+productIds.length+' producto(s), '+basket.origins.length+' almacén(es), destino '+destination.name+'. No es un pedido ni una cotización.';
+ return true;
+}
+function edDeliveryLoadShipmentDraft(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output)return false;
+ const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
+ let draft;
+ try{draft=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)||'null')}catch(e){return pending('Borrador local ilegible.')}
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length)return pending('No hay un borrador válido.');
+ const select=document.getElementById('edQuoteDemoProduct'),destinationSelect=document.getElementById('edQuoteDemoDestination');
+ if(!select||!destinationSelect)return pending('No están disponibles los selectores.');
+ const values=new Set([...select.options].map(o=>o.value));
+ if(draft.productIds.some(id=>!values.has(id))||![...destinationSelect.options].some(o=>o.value===draft.destinationId))return pending('Productos o destino del borrador ya no están disponibles.');
+ let current;
+ try{current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias.')}
+ if(!draft.snapshot||Object.keys(current).some(k=>current[k]!==draft.snapshot[k]))return pending('Borrador desactualizado. Revisa los cambios y vuelve a guardarlo.');
+ const basket=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
+ if(!basket||basket.origins.length!==draft.warehouseIds?.length||basket.origins.some(o=>!draft.warehouseIds.includes(o.id)))return pending('Las asociaciones del borrador ya no son válidas.');
+ for(const option of select.options)option.selected=draft.productIds.includes(option.value);
+ destinationSelect.value=draft.destinationId;
+ output.textContent='PENDIENTE · Borrador recuperado: '+draft.productIds.length+' producto(s), '+basket.origins.length+' almacén(es). No se han calculado tarifas ni creado pedidos.';
+ return true;
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -3440,6 +3484,7 @@ function edDeliveryQuoteDemoPanel(){
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryPrepareShipment()">Preparar entrega multiproducto</button> '+
+ '<button type="button" class="secondary" onclick="edDeliverySaveShipmentDraft()">Guardar borrador offline</button> <button type="button" class="secondary" onclick="edDeliveryLoadShipmentDraft()">Recuperar borrador</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
