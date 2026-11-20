@@ -2205,7 +2205,7 @@ function edDeliveryAssignProductWarehouse(){
  if(!['add','remove','replace'].includes(operation)){alert('Selecciona una operación válida.');return false}
  const products=state.products.filter(p=>String(p.id)===productId);
  const origins=edDeliveryOriginsRead(),warehouse=origins.find(o=>o.id===warehouseId),suppliers=edDeliverySuppliersRead();
- if(products.length!==1||(operation!=='remove'&&(!warehouse||warehouse.active===false||warehouse.type!==products[0].origen_producto||(warehouse.type==='proveedor'&&!suppliers.some(p=>p.id===warehouse.supplierId&&p.active!==false))))){alert('Selecciona un producto y almacén activo compatibles.');return false}
+ if(products.length!==1||!warehouse||(operation!=='remove'&&(warehouse.active===false||warehouse.type!==products[0].origen_producto||(warehouse.type==='proveedor'&&!suppliers.some(p=>p.id===warehouse.supplierId&&p.active!==false))))){alert('Selecciona un producto y almacén activo compatibles.');return false}
  let snapshot,originSnapshot,supplierSnapshot,inventorySnapshot,map;
  try{
   snapshot=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
