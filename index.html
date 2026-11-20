@@ -2486,11 +2486,25 @@ function edDeliveryOriginSave(){
 }
 function edDeliveryOriginSetDefault(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica las asociaciones.');return false}
- const items=edDeliveryOriginsRead(),chosen=items.find(p=>p.id===id);
- if(!chosen||chosen.type!=='proveedor'||chosen.active===false||!edDeliverySuppliersRead().some(p=>p.id===chosen.supplierId&&p.active!==false)){alert('Selecciona un almacén de proveedor activo.');return false}
- for(const p of items)if(p.type==='proveedor'&&p.supplierId===chosen.supplierId)p.defaultForSupplier=p.id===id;
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'default_warehouse_changed')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus();return true}
- return false;
+ let rawOrigins,rawSuppliers,items,suppliers;
+ try{
+  rawOrigins=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);
+  rawSuppliers=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);
+  items=edDeliveryOriginsRead();suppliers=edDeliverySuppliersRead();
+ }catch(e){alert('No se pudieron verificar los almacenes y proveedores.');return false}
+ const chosen=items.find(p=>p.id===id);
+ if(!chosen||chosen.type!=='proveedor'||chosen.active===false||!suppliers.some(p=>p.id===chosen.supplierId&&p.active!==false)){
+  alert('Selecciona un almacén de proveedor activo.');return false
+ }
+ const group=items.filter(p=>p.type==='proveedor'&&p.supplierId===chosen.supplierId);
+ if(group.length===1&&group[0].defaultForSupplier===true||group.every(p=>(p.defaultForSupplier===true)===(p.id===id)))return false;
+ if(!confirm('Establecer '+chosen.name+' como almacén predeterminado de este proveedor?'))return false;
+ let same=false;
+ try{same=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
+ if(!same){alert('Los almacenes o proveedores cambiaron durante la confirmación.');return false}
+ const updated=items.map(p=>p.type==='proveedor'&&p.supplierId===chosen.supplierId?{...p,defaultForSupplier:p.id===id,version:(Number.isSafeInteger(p.version)&&p.version>=0?p.version:0)+1}:p);
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,updated,'default_warehouse_changed',rawOrigins))return false;
+ adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus();return true;
 }
 function edDeliveryReassignWarehouse(sourceId){
  if(edDeliveryIsQuarantined())return false;
