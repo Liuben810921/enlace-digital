@@ -1809,6 +1809,20 @@ function edDeliveryDestinationCancelEdit(){
  document.getElementById('edDestinationFormTitle').textContent='Nuevo destino de referencia (La Habana)';
  document.getElementById('edDestinationCancelEdit').hidden=true;
 }
+function edDeliveryDestinationDuplicate(id){
+ if(edDeliveryIsQuarantined())return false;
+ const item=edDeliveryDestinationsRead().find(d=>d.id===id);
+ if(!item)return false;
+ edDeliveryDestinationCancelEdit();
+ const fields={edDestinationName:item.name+' (copia)',edDestinationMunicipality:item.municipality,edDestinationAddress:item.address,edDestinationLat:item.lat??'',edDestinationLng:item.lng??''};
+ for(const [key,value] of Object.entries(fields)){const el=document.getElementById(key);if(el)el.value=String(value)}
+ document.getElementById('edDestinationId').value='';
+ const title=document.getElementById('edDestinationFormTitle');
+ title.textContent='Nuevo destino a partir de '+item.name;
+ title.scrollIntoView({block:'center',behavior:'smooth'});
+ document.getElementById('edDestinationName')?.focus();
+ return true;
+}
 function edDeliveryDestinationDelete(id){
  if(edDeliveryIsQuarantined())return false;
  const items=edDeliveryDestinationsRead();
@@ -2007,7 +2021,7 @@ function edDeliveryLocationPreview(){
  }
  svg+='</svg>';
  const municipalitySummary=[...new Set(points.map(p=>String(p.municipality||'Sin municipio').trim()||'Sin municipio'))].sort((a,b)=>a.localeCompare(b,'es')).map(m=>{const subset=points.filter(p=>(String(p.municipality||'Sin municipio').trim()||'Sin municipio')===m);return '<li>'+esc(m)+': '+subset.filter(p=>p.kind==='Almacén').length+' almacén(es), '+subset.filter(p=>p.kind==='Destino').length+' destino(s), '+subset.filter(p=>!Number.isFinite(p.lat)||!Number.isFinite(p.lng)).length+' sin coordenadas</li>'}).join('');
- const rows=points.map(p=>'<p><strong>'+esc(p.kind)+' · '+esc(p.name)+'</strong> — '+esc(p.municipality)+'<span class="note"> · '+esc(p.address)+' · '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'Con coordenadas':'Sin coordenadas')+'</span>'+(p.kind==='Destino'?'<span> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationEdit(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Editar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDelete(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar</button></span>':'')+'</p>').join('');
+ const rows=points.map(p=>'<p><strong>'+esc(p.kind)+' · '+esc(p.name)+'</strong> — '+esc(p.municipality)+'<span class="note"> · '+esc(p.address)+' · '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?'Con coordenadas':'Sin coordenadas')+'</span>'+(p.kind==='Destino'?'<span> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationEdit(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Editar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDuplicate(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Duplicar</button> <button type="button" class="secondary" data-id="'+esc(p.id)+'" onclick="edDeliveryDestinationDelete(this.dataset.id)"'+(edDeliveryIsQuarantined()?' disabled':'')+'>Eliminar</button></span>':'')+'</p>').join('');
  return '<div class="panel"><h3>Ubicaciones de referencia</h3><details><summary>Resumen por municipio ('+points.length+' ubicaciones)</summary><ul>'+municipalitySummary+'</ul></details><p class="note">Esquema local, no mapa de calles. No calcula rutas ni distancias viales. Turquesa: almacenes; ámbar: destinos. Las direcciones manuales se conservan.</p>'+svg+rows+
  '<h4 id="edDestinationFormTitle">Nuevo destino de referencia (La Habana)</h4><input id="edDestinationId" type="hidden"><div class="field"><label>Nombre</label><input id="edDestinationName"></div>'+
  '<div class="field"><label>Municipio</label><select id="edDestinationMunicipality"><option value="">Seleccionar</option>'+municipios.map(m=>'<option>'+esc(m)+'</option>').join('')+'</select></div>'+
