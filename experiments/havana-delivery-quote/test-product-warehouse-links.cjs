@@ -71,3 +71,32 @@ assert.equal(conflictedReconcile.result,false);
 assert.equal(conflictedReconcile.stored,'old');
 assert.match(conflictedReconcile.message,/dependencias cambiaron/);
 console.log('PASS: 2 focused reconciliation cases (normal and changed during confirmation)');
+
+
+const restoreFrom=html.indexOf('function edDeliveryRestoreArchivedDraft(){');
+const restoreTo=html.indexOf('function edDeliveryDeleteArchivedDraft(){',restoreFrom);
+assert(restoreFrom>=0&&restoreTo>restoreFrom,'Missing archive restoration');
+function testArchiveRestore(stale,changeOnConfirm){
+ const snapshot={inventory:'i',associations:'a',origins:'o',suppliers:'s',destinations:'d',revision:1};
+ const item={id:'arch',name:'test',version:1,status:'PENDIENTE',productIds:['p'],destinationId:'d1',warehouseIds:['w'],snapshot:{...snapshot}};
+ if(stale)item.snapshot.origins='OLD';
+ const store={archive:JSON.stringify([item]),draft:'OLD','enlace_demo_v1':'i',links:'a',origins:'o',suppliers:'s',destinations:'d'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDraftArchive'?{value:'arch'}:null},
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_DELIVERY_DRAFT_KEY:'draft',ED_PRODUCT_ORIGINS_KEY:'links',
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryContextRevision:()=>1,edDeliveryIsQuarantined:()=>false,edDeliveryDestinationsRead:()=>[{id:'d1'}],
+  edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w'}]}),
+  confirm:()=>{if(changeOnConfirm)store.origins='CHANGED';return true},edDeliveryLoadShipmentDraft:()=>true
+ };
+ vm.createContext(ctx);vm.runInContext(html.slice(restoreFrom,restoreTo),ctx,{timeout:1000});
+ return {result:ctx.edDeliveryRestoreArchivedDraft(),draft:store.draft};
+}
+const restored=testArchiveRestore(false,false),staleArchive=testArchiveRestore(true,false),changedArchive=testArchiveRestore(false,true);
+assert.equal(restored.result,true);
+assert.notEqual(restored.draft,'OLD');
+assert.equal(staleArchive.result,false);assert.equal(staleArchive.draft,'OLD');
+assert.equal(changedArchive.result,false);assert.equal(changedArchive.draft,'OLD');
+console.log('PASS: 3 focused archive restore cases (valid, stale, changed during confirmation)');
