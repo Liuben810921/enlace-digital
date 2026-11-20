@@ -99,7 +99,23 @@ begin
    not exists(select 1 from jsonb_array_elements(p_links) l
     where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')
  ) then raise exception 'draft destination missing' using errcode='23514'; end if;
- -- A warehouse with product associations cannot silently change supplier/type.
+ -- Serialize all default-warehouse changes for a supplier. This check applies
+ -- to single writes and every item of a batch, not just the browser.
+ if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true' then
+  if p_payload->>'type'<>'proveedor' or nullif(p_payload->>'supplierId','') is null
+   or p_payload->>'active'='false' then
+   raise exception 'invalid default warehouse' using errcode='23514';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('default:supplier:'||(p_payload->>'supplierId'),2));
+  if exists(
+   select 1 from ed_delivery_private.entities e
+   where e.kind='warehouse' and e.id<>p_id
+    and e.payload->>'type'='proveedor'
+    and e.payload->>'supplierId'=p_payload->>'supplierId'
+    and e.payload->>'defaultForSupplier'='true'
+  ) then raise exception 'supplier already has default warehouse' using errcode='23505'; end if;
+ end if;
+  -- A warehouse with product associations cannot silently change supplier/type.
  -- Product reassignment must first remove or replace those associations.
  if p_kind='warehouse' and v_old is not null and exists(
   select 1 from ed_delivery_private.links l
