@@ -3473,7 +3473,7 @@ function edDeliveryLoadShipmentDraft(){
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
  let draft;
  try{draft=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)||'null')}catch(e){return pending('Borrador local ilegible.')}
- if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length)return pending('No hay un borrador válido.');
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No hay un borrador válido.');
  const select=document.getElementById('edQuoteDemoProduct'),destinationSelect=document.getElementById('edQuoteDemoDestination');
  if(!select||!destinationSelect)return pending('No están disponibles los selectores.');
  const values=new Set([...select.options].map(o=>o.value));
@@ -3482,7 +3482,10 @@ function edDeliveryLoadShipmentDraft(){
  try{current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias.')}
  if(!draft.snapshot||Object.keys(current).some(k=>current[k]!==draft.snapshot[k]))return pending('Borrador desactualizado. Revisa los cambios y vuelve a guardarlo.');
  const basket=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
- if(!basket||basket.origins.length!==draft.warehouseIds?.length||basket.origins.some(o=>!draft.warehouseIds.includes(o.id)))return pending('Las asociaciones del borrador ya no son válidas.');
+ if(!basket||basket.origins.length!==draft.warehouseIds.length||basket.origins.some(o=>!draft.warehouseIds.includes(o.id)))return pending('Las asociaciones del borrador ya no son válidas.');
+ let unchanged=false;
+ try{unchanged=Object.keys(current).every(k=>current[k]=== (k==='revision'?edDeliveryContextRevision():localStorage.getItem(({inventory:'enlace_demo_v1',associations:ED_PRODUCT_ORIGINS_KEY,origins:ED_DELIVERY_ORIGINS_KEY,suppliers:ED_DELIVERY_SUPPLIERS_KEY,destinations:ED_DELIVERY_DESTINATIONS_KEY})[k])))}catch(e){}
+ if(!unchanged)return pending('Dependencias modificadas durante la recuperación. Reintenta.');
  for(const option of select.options)option.selected=draft.productIds.includes(option.value);
  destinationSelect.value=draft.destinationId;
  edQuoteDemoSelectionRemember();
