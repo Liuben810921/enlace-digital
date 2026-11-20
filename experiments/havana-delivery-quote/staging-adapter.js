@@ -18,6 +18,11 @@ function create({publishableKey,getAccessToken}={}){
  }
  return Object.freeze({
   async readAll(){const result=await rpc('ed_delivery_staging_read',{});if(!result||!Array.isArray(result.entities)||!Array.isArray(result.links))throw Error('Estructura de staging inválida');return result},
+  async deactivate(collection,id,expectedRevision,operationId){
+   const kind=KINDS[collection];
+   if(!['supplier','warehouse','destination'].includes(kind)||!Number.isSafeInteger(expectedRevision)||expectedRevision<1||typeof id!=='string'||!id||typeof operationId!=='string')throw Error('Desactivación inválida');
+   return rpc('ed_delivery_staging_deactivate',{p_kind:kind,p_id:id,p_expected_revision:expectedRevision,p_operation_id:operationId});
+  },
   async save(collection,id,payload,expectedRevision,links=[],operationId){
    const kind=KINDS[collection];
    if(!kind||typeof id!=='string'||!id||!payload||Array.isArray(payload)||typeof payload!=='object'||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||!Array.isArray(links))throw Error('Datos de guardado inválidos');
