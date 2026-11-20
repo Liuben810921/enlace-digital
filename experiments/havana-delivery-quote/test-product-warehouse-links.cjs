@@ -152,3 +152,54 @@ function testSupplierTransferIds(duplicate){
 assert.match(testSupplierTransferIds(true).join(' '),/Identificadores duplicados/);
 assert.equal(testSupplierTransferIds(false).length,0);
 console.log('PASS: 2 supplier transfer checks (duplicate records blocked; valid IDs reach confirmation)');
+
+
+function extractDeliveryFunction(name){
+ const start=html.indexOf('function '+name+'('),end=html.indexOf('\nfunction ',start+12);
+ assert(start>=0&&end>start,'Missing '+name);
+ return html.slice(start,end);
+}
+function testBulkMunicipality(name,conflict){
+ const warehouse=name==='edDeliveryOriginsMoveSelected',key=warehouse?'origins':'destinations';
+ const item={id:'x',name:'X',municipality:'Plaza',lat:23.1,lng:-82.4,version:1};
+ const store={[key]:JSON.stringify([item])};let persisted=null;const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,
+  document:{getElementById:id=>id===(warehouse?'edOriginBulkSelection':'edDestinationBulkSelection')?{disabled:false,querySelectorAll:()=>[{value:'x'}]}:id===(warehouse?'edOriginBulkMunicipality':'edDestinationBulkMunicipality')?{value:'Centro Habana'}:null},
+  municipios:['Plaza','Centro Habana'],localStorage:{getItem:k=>store[k]??null},
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryOriginsRead:()=>[item],edDeliveryDestinationsRead:()=>[item],
+  alert:m=>alerts.push(m),confirm:()=>{if(conflict)store[key]='changed';return true},
+  edDeliveryPersistAndInvalidate:(k,v)=>{persisted=v;return true},adminTab:()=>{}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const result=ctx[name]();
+ if(conflict){assert.equal(result,false);assert.equal(persisted,null);assert(alerts.length>0);}
+ else{assert.equal(result,true);assert.equal(persisted[0].municipality,'Centro Habana');assert.equal(persisted[0].lat,null);assert.equal(persisted[0].lng,null);}
+}
+for(const name of ['edDeliveryOriginsMoveSelected','edDeliveryDestinationsMoveSelected']){
+ testBulkMunicipality(name,false);testBulkMunicipality(name,true);
+}
+function testSupplierTransferExecution(conflict){
+ const suppliers=[{id:'s1',name:'Origen',active:true},{id:'s2',name:'Destino',active:true}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true,name:'Almacen',version:1}];
+ const products=[{id:'p1',origen_producto:'proveedor'}];
+ const store={links:JSON.stringify({p1:['w1']}),origins:JSON.stringify(origins),suppliers:JSON.stringify(suppliers),'enlace_demo_v1':JSON.stringify({products})};
+ let saved=null;const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,edDeliverySuppliersRead:()=>suppliers,edDeliveryOriginsRead:()=>origins,
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventoryLoadGeneration:1,
+  edInventorySnapshot:JSON.stringify(products),state:{products},
+  ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  localStorage:{getItem:k=>store[k]??null},
+  document:{getElementById:id=>id==='edTransferWarehouses-s1'?{querySelectorAll:()=>[{value:'w1'}]}:id==='edTransferSupplier-s1'?{value:'s2'}:id==='edTransferMakeDefault-s1'?{checked:false}:null},
+  alert:m=>alerts.push(m),confirm:()=>{if(conflict)store.links='changed';return true},
+  edDeliveryPersistAndInvalidate:(k,v)=>{saved=v;return true},adminTab:()=>{}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliverySupplierTransferWarehouses'),ctx,{timeout:1000});
+ const result=ctx.edDeliverySupplierTransferWarehouses('s1');
+ if(conflict){assert.equal(result,false);assert.equal(saved,null);assert(alerts.length>0);}
+ else{assert.equal(result,true);assert.equal(saved[0].supplierId,'s2');assert.equal(saved[0].id,'w1');assert.deepEqual(JSON.parse(store.links),{p1:['w1']});}
+}
+testSupplierTransferExecution(false);testSupplierTransferExecution(true);
+console.log('PASS: 6 execution cases (supplier transfer, warehouse and destination bulk moves; success and conflict)');
