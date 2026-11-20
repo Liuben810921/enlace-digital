@@ -2208,6 +2208,7 @@ function edDeliverySendProductToQuote(){
  const option=[...select.options].find(o=>o.value===productId);
  if(!option){alert('El producto no está disponible en el simulador.');return false}
  option.selected=true;
+ edQuoteDemoSelectionRemember();
  result.textContent='PENDIENTE · Producto '+(product.name||product.nombre||productId)+' añadido a la simulación. Selecciona un destino y comprueba el estado; no hay rutas viales verificadas.';
  select.scrollIntoView({block:'center',behavior:'smooth'});
  select.focus();
@@ -3382,6 +3383,8 @@ function edQuoteDemoSelectionRemember(){
  const select=document.getElementById('edQuoteDemoProduct');
  edQuoteDemoSelectedProductIds=select?[...select.selectedOptions].map(o=>o.value):[];
  edQuoteDemoDestinationDraft=document.getElementById('edQuoteDemoDestination')?.value||'';
+ const status=document.getElementById('edQuoteDemoResult');
+ if(status)status.textContent='PENDIENTE · La selección cambió; vuelve a comprobar las dependencias y la simulación.';
 }
 
 function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
