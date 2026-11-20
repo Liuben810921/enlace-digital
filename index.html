@@ -2515,8 +2515,8 @@ function edDeliveryOriginsTransferSelectedSupplier(){
   try{shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null')}catch(e){}
   if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot){alert('El inventario compartido no está verificado.');return false}
   const products=new Map(state.products.map(p=>[String(p.id),p]));
-  if(products.size!==state.products.length||affectedProducts.some(([productId,warehouseIds])=>!products.has(productId)||products.get(productId).origen_producto!=='proveedor'||warehouseIds.some(id=>!changedIds.has(id)))){
-   alert('Hay productos asociados también a almacenes que no se transfieren, o asociaciones incompatibles. Selecciona todos sus almacenes o reasigna esos productos primero.');return false;
+  if(products.size!==state.products.length||affectedProducts.some(([productId,warehouseIds])=>!products.has(productId)||products.get(productId).origen_producto!=='proveedor'||warehouseIds.some(id=>!changedIds.has(id)&&known.get(id).supplierId!==targetId))){
+   alert('Hay productos asociados también a almacenes que no se transfieren, o asociaciones incompatibles. Transfiere también los almacenes de otros proveedores o reasigna esos productos primero.');return false;
   }
  }
  if(!confirm('Transferir '+changed.length+' almacén(es) al proveedor seleccionado, conservando '+affectedProducts.length+' producto(s) asociado(s)?'))return false;
