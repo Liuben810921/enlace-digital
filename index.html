@@ -2175,7 +2175,7 @@ function edDeliveryOriginsMoveSelected(){
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===snapshot}catch(e){}
  if(!unchanged){alert('Los almacenes cambiaron durante la confirmación.');return false}
- const updated=items.map(o=>selected.has(o.id)?{...o,municipality:target,version:(o.version||0)+1}:o);
+ const updated=items.map(o=>selected.has(o.id)&&o.municipality!==target?{...o,municipality:target,version:(o.version||0)+1}:o);
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,updated,'warehouses_bulk_municipality',snapshot))return false;
  adminTab('delivery');return true;
 }
