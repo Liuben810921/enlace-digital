@@ -597,3 +597,37 @@ function testPartialTransferRecoveryWithArchivedReconciliation(){
 }
 testPartialTransferRecoveryWithArchivedReconciliation();
 console.log('PASS: partial supplier transfer rejection, multiproduct reassociation, retry and archived reconciliation chain');
+
+
+function testPersistRollbackFailureMatrix(mode){
+ let value='old',sets=0,quarantined=0,readbackMismatch=false;const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,
+  localStorage:{
+   getItem:()=>mode==='readback-mismatch'&&readbackMismatch?(readbackMismatch=false,'wrong'):value,
+   setItem:(key,next)=>{
+    sets++;
+    if(mode==='write-throws'&&sets===1)throw Error('quota');
+    if(mode==='rollback-fails'&&sets>1)throw Error('rollback');
+    value=next;
+    if(mode==='readback-mismatch'&&sets===1)readbackMismatch=true;
+   },
+   removeItem:()=>{value=null}
+  },
+  edDeliveryContextInvalidate:()=>['invalidate-fails','rollback-fails'].includes(mode)?null:1,
+  edDeliveryQuarantine:()=>{quarantined++},
+  alert:msg=>alerts.push(msg)
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryPersistAndInvalidate'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryPersistAndInvalidate('key',['new'],'test',mode==='expected-mismatch'?'different':'old');
+ const success=mode==='success';
+ assert.equal(result,success,mode+' result');
+ assert.equal(value,success||mode==='rollback-fails'?JSON.stringify(['new']):'old',mode+' persisted value');
+ assert.equal(quarantined,mode==='rollback-fails'?1:0,mode+' quarantine');
+ assert.equal(sets,mode==='success'||mode==='write-throws'?1:mode==='expected-mismatch'?0:2,mode+' write attempts');
+ assert.equal(alerts.length,success?0:1,mode+' error notification');
+}
+for(const mode of ['success','write-throws','readback-mismatch','invalidate-fails','rollback-fails','expected-mismatch'])
+ testPersistRollbackFailureMatrix(mode);
+console.log('PASS: 6 persistence scenarios with write failure, readback mismatch, invalidation failure, rollback and quarantine');
