@@ -18,6 +18,16 @@ function create({publishableKey,getAccessToken}={}){
  }
  return Object.freeze({
   async readAll(){const result=await rpc('ed_delivery_staging_read',{});if(!result||!Array.isArray(result.entities)||!Array.isArray(result.links))throw Error('Estructura de staging inválida');return result},
+  async batch(changes){
+   if(!Array.isArray(changes)||changes.length<1||changes.length>100)throw Error('Lote inválido');
+   const items=changes.map(x=>{
+    const kind=KINDS[x.collection];
+    if(!kind||typeof x.id!=='string'||!x.id||!Number.isSafeInteger(x.expectedRevision)||x.expectedRevision<0||!x.payload||typeof x.payload!=='object'||Array.isArray(x.payload)||!Array.isArray(x.links)||typeof x.operationId!=='string')throw Error('Cambio de lote inválido');
+    return {kind,id:x.id,payload:x.payload,expected_revision:x.expectedRevision,links:x.links,operation_id:x.operationId};
+   }).sort((a,b)=>(a.kind+':'+a.id).localeCompare(b.kind+':'+b.id,'en'));
+   if(items.some((x,i)=>i>0&&x.kind===items[i-1].kind&&x.id===items[i-1].id))throw Error('Entidad duplicada en lote');
+   return rpc('ed_delivery_staging_batch',{p_items:items});
+  },
   async deactivate(collection,id,expectedRevision,operationId){
    const kind=KINDS[collection];
    if(!['supplier','warehouse','destination'].includes(kind)||!Number.isSafeInteger(expectedRevision)||expectedRevision<1||typeof id!=='string'||!id||typeof operationId!=='string')throw Error('Desactivación inválida');
