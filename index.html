@@ -3445,6 +3445,9 @@ function edDeliverySaveShipmentDraft(){
  if(!output)return false;
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
  if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
+ let before;
+ try{before={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias iniciales.')}
+ if(before.revision===null)return pending('Revisión inicial de entregas inválida.');
  const select=document.getElementById('edQuoteDemoProduct');
  const productIds=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
  const destinationId=document.getElementById('edQuoteDemoDestination')?.value;
@@ -3457,6 +3460,7 @@ function edDeliverySaveShipmentDraft(){
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
  if(snapshot.revision===null)return pending('Revisión de entregas inválida.');
+ if(Object.keys(before).some(k=>before[k]!==snapshot[k]))return pending('Dependencias modificadas durante la validación de productos y almacenes; reintenta.');
  const draft={version:1,status:'PENDIENTE',productIds,destinationId,warehouseIds:basket.origins.map(o=>o.id),snapshot,createdAt:new Date().toISOString()};
  try{
   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
