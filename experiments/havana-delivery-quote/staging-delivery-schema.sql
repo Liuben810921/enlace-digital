@@ -181,13 +181,16 @@ begin
  perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
  select * into v_entity from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
  if not found or v_entity.revision<>p_expected_revision then raise exception 'revision conflict' using errcode='40001'; end if;
- if p_kind in ('supplier','warehouse') and exists(
-  select 1 from ed_delivery_private.links l
-  join ed_delivery_private.entities e on e.kind=l.source_kind and e.id=l.source_id
-  where (l.target_kind=p_kind and l.target_id=p_id and e.payload->>'active' is distinct from 'false')
-   or (p_kind='supplier' and l.target_kind='warehouse' and l.source_kind='product_origin'
-       and exists(select 1 from ed_delivery_private.links w where w.source_kind='warehouse' and w.source_id=l.target_id and w.target_kind='supplier' and w.target_id=p_id))
- ) then raise exception 'active dependencies prevent deactivation' using errcode='23503'; end if;
+ if p_kind='supplier' and exists(
+   select 1 from ed_delivery_private.links l
+   join ed_delivery_private.entities w on w.kind='warehouse' and w.id=l.source_id
+   where l.source_kind='warehouse' and l.target_kind='supplier' and l.target_id=p_id
+    and w.payload->>'active' is distinct from 'false'
+ ) then raise exception 'supplier has active warehouses' using errcode='23503'; end if;
+ if p_kind='warehouse' and exists(
+   select 1 from ed_delivery_private.links l
+   where l.target_kind='warehouse' and l.target_id=p_id and l.source_kind='product_origin'
+ ) then raise exception 'warehouse has product associations' using errcode='23503'; end if;
  update ed_delivery_private.entities set payload=jsonb_set(payload,'{active}','false'::jsonb,true),revision=revision+1,updated_at=now()
  where kind=p_kind and id=p_id;
  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',p_expected_revision+1,'active',false);
