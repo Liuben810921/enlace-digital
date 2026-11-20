@@ -1812,13 +1812,24 @@ function edDeliverySupplierToggle(id){
 
 function edDeliverySupplierAdd(){
  if(edDeliveryIsQuarantined())return false;
- const name=document.getElementById('edSupplierName').value.trim();
- if(!name){alert('Introduce el nombre del proveedor.');return}
- const list=edDeliverySuppliersRead();
- if(list.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return}
- list.push({id:'supplier-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name,active:true});
- if(edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,list,'supplier_added')){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
+ const field=document.getElementById('edSupplierName');
+ const name=field?.value.trim()||'';
+ if(!name){alert('Introduce el nombre del proveedor.');field?.focus();return false}
+ let previous,list;
+ try{previous=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY);list=edDeliverySuppliersRead()}catch(e){alert('No se pudieron verificar los proveedores.');return false}
+ if(list.some(p=>p.name.toLocaleLowerCase()===name.toLocaleLowerCase())){alert('Este proveedor ya está registrado.');return false}
+ const id='supplier-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+ const updated=[...list,{id,name,active:true}];
+ if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,updated,'supplier_added',previous))return false;
+ adminTab('delivery');
+ const type=document.getElementById('edOriginType'),supplier=document.getElementById('edOriginSupplier'),originName=document.getElementById('edOriginName');
+ if(type&&supplier&&originName){
+  type.value='proveedor';edDeliveryOriginTypeChange();supplier.value=id;
+  originName.value=name;document.getElementById('edOriginMunicipality')?.focus();
+ }else document.getElementById('edDeliveryPanelTitle')?.focus();
+ return true;
 }
+
 function edDeliverySupplierOptions(selected){
  return '<option value="">Selecciona proveedor</option>'+edDeliverySuppliersRead().filter(p=>p.active!==false||p.id===selected).map(p=>'<option value="'+esc(p.id)+'" '+(selected===p.id?'selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
