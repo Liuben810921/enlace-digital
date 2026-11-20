@@ -823,3 +823,34 @@ function testRollbackPreservesObservedConcurrentWrites(mode){
 for(const mode of ['invalidate-concurrent','readback-concurrent','invalidate-ordinary','write-throws','rollback-throws'])
  testRollbackPreservesObservedConcurrentWrites(mode);
 console.log('PASS: 5 rollback and observed-concurrent-write scenarios');
+
+
+function testQuarantineDependencyChangeDuringInvalidation(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'}];
+ const store={q:'1',origins:JSON.stringify([{id:'w1',type:'proveedor',supplierId:'s1',active:true}]),
+  suppliers:JSON.stringify([{id:'s1',active:true}]),links:JSON.stringify({p1:['w1']}),
+  'enlace_demo_v1':JSON.stringify({products})};
+ const ctx={
+  ED_DELIVERY_QUARANTINE_KEY:'q',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  ED_PRODUCT_ORIGINS_KEY:'links',edDeliveryQuarantinedInSession:true,
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),
+  state:{products},
+  edDeliveryContextInvalidate:()=>{
+   if(mode==='links-change')store.links=JSON.stringify({p1:['missing']});
+   if(mode==='inventory-change')store.enlace_demo_v1=JSON.stringify({products:[{id:'p1',origen_producto:'propio'}]});
+   if(mode==='suppliers-change')store.suppliers='[]';
+   if(mode==='origins-change')store.origins='[]';
+   return 1;
+  },
+  localStorage:{getItem:k=>store[k]??null,removeItem:k=>{delete store[k]}}
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryIsQuarantined','edDeliveryRecoverQuarantine'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryRecoverQuarantine(),success,mode+' recovery');
+ assert.equal(ctx.edDeliveryIsQuarantined(),!success,mode+' quarantine preserved');
+}
+for(const mode of ['normal','links-change','inventory-change','suppliers-change','origins-change'])
+ testQuarantineDependencyChangeDuringInvalidation(mode);
+console.log('PASS: 5 quarantine recovery dependency-change scenarios');
