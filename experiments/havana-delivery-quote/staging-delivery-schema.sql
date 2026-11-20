@@ -96,11 +96,20 @@ begin
      where not exists(select 1 from jsonb_array_elements(p_links) l
        where l->>'target_kind'='warehouse' and l->>'target_id'=w.value))
  ) then raise exception 'association links inconsistent' using errcode='23514'; end if;
- if p_kind='shipment_draft' and (
-   p_payload->>'destinationId' is null or
-   not exists(select 1 from jsonb_array_elements(p_links) l
-    where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')
- ) then raise exception 'draft destination missing' using errcode='23514'; end if;
+ if p_kind='shipment_draft' then
+  if nullif(p_payload->>'destinationId','') is null
+    or jsonb_typeof(p_payload->'productIds') is distinct from 'array'
+    or jsonb_array_length(p_payload->'productIds')=0
+    or jsonb_array_length(p_links)<>jsonb_array_length(p_payload->'productIds')+1
+    or (select count(*) from jsonb_array_elements(p_links) l
+      where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')<>1
+    or exists(select 1 from jsonb_array_elements(p_links) l
+      where l->>'target_kind' not in ('destination','product_origin') or l->>'target_kind' is null)
+    or exists(select 1 from jsonb_array_elements_text(p_payload->'productIds') p
+      where not exists(select 1 from jsonb_array_elements(p_links) l
+        where l->>'target_kind'='product_origin' and l->>'target_id'=p.value))
+  then raise exception 'draft links inconsistent' using errcode='23514'; end if;
+ end if;
  -- Serialize all default-warehouse changes for a supplier. This check applies
  -- to single writes and every item of a batch, not just the browser.
  -- An inactive warehouse cannot be marked as default, and a supplier
