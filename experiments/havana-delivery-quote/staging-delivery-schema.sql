@@ -63,7 +63,7 @@ begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
  end if;
- if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
+ if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
   raise exception 'invalid request' using errcode='22023';
  end if;
  perform pg_advisory_xact_lock(672045900001::bigint); -- global staging write lock: serialize all mutation paths
@@ -83,14 +83,15 @@ begin
  -- Refuse inconsistent payload/link pairs; do not trust browser validation.
  if p_kind='warehouse' and (
    (p_payload->>'type'='proveedor' and
-     (p_payload->>'supplierId' is null or
+     (nullif(p_payload->>'supplierId','') is null or jsonb_array_length(p_links)<>1 or
       not exists(select 1 from jsonb_array_elements(p_links) x where x->>'target_kind'='supplier' and x->>'target_id'=p_payload->>'supplierId')))
    or (p_payload->>'type'='propio' and jsonb_array_length(p_links)<>0)
-   or p_payload->>'type' not in ('propio','proveedor')
+   or p_payload->>'type' is null or p_payload->>'type' not in ('propio','proveedor')
  ) then raise exception 'warehouse links inconsistent' using errcode='23514'; end if;
  if p_kind='product_origin' and (
    jsonb_typeof(p_payload->'warehouseIds')<>'array' or
    jsonb_array_length(p_payload->'warehouseIds')<>jsonb_array_length(p_links) or
+   exists(select 1 from jsonb_array_elements(p_links) l where l->>'target_kind' is distinct from 'warehouse') or
    exists(select 1 from jsonb_array_elements_text(p_payload->'warehouseIds') w
      where not exists(select 1 from jsonb_array_elements(p_links) l
        where l->>'target_kind'='warehouse' and l->>'target_id'=w.value))
@@ -117,9 +118,6 @@ begin
   ) then raise exception 'supplier already has default warehouse' using errcode='23505'; end if;
  end if;
   -- An inactive or own-stock warehouse cannot retain a supplier default.
- if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true'
-    and (p_payload->>'type' is distinct from 'proveedor' or p_payload->>'active' is distinct from 'true')
- then raise exception 'default warehouse must be active supplier warehouse' using errcode='23514'; end if;
  -- A warehouse with product associations cannot silently change supplier/type.
  -- Product reassignment must first remove or replace those associations.
  if p_kind='warehouse' and v_old is not null and exists(
