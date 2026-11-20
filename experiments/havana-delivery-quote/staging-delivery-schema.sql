@@ -104,7 +104,7 @@ begin
  -- to single writes and every item of a batch, not just the browser.
  if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true' then
   if p_payload->>'type' is distinct from 'proveedor' or nullif(p_payload->>'supplierId','') is null
-   or p_payload->>'active'='false' then
+   or p_payload->>'active' is distinct from 'true' then
    raise exception 'invalid default warehouse' using errcode='23514';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('default:supplier:'||(p_payload->>'supplierId'),2));
@@ -116,7 +116,11 @@ begin
     and e.payload->>'defaultForSupplier'='true'
   ) then raise exception 'supplier already has default warehouse' using errcode='23505'; end if;
  end if;
-  -- A warehouse with product associations cannot silently change supplier/type.
+  -- An inactive or own-stock warehouse cannot retain a supplier default.
+ if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true'
+    and (p_payload->>'type' is distinct from 'proveedor' or p_payload->>'active' is distinct from 'true')
+ then raise exception 'default warehouse must be active supplier warehouse' using errcode='23514'; end if;
+ -- A warehouse with product associations cannot silently change supplier/type.
  -- Product reassignment must first remove or replace those associations.
  if p_kind='warehouse' and v_old is not null and exists(
   select 1 from ed_delivery_private.links l
@@ -199,6 +203,14 @@ do $$ begin
   create role ed_delivery_staging_rpc nologin noinherit nobypassrls;
  end if;
 end $$;
+-- PostgreSQL requires the migration executor to be able to SET ROLE to
+-- the new owner before ALTER FUNCTION OWNER; schema CREATE alone is insufficient.
+-- Fail inside this transaction rather than silently using a privileged owner.
+do $ begin
+ if not pg_has_role(current_user,'ed_delivery_staging_rpc','SET') then
+  raise exception 'migration executor cannot SET ROLE to RPC owner; authorize a separate least-privilege membership grant before migration' using errcode='42501';
+ end if;
+end $;
 grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
 grant usage on schema auth to ed_delivery_staging_rpc;
 grant execute on function auth.uid() to ed_delivery_staging_rpc;
