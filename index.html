@@ -3816,7 +3816,9 @@ function edDeliveryBulkAssignSelectedProducts(){
  const warehouseId=document.getElementById('edAssignWarehouse')?.value;
  const operation=document.getElementById('edAssignOperation')?.value;
  if(!ids.length||new Set(ids).size!==ids.length||!['add','remove','replace'].includes(operation)){alert('Selecciona productos y una operación válida.');return false}
- const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),warehouse=origins.find(o=>o.id===warehouseId);
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ if(new Set(origins.map(o=>o.id)).size!==origins.length||new Set(suppliers.map(p=>p.id)).size!==suppliers.length){alert('Identificadores duplicados de almacenes o proveedores. Operación masiva cancelada.');return false}
+ const warehouse=origins.find(o=>o.id===warehouseId);
  if(!warehouse){alert('Selecciona un almacén existente.');return false}
  if(operation!=='remove'&&(warehouse.active===false||warehouse.type==='proveedor'&&!suppliers.some(p=>p.id===warehouse.supplierId&&p.active!==false))){alert('El almacén o proveedor no está activo.');return false}
  let snapshot,originSnapshot,supplierSnapshot,inventorySnapshot,map;
