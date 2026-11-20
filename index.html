@@ -3821,32 +3821,39 @@ function edDeliveryQuoteDemo(synthetic){
  const result=document.getElementById('edQuoteDemoResult');
  if(!result)return false;
  const pending=reason=>{result.textContent='PENDIENTE · '+reason;return false};
+ if(edDeliveryIsQuarantined())return pending('Administración de entregas bloqueada.');
  const destinationId=document.getElementById('edQuoteDemoDestination')?.value||'';
- const rateInput=document.getElementById('edQuoteDemoRate')?.value;
- const rateCupPerKm=rateInput===''?NaN:Number(rateInput);
+ const rateRaw=document.getElementById('edQuoteDemoRate')?.value;
+ const rateCupPerKm=rateRaw===''?NaN:Number(rateRaw);
+ if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0)return pending('Introduce una tarifa de ejemplo válida.');
  if(!destinationId||!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('Selecciona un destino de referencia.');
- const productSelect=document.getElementById('edQuoteDemoProduct');
- const productIds=productSelect?[...productSelect.selectedOptions].map(o=>o.value).filter(Boolean):[];
- let contextSnapshot;
- try{contextSnapshot={origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),inventory:localStorage.getItem('enlace_demo_v1')}}catch(e){return pending('No se pudieron verificar las dependencias locales.')}
+ const select=document.getElementById('edQuoteDemoProduct');
+ const productIds=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
+ if(!productIds.length)return pending('Selecciona al menos un producto.');
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const basket=edDeliveryQuoteDemoBasket(productIds,origins,suppliers);
+ if(!basket)return pending('Productos o asociaciones de almacenes no verificados.');
  const revision=edDeliveryContextRevision();
- const origins=edDeliveryOriginsRead();
- const suppliers=edDeliverySuppliersRead();
- const basket=productIds.length?edDeliveryQuoteDemoBasket(productIds,origins,suppliers):null;
- const eligible=productIds.length?basket?.origins:edDeliveryQuoteDemoEligible('',origins,suppliers);
- if(!eligible||!eligible.length)return pending(productIds.length?'Algún producto no tiene asociaciones verificadas y compatibles. Revisa inventario y almacenes.':'No hay almacenes activos disponibles.');
- // These ephemeral fixtures are NEVER road measurements. They exist solely for demonstration.
- const routes=synthetic?eligible.map((o,i)=>({originId:o.id,destinationId,km:2+i*3,status:'verified',contextRevision:revision})):[];
- const contract=window.EDOfflineQuote?.quoteDelivery;
- if(typeof contract!=='function')return pending('Contrato offline no disponible; no se puede simular.');
- const quote=contract({origins:eligible,suppliers,routes,destinationId,rateCupPerKm,contextRevision:revision,quarantined:edDeliveryIsQuarantined()});
- if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
- if(!synthetic)return pending('No hay distancias viales verificadas.');
+ let snapshot;
+ try{snapshot=[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'].map(k=>localStorage.getItem(k))}catch(e){return pending('No se pudieron leer los datos locales.')}
+ if(!synthetic)return pending('Sin distancias viales verificadas. La cotización real continúa desactivada.');
+ // Deterministic synthetic fixture per distinct origin. Never stored or used for checkout.
+ const fictitiousKm=new Map(basket.origins.map((o,i)=>[o.id,2+i*3]));
+ const lines=[];
+ let total=0;
+ for(const group of basket.groups){
+  const distances=group.origins.map(o=>({id:o.id,name:o.name,km:fictitiousKm.get(o.id)}));
+  if(distances.some(d=>!Number.isFinite(d.km)))return pending('Distancia ficticia incompleta.');
+  distances.sort((a,b)=>b.km-a.km||a.id.localeCompare(b.id));
+  const farthest=distances[0],fee=Math.ceil(Math.max(3,farthest.km)*rateCupPerKm);
+  if(!Number.isSafeInteger(fee)||!Number.isSafeInteger(total+fee))return pending('Importe de simulación fuera de rango.');
+  total+=fee;
+  lines.push(group.productId+': '+farthest.name+' ('+farthest.km+' km ficticios; '+fee+' CUP)');
+ }
  let unchanged=false;
- try{unchanged=edDeliveryContextRevision()===revision&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===contextSnapshot.origins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===contextSnapshot.suppliers&&localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===contextSnapshot.destinations&&localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===contextSnapshot.associations&&localStorage.getItem('enlace_demo_v1')===contextSnapshot.inventory}catch(e){}
- if(!unchanged)return pending('Los productos, almacenes o destinos cambiaron durante la simulación. Vuelve a calcular.');
- const origin=eligible.find(o=>o.id===quote.originId);
- result.textContent='SIMULACIÓN FICTICIA · '+(productIds.length?productIds.length+' producto(s) · '+eligible.length+' almacén(es) vinculados · ':'')+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
+ try{unchanged=edDeliveryContextRevision()===revision&&[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'].every((k,i)=>localStorage.getItem(k)===snapshot[i])}catch(e){}
+ if(!unchanged)return pending('Los datos cambiaron durante la simulación; vuelve a calcular.');
+ result.textContent='SIMULACIÓN FICTICIA MULTIPRODUCTO · '+basket.groups.length+' producto(s) · '+basket.origins.length+' almacén(es) · '+lines.join(' | ')+' · TOTAL DE EJEMPLO: '+total+' CUP. NO ES TARIFA REAL NI AUTORIZA PEDIDOS.';
  return true;
 }
 
