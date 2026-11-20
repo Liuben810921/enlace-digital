@@ -3518,6 +3518,11 @@ function edDeliveryReconcileShipmentDraft(){
  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No existe un borrador recuperable.');
  const products=document.getElementById('edQuoteDemoProduct'),destinations=document.getElementById('edQuoteDemoDestination');
  if(!products||!destinations||draft.productIds.some(id=>![...products.options].some(o=>o.value===id))||![...destinations.options].some(o=>o.value===draft.destinationId))return pending('El destino o algún producto fue eliminado. Reconfigura la entrega manualmente.');
+ const keys=[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'];
+ const initialRevision=edDeliveryContextRevision();
+ if(initialRevision===null)return pending('Revisión inicial de entregas inválida.');
+ let initial;
+ try{initial=keys.map(k=>localStorage.getItem(k))}catch(e){return pending('No se pudieron leer las dependencias iniciales.')}
  const basket=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!basket)return pending('Los productos ya no tienen asociaciones compatibles. Reasigna almacenes antes de reconciliar.');
  const newWarehouses=basket.origins.map(o=>o.id);
@@ -3527,6 +3532,7 @@ function edDeliveryReconcileShipmentDraft(){
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias.')}
  if(snapshot.revision===null)return pending('Revisión de entregas inválida.');
+ if(initialRevision!==snapshot.revision||keys.some((k,i)=>initial[i]!==snapshot[({[ED_DELIVERY_ORIGINS_KEY]:'origins',[ED_DELIVERY_SUPPLIERS_KEY]:'suppliers',[ED_DELIVERY_DESTINATIONS_KEY]:'destinations',[ED_PRODUCT_ORIGINS_KEY]:'associations','enlace_demo_v1':'inventory'})[k]]))return pending('Las dependencias cambiaron durante la reconciliación; repite la operación.');
  const fresh=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!fresh||fresh.origins.map(o=>o.id).join('|')!==newWarehouses.join('|'))return pending('Las asociaciones cambiaron durante la confirmación.');
  try{
