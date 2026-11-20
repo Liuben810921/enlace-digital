@@ -298,3 +298,33 @@ for(const name of ['edDeliveryReplaceArchivedDraftProducts','edDeliveryReassignA
  testArchivedSingleEdit(name,false);testArchivedSingleEdit(name,true);
 }
 console.log('PASS: 4 archived single-edit cases (success and confirmation-time dependency conflict)');
+
+
+function testBulkArchivedProductReconciliation(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const archive=[{id:'a',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'d',warehouseIds:mode==='stale'?['old']:['w1']},{id:'b',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'d',warehouseIds:['w2']}];
+ const store={archive:JSON.stringify(archive),'enlace_demo_v1':JSON.stringify({products}),links:JSON.stringify({p1:['w1'],p2:['w2']}),origins:'o',suppliers:'s',destinations:'d'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoProduct'?{selectedOptions:[{value:mode==='stale'?'p1':'p2'}]}:id==='edQuoteArchiveProductOperation'?{value:'add'}:null},
+  edDeliveryIsQuarantined:()=>false,edInventoryLoaded:true,edInventoryPendingSaves:0,state:{products},edInventorySnapshot:JSON.stringify(products),
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryContextRevision:()=>1,edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],edDeliveryDestinationsRead:()=>[{id:'d'}],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),
+  confirm:()=>{if(mode==='conflict')store.origins='changed';return true}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryBulkEditArchivedProducts'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryBulkEditArchivedProducts(),updated=JSON.parse(store.archive);
+ if(mode==='conflict'){assert.equal(result,false);assert.equal(JSON.stringify(updated),JSON.stringify(archive));}
+ else if(mode==='stale'){
+  assert.equal(result,true);assert.equal(JSON.stringify(updated[0].productIds),JSON.stringify(['p1']));
+  assert.equal(JSON.stringify(updated[0].warehouseIds),JSON.stringify(['w1']));
+  assert.equal(JSON.stringify(updated[1].productIds),JSON.stringify(['p2','p1']));
+ }else{
+  assert.equal(result,true);assert.equal(JSON.stringify(updated[0].productIds),JSON.stringify(['p1','p2']));
+  assert.equal(JSON.stringify(updated[1]),JSON.stringify(archive[1]));
+ }
+}
+for(const mode of ['success','stale','conflict'])testBulkArchivedProductReconciliation(mode);
+console.log('PASS: 3 bulk archived multiproduct edit cases including stale warehouse reconciliation');
