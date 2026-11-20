@@ -1627,19 +1627,30 @@ function edDeliveryPersistAndInvalidate(key,items,reason,expectedPrevious){
  let previous;
  try{previous=localStorage.getItem(key)}catch(e){alert('No se pudo leer la configuración anterior.');return false}
  if(arguments.length>=4&&previous!==expectedPrevious){alert('La configuración cambió antes del guardado. Vuelve a revisar.');return false}
- try{const serialized=JSON.stringify(items);localStorage.setItem(key,serialized);if(localStorage.getItem(key)!==serialized)throw new Error('Configuración no persistida')}
+ let serialized,writeAttempted=false;
+ try{serialized=JSON.stringify(items);writeAttempted=true;localStorage.setItem(key,serialized);if(localStorage.getItem(key)!==serialized)throw new Error('Configuración no persistida')}
  catch(e){
   try{
-   if(localStorage.getItem(key)!==previous){
-    if(previous===null)localStorage.removeItem(key);
-    else localStorage.setItem(key,previous);
+   const observed=localStorage.getItem(key);
+   if(observed!==previous){
+    if(!writeAttempted||observed!==serialized)edDeliveryQuarantine();
+    else{
+     if(previous===null)localStorage.removeItem(key);
+     else localStorage.setItem(key,previous);
+     if(localStorage.getItem(key)!==previous)edDeliveryQuarantine();
+    }
    }
-   if(localStorage.getItem(key)!==previous)edDeliveryQuarantine();
   }catch(rollbackError){edDeliveryQuarantine()}
   alert('No se pudo confirmar el guardado de entregas.');return false
  }
  if(edDeliveryContextInvalidate(reason)!==null)return true;
- try{if(previous===null)localStorage.removeItem(key);else localStorage.setItem(key,previous);if(localStorage.getItem(key)!==previous)edDeliveryQuarantine()}
+ try{
+  if(localStorage.getItem(key)!==serialized)edDeliveryQuarantine();
+  else{
+   if(previous===null)localStorage.removeItem(key);else localStorage.setItem(key,previous);
+   if(localStorage.getItem(key)!==previous)edDeliveryQuarantine();
+  }
+ }
  catch(e){edDeliveryQuarantine()}
  alert('Cambio no confirmado: falló la invalidación de cotizaciones. Revisa la configuración.');
  return false;
