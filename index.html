@@ -1686,8 +1686,8 @@ function edDeliverySupplierTransferWarehouses(sourceId){
   if(!Array.isArray(state.products)||state.products.some(p=>!p||p.id===null||p.id===undefined||typeof p.origen_producto!=='string'))throw new Error('Inventario incompleto');
   const productIds=state.products.map(p=>String(p.id));
   if(new Set(productIds).size!==productIds.length)throw new Error('IDs de producto duplicados');
-  inventorySnapshot=JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]));
-  if(edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot)throw new Error('Inventario no sincronizado');
+  inventorySnapshot=JSON.stringify(state.products);
+  if(edInventoryPendingSaves>0||inventorySnapshot!==edInventorySnapshot)throw new Error('Inventario no sincronizado');
   const sharedInventory=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');
   if(!sharedInventory||!Array.isArray(sharedInventory.products)||JSON.stringify(sharedInventory.products)!==edInventorySnapshot)throw new Error('Inventario de otra pestaña no verificado');
  }catch(e){alert('Inventario incompleto, duplicado o no sincronizado. No se puede transferir.');return false}
@@ -1711,19 +1711,20 @@ function edDeliverySupplierTransferWarehouses(sourceId){
  const selectedIds=[...selectionPanel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
  const allowedIds=new Set(affected.map(o=>o.id)),ids=new Set(selectedIds);
  if(!ids.size||ids.size!==selectedIds.length||selectedIds.some(id=>!allowedIds.has(id))){alert('Selecciona IDs únicos y válidos de los almacenes del proveedor.');return false}
- if(Object.values(associations).some(v=>v.some(id=>ids.has(id)))){
-  alert('Hay productos asociados a estos almacenes. Reasigna o desvincula primero esos productos para evitar dependencias inconsistentes.');return false;
+ const affectedProducts=Object.entries(associations).filter(([,warehouseIds])=>warehouseIds.some(id=>ids.has(id)));
+ if(affectedProducts.some(([,warehouseIds])=>warehouseIds.some(id=>!ids.has(id)))){
+  alert('Un producto está asociado también a almacenes que no se transfieren. Selecciona todos sus almacenes o reasigna ese producto primero.');return false;
  }
  const inventoryGeneration=edInventoryLoadGeneration,inventoryVersion=edInventorySnapshot;
  const selection=document.getElementById('edTransferSupplier-'+sourceId)?.value;
  const target=candidates.find(s=>s.id===selection);
  if(!target){alert('Selecciona un ID válido de proveedor activo.');return false}
- if(!confirm('Transferir '+ids.size+' almacén(es) de '+source.name+' a '+target.name+'? No se cambiarán productos.'))return false;
+ if(!confirm('Transferir '+ids.size+' almacén(es) de '+source.name+' a '+target.name+', conservando '+affectedProducts.length+' producto(s) asociado(s)?'))return false;
  const freshOrigins=edDeliveryOriginsRead(),freshSuppliers=edDeliverySuppliersRead();
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===rawAssociations&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===rawOrigins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===rawSuppliers}catch(e){}
  let inventoryUnchanged=false;
- try{const shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');inventoryUnchanged=!!shared&&Array.isArray(shared.products)&&JSON.stringify(shared.products)===inventoryVersion&&edInventoryLoaded&&edInventoryPendingSaves===0&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&JSON.stringify(state.products.map(p=>[String(p.id),p.origen_producto]))===inventorySnapshot}catch(e){}
+ try{const shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');inventoryUnchanged=!!shared&&Array.isArray(shared.products)&&JSON.stringify(shared.products)===inventoryVersion&&edInventoryLoaded&&edInventoryPendingSaves===0&&edInventoryLoadGeneration===inventoryGeneration&&edInventorySnapshot===inventoryVersion&&Array.isArray(state.products)&&JSON.stringify(state.products)===inventoryVersion&&new Set(state.products.map(p=>String(p.id))).size===state.products.length}catch(e){}
  if(!unchanged||!inventoryUnchanged||JSON.stringify(freshOrigins)!==JSON.stringify(origins)||JSON.stringify(freshSuppliers)!==JSON.stringify(suppliers)){
   alert('Los datos cambiaron durante la confirmación. Vuelve a revisar la operación.');return false;
  }
