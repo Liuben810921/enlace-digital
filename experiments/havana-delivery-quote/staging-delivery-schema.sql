@@ -371,7 +371,7 @@ begin
   end if;
  end loop;
  for v_item in select value from jsonb_array_elements(p_items) loop
-  if not (v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false') then
+  if (v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false') is not true then
    v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
     (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
     v_item->'payload',(v_item->>'expected_revision')::bigint,
