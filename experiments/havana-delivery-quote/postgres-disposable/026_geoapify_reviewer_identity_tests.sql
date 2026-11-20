@@ -12,9 +12,9 @@ BEGIN
  IF n<>0 THEN RAISE EXCEPTION 'reviewer allowlist unexpectedly populated'; END IF;
  SELECT count(*) INTO n FROM geoapify_disposable.reconciliation_evidence;
  IF n<>0 THEN RAISE EXCEPTION 'evidence unexpectedly populated'; END IF;
- IF has_table_privilege('public','geoapify_disposable.reconciliation_evidence','INSERT') THEN
+ IF EXISTS (SELECT 1 FROM pg_catalog.pg_class c, LATERAL pg_catalog.aclexplode(coalesce(c.relacl,pg_catalog.acldefault('r',c.relowner))) a WHERE c.oid='geoapify_disposable.reconciliation_evidence'::regclass AND a.grantee=0 AND a.privilege_type='INSERT') THEN
   RAISE EXCEPTION 'PUBLIC may inject evidence'; END IF;
- IF has_table_privilege('public','geoapify_disposable.reconciliation_reviewer','INSERT') THEN
+ IF EXISTS (SELECT 1 FROM pg_catalog.pg_class c, LATERAL pg_catalog.aclexplode(coalesce(c.relacl,pg_catalog.acldefault('r',c.relowner))) a WHERE c.oid='geoapify_disposable.reconciliation_reviewer'::regclass AND a.grantee=0 AND a.privilege_type='INSERT') THEN
   RAISE EXCEPTION 'PUBLIC may enroll reviewer'; END IF;
  RAISE NOTICE 'PASS identity guards, empty allowlist, empty evidence, no PUBLIC inserts';
 END $$;
