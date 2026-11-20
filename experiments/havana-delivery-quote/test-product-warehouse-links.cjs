@@ -1010,3 +1010,35 @@ function testArchivedReconciliationQuarantineActivation(mode){
 for(const mode of ['normal','quarantine-confirm','quarantine-final-check','archive-conflict'])
  testArchivedReconciliationQuarantineActivation(mode);
 console.log('PASS: 4 archived multiproduct reconciliation quarantine/conflict scenarios');
+
+
+function testArchivedProductReplacementQuarantine(mode){
+ const store={archive:JSON.stringify([{id:'a',name:'A',version:1,status:'PENDIENTE',destinationId:'d',productIds:['p0'],warehouseIds:['old']}]),
+  links:'{}',origins:'[]',suppliers:'[]',destinations:'[]','enlace_demo_v1':'{}'};
+ let quarantined=false,writes=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryIsQuarantined:()=>quarantined,
+  document:{getElementById:id=>id==='edQuoteDemoResult'?{textContent:''}:id==='edQuoteDraftArchive'?{value:'a'}:
+   id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'},{value:'p2'}]}:null},
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'},{id:'w2'}]}),edDeliveryContextRevision:()=>1,
+  confirm:()=>{
+   if(mode==='quarantine-confirm')quarantined=true;
+   if(mode==='archive-conflict')store.archive='[]';
+   return true;
+  },
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{writes++;store[k]=v}}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryReplaceArchivedDraftProducts'),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryReplaceArchivedDraftProducts(),success,mode+' result');
+ assert.equal(writes,success?1:0,mode+' writes');
+ if(mode!=='archive-conflict')assert.equal(JSON.stringify(JSON.parse(store.archive)[0].productIds),
+  JSON.stringify(success?['p1','p2']:['p0']));
+}
+for(const mode of ['normal','quarantine-confirm','archive-conflict'])
+ testArchivedProductReplacementQuarantine(mode);
+console.log('PASS: 3 archived multiproduct replacement quarantine/conflict scenarios');
