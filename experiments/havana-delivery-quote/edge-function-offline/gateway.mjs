@@ -1,3 +1,4 @@
+import {contextDigest,reservationAccepted,dispatchAccepted} from './dispatch-contract.mjs';
 // Offline-only shared ESM gateway; no network, keys or tariffs.
 const pending=reason=>({status:'PENDIENTE',reason,feeCup:null,routes:[]});
 const keys=new Set(['contextRevision','mode','destination','origins','operationId']);
@@ -23,12 +24,13 @@ export async function handleGateway(request,deps={}){
   if(raw.length>8192)return {httpStatus:413,body:pending('BODY_TOO_LARGE')};
   let body;try{body=JSON.parse(raw)}catch{return {httpStatus:400,body:pending('INVALID_JSON')}};
   const error=validate(body);if(error)return {httpStatus:400,body:pending(error)};
-  const receipt=await deps.reserveAtomic({principal:identity.subject,operationId:body.operationId,revision:body.contextRevision,credits:body.origins.length,scope:body.origins.map(o=>o.id).join(','),destination:body.destination});
-  if(!receipt||receipt.committed!==true||typeof receipt.reservationId!=='string'||!receipt.reservationId||!['RESERVED','REPLAY_RESERVED'].includes(receipt.reason)||receipt.lifecycle!=='RESERVED')return {httpStatus:409,body:pending('RESERVATION_NOT_DISPATCHABLE')};
+  const digest=await contextDigest(identity.subject,body);
+  const receipt=await deps.reserveAtomic({contextDigest:digest,principal:identity.subject,operationId:body.operationId,revision:body.contextRevision,credits:body.origins.length,scope:body.origins.map(o=>o.id).join(','),destination:body.destination});
+  if(!reservationAccepted(receipt,digest))return {httpStatus:409,body:pending('RESERVATION_NOT_DISPATCHABLE')};
   // Offline contract check only: never dispatch to a provider. The trusted adapter
   // must enforce the SQL transition atomically and reject released/review/expired records.
-  const gate=await deps.authorizeDispatch({principal:identity.subject,operationId:body.operationId,reservationId:receipt.reservationId,expectedLifecycle:'RESERVED',contextRevision:body.contextRevision});
-  if(!gate||gate.authorized!==true||gate.lifecycle!=='DISPATCHED'||gate.reservationId!==receipt.reservationId||gate.operationId!==body.operationId)return {httpStatus:409,body:pending('DISPATCH_NOT_AUTHORIZED')};
+  const gate=await deps.authorizeDispatch({contextDigest:digest,principal:identity.subject,operationId:body.operationId,reservationId:receipt.reservationId,expectedLifecycle:'RESERVED',contextRevision:body.contextRevision});
+  if(!dispatchAccepted(gate,receipt,body,digest))return {httpStatus:409,body:pending('DISPATCH_NOT_AUTHORIZED')};
   return {httpStatus:503,body:pending('PROVIDER_NOT_CONNECTED')};
  }catch{return {httpStatus:503,body:pending('GATEWAY_ERROR')}}
 }
