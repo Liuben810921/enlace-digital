@@ -718,3 +718,53 @@ function testArchiveCreationReadback(mode){
 }
 for(const mode of ['persist','silent','throws'])testArchiveCreationReadback(mode);
 console.log('PASS: 3 archived draft creation persistence/readback scenarios');
+
+
+function testArchivedBulkPersistenceAndConflicts(operation,mode){
+ const drafts=[
+  {id:'a',name:'A',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'old',warehouseIds:['w1']},
+  {id:'b',name:'B',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'new',warehouseIds:['w2']}
+ ];
+ const store={archive:JSON.stringify(drafts),'enlace_demo_v1':'inv',links:'links',origins:'orig',suppliers:'sup',destinations:'dest'};
+ const output={textContent:''};let writes=0;
+ const ctx={
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',
+  ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoDestination'?{value:'new'}:
+   id==='edQuoteDraftArchive'?{value:'a'}:id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'},{value:'p2'}]}:null},
+  edDeliveryIsQuarantined:()=>false,
+  edDeliveryDestinationsRead:()=>[{id:'old',name:'Old'},{id:'new',name:'New'}],
+  edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),
+  edDeliveryContextRevision:()=>1,
+  confirm:()=>{
+   if(mode==='archive-conflict')store.archive=JSON.stringify([...drafts,{id:'external'}]);
+   if(mode==='dependency-conflict')store.links='changed';
+   return true;
+  },
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{
+   writes++;if(mode==='throws')throw Error('quota');
+   if(mode==='success')store[k]=v;
+  }}
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction(operation),ctx,{timeout:1000});
+ const result=ctx[operation](),saved=JSON.parse(store.archive);
+ assert.equal(result,mode==='success',operation+' '+mode+' result');
+ assert.equal(writes,['success','silent','throws'].includes(mode)?1:0,operation+' '+mode+' write count');
+ assert.equal(saved[1].destinationId,'new');
+ assert.equal(JSON.stringify(saved[1].productIds),JSON.stringify(['p2']));
+ if(mode==='success'){
+  assert.equal(saved[0].destinationId,operation==='edDeliveryBulkReassignArchivedDestinations'?'new':'old');
+  assert.equal(JSON.stringify(saved[0].productIds),JSON.stringify(operation==='edDeliveryReplaceArchivedDraftProducts'?['p1','p2']:['p1']));
+ }else{
+  assert.equal(saved[0].destinationId,'old');
+  assert.equal(JSON.stringify(saved[0].productIds),JSON.stringify(['p1']));
+ }
+ if(mode==='silent')assert.match(output.textContent,/No se pudo confirmar la persistencia/);
+ if(mode==='archive-conflict')assert.equal(saved.length,3);
+}
+for(const operation of ['edDeliveryBulkReassignArchivedDestinations','edDeliveryReplaceArchivedDraftProducts'])
+ for(const mode of ['success','silent','throws','archive-conflict','dependency-conflict'])
+  testArchivedBulkPersistenceAndConflicts(operation,mode);
+console.log('PASS: 10 archived destination/product replacement persistence and conflict scenarios');
