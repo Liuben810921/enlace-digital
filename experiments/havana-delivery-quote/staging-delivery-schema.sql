@@ -211,11 +211,11 @@ end $$;
 -- PostgreSQL requires the migration executor to be able to SET ROLE to
 -- the new owner before ALTER FUNCTION OWNER; schema CREATE alone is insufficient.
 -- Fail inside this transaction rather than silently using a privileged owner.
-do $ begin
+do $$ begin
  if not pg_has_role(current_user,'ed_delivery_staging_rpc','SET') then
   raise exception 'migration executor cannot SET ROLE to RPC owner; authorize a separate least-privilege membership grant before migration' using errcode='42501';
  end if;
-end $;
+end $$;
 grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
 grant usage on schema auth to ed_delivery_staging_rpc;
 grant execute on function auth.uid() to ed_delivery_staging_rpc;
@@ -227,12 +227,12 @@ grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc
 -- SECURITY DEFINER owner also needs sequence permissions if serial IDs are added later; none exist here.
 -- The owner of SECURITY DEFINER RPCs must have only the required grants.
 -- Do not grant BYPASSRLS, login, table ownership, or direct privileges to API roles.
-do $ begin
+do $$ begin
  if exists(select 1 from pg_roles where rolname='ed_delivery_staging_rpc' and
    (rolbypassrls or rolcanlogin or rolsuper or rolcreaterole or rolcreatedb)) then
   raise exception 'unsafe RPC owner role' using errcode='42501';
  end if;
-end $;
+end $$;
 create policy ed_admin_self_read on ed_delivery_private.admin_members
  for select to ed_delivery_staging_rpc using (user_id = (select auth.uid()) and enabled);
 create policy ed_entities_admin on ed_delivery_private.entities
