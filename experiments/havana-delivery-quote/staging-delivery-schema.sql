@@ -162,7 +162,7 @@ alter function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,json
 -- Explicit soft deactivation avoids breaking linked warehouses and historical drafts.
 create or replace function public.ed_delivery_staging_deactivate(p_kind text,p_id text,p_expected_revision bigint,p_operation_id uuid)
 returns jsonb language plpgsql security definer set search_path = ''
-as $
+as $$
 declare v_actor uuid:=auth.uid(); v_entity ed_delivery_private.entities%rowtype; v_previous ed_delivery_private.operations%rowtype; v_args jsonb; v_result jsonb;
 begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
@@ -196,7 +196,7 @@ begin
  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',p_expected_revision+1,'active',false);
  insert into ed_delivery_private.operations(operation_id,actor_id,payload,response) values(p_operation_id,v_actor,v_args,v_result);
  return v_result;
-end $;
+end $$;
 revoke all on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) to authenticated;
 alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owner to ed_delivery_staging_rpc;
@@ -205,7 +205,7 @@ alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owne
 -- Reject duplicate entities and require canonical order to avoid opposite-order deadlocks.
 create or replace function public.ed_delivery_staging_batch(p_items jsonb)
 returns jsonb language plpgsql security definer set search_path = ''
-as $
+as $$
 declare v_actor uuid:=auth.uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb;
 begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
@@ -228,7 +228,7 @@ begin
   ));
  end loop;
  return v_results;
-end $;
+end $$;
 revoke all on function public.ed_delivery_staging_batch(jsonb) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticated;
 alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
