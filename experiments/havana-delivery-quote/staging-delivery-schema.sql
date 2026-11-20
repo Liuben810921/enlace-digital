@@ -143,7 +143,9 @@ begin
       or nullif(l.value->>'target_kind','') is null
       or nullif(l.value->>'target_id','') is null
       or jsonb_typeof(l.value->'target_kind') is distinct from 'string'
-      or jsonb_typeof(l.value->'target_id') is distinct from 'string')
+      or jsonb_typeof(l.value->'target_id') is distinct from 'string'
+      or (l.value ? 'source_kind' and (jsonb_typeof(l.value->'source_kind') is distinct from 'string' or l.value->>'source_kind' is distinct from p_kind))
+      or (l.value ? 'source_id' and (jsonb_typeof(l.value->'source_id') is distinct from 'string' or l.value->>'source_id' is distinct from p_id)))
     or (select count(*) from (
       select l.value->>'target_kind' as kind,l.value->>'target_id' as id
       from jsonb_array_elements(p_links) l
