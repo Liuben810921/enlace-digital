@@ -94,6 +94,38 @@ function draft(){
  const id='draft-'+crypto.randomUUID();
  return save('shipment_draft',id,{status:'PENDIENTE',productIds,destinationId,warehouseIds,createdAt:new Date().toISOString()},[{target_kind:'destination',target_id:destinationId},...productIds.map(id=>({target_kind:'product_origin',target_id:id}))]);
 }
+async function deactivate(kind,id){
+ if(busy)return false;
+ const row=get(kind,id);if(!row){tell('Entidad no encontrada en staging');return false}
+ if(kind==='supplier'&&rows('warehouse').some(w=>w.payload.supplierId===id&&w.payload.active!==false)){tell('Desactiva o reasigna sus almacenes antes de desactivar el proveedor');return false}
+ if(kind==='warehouse'&&links.some(l=>l.target_kind==='warehouse'&&l.target_id===id)){tell('Reasigna productos antes de desactivar el almacén');return false}
+ busy=true;
+ try{
+  const result=await api.deactivate(map[kind],id,row.revision,crypto.randomUUID());
+  try{await refresh()}catch(e){tell('Desactivación confirmada, pero la vista no pudo actualizarse');return true}
+  adminTab('delivery');tell('Desactivación confirmada: '+id+' · revisión '+result.revision);return true;
+ }catch(e){tell('Desactivación rechazada: '+e.message);return false}finally{busy=false}
+}
+function supplierEdit(id){
+ const row=get('supplier',id),fieldEl=document.getElementById('edSupplierEdit-'+id),input=document.getElementById('edSupplierEditName-'+id);
+ if(!row||!fieldEl||!input)return false;
+ if(fieldEl.hidden){fieldEl.dataset.stagingRevision=String(row.revision);input.value=row.payload.name;fieldEl.hidden=false;input.focus();return true}
+ const name=input.value.trim();
+ if(!name||rows('supplier').some(x=>x.id!==id&&x.payload.name?.toLowerCase()===name.toLowerCase())){tell('Nombre inválido o duplicado');return false}
+ if(String(row.revision)!==fieldEl.dataset.stagingRevision){tell('Proveedor modificado durante la edición');return false}
+ return save('supplier',id,{...row.payload,name});
+}
+function supplierToggle(id){
+ const row=get('supplier',id);if(!row)return false;
+ if(row.payload.active!==false)return deactivate('supplier',id);
+ return save('supplier',id,{...row.payload,active:true});
+}
+function archive(){
+ const name=field('edQuoteDraftName');if(!name||name.length>80){tell('Nombre de archivo inválido');return false}
+ const latest=rows('shipment_draft').filter(x=>x.payload.status==='PENDIENTE'&&!x.payload.archivedAt).sort((a,b)=>String(b.payload.createdAt||'').localeCompare(String(a.payload.createdAt||'')))[0];
+ if(!latest){tell('No hay borrador remoto pendiente para archivar');return false}
+ return save('shipment_draft',latest.id,{...latest.payload,name,archivedAt:new Date().toISOString(),status:'ARCHIVADO'},links.filter(l=>l.source_kind==='shipment_draft'&&l.source_id===latest.id).map(l=>({target_kind:l.target_kind,target_id:l.target_id})));
+}
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
@@ -103,16 +135,21 @@ function init(){
  wrap('edDeliveryDestinationsRead',()=>read('destination'));
  wrap('edProductOriginsRead',associations);
  wrap('edDeliverySupplierAdd',supplier);
+ wrap('edDeliverySupplierEdit',supplierEdit);
+ wrap('edDeliverySupplierToggle',supplierToggle);
+ wrap('edDeliveryArchiveShipmentDraft',archive);
+ wrap('edDeliveryOriginDelete',id=>deactivate('warehouse',id));
+ wrap('edDeliverySupplierDelete',id=>deactivate('supplier',id));
  wrap('edDeliveryOriginSave',origin);
  wrap('edDeliveryDestinationSave',destination);
  wrap('edProductOriginsSave',association);
  wrap('edDeliverySaveShipmentDraft',draft);
  // Prevent unsupported local-only mutations from being mistaken for remote saves.
- const unsupported=['edDeliveryPersistAndInvalidate','edDeliverySupplierDelete','edDeliverySupplierToggle',
+ const unsupported=['edDeliveryPersistAndInvalidate',
  'edDeliverySuppliersDeleteSelected','edDeliverySuppliersSetSelectedActive','edDeliverySupplierTransferWarehouses',
  'edDeliveryOriginsDeleteSelected','edDeliveryOriginsSetSelectedActive','edDeliveryOriginsTransferSelectedSupplier',
- 'edDeliveryOriginsMoveSelected','edDeliveryOriginDelete','edDeliveryOriginSetDefault',
- 'edDeliveryArchiveShipmentDraft','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
+ 'edDeliveryOriginsMoveSelected','edDeliveryOriginSetDefault',
+ 'edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
  for(const name of unsupported){
   if(typeof window[name]!=='function')continue;
   const original=window[name];
