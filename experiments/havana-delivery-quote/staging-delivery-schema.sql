@@ -395,7 +395,7 @@ begin
   raise exception 'batch result count mismatch' using errcode='22023';
  end if;
  return v_results;
-end $;
+end $$;
 revoke all on function public.ed_delivery_staging_batch(jsonb) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticated;
 alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
