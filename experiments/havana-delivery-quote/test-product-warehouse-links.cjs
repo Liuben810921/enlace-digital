@@ -952,3 +952,30 @@ function testQuarantineReactivationWriteFailure(mode){
 for(const mode of ['normal','reactivation-silent','reactivation-throws'])
  testQuarantineReactivationWriteFailure(mode);
 console.log('PASS: 3 quarantine reactivation write-failure cases (cross-tab persistence remains PENDING)');
+
+
+function testPersistInvalidationFinalReadback(mode){
+ const store={k:'old'};let quarantined=false,reads=0;
+ const ctx={
+  edDeliveryIsQuarantined:()=>quarantined,
+  edDeliveryQuarantine:()=>{quarantined=true;store.q='1'},
+  alert:()=>{},
+  localStorage:{
+   getItem:k=>{reads++;if(mode==='throw-final-read'&&reads===3)throw Error('read');return store[k]??null},
+   setItem:(k,v)=>{if(mode!=='write-silent')store[k]=v},
+   removeItem:k=>{delete store[k]}
+  },
+  edDeliveryContextInvalidate:()=>{
+   if(mode==='mutate-invalidate')store.k='external';
+   return mode==='invalidate-fails'?null:2;
+  }
+ };
+ vm.createContext(ctx);
+ vm.runInContext(extractDeliveryFunction('edDeliveryPersistAndInvalidate'),ctx,{timeout:1000});
+ assert.equal(ctx.edDeliveryPersistAndInvalidate('k',['new'],'test','old'),mode==='normal',mode+' success');
+ assert.equal(store.k,mode==='mutate-invalidate'?'external':mode==='invalidate-fails'||mode==='write-silent'?'old':'["new"]',mode+' stored value');
+ assert.equal(quarantined,mode==='mutate-invalidate'||mode==='throw-final-read',mode+' quarantine');
+}
+for(const mode of ['normal','mutate-invalidate','throw-final-read','invalidate-fails','write-silent'])
+ testPersistInvalidationFinalReadback(mode);
+console.log('PASS: 5 persistence and invalidation final-readback scenarios');
