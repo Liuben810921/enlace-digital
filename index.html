@@ -3380,6 +3380,18 @@ function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
  if(selected.some(o=>!o||o.type!==products[0].origen_producto||o.type==='proveedor'&&o.supplierId!==selected[0]?.supplierId))return null;
  return selected;
 }
+function edDeliveryQuoteDemoBasket(productIds,origins,suppliers){
+ if(!Array.isArray(productIds)||!productIds.length||new Set(productIds).size!==productIds.length)return null;
+ const grouped=[];
+ for(const id of productIds){
+  const eligible=edDeliveryQuoteDemoEligible(id,origins,suppliers);
+  if(!eligible||!eligible.length)return null;
+  grouped.push({productId:id,origins:eligible});
+ }
+ const unique=new Map();
+ for(const group of grouped)for(const origin of group.origins)unique.set(origin.id,origin);
+ return {groups:grouped,origins:[...unique.values()]};
+}
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
@@ -3388,7 +3400,7 @@ function edDeliveryQuoteDemoPanel(){
  return '<section class="panel" aria-labelledby="edQuoteDemoTitle"><h3 id="edQuoteDemoTitle">Simulador local de mensajería · NO OPERATIVO</h3>'+
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
  '<p class="note">Almacenes elegibles: '+eligible.length+'. Destinos de prueba: '+destinations.length+'.</p>'+
- '<div class="field"><label for="edQuoteDemoProduct">Producto para simular</label><select id="edQuoteDemoProduct"><option value="">Todos los almacenes activos (demostración general)</option>'+productOptions+'</select></div>'+
+ '<div class="field"><label for="edQuoteDemoProduct">Productos para simular (selección múltiple)</label><select id="edQuoteDemoProduct" multiple size="5">'+productOptions+'</select><p class="note">Sin selección: demostración general. Con varios productos: se incluyen todos sus almacenes asociados; la distancia mayor determina el ejemplo de mensajería.</p></div>'+
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
@@ -3403,12 +3415,14 @@ function edDeliveryQuoteDemo(synthetic){
  const rateInput=document.getElementById('edQuoteDemoRate')?.value;
  const rateCupPerKm=rateInput===''?NaN:Number(rateInput);
  if(!destinationId||!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('Selecciona un destino de referencia.');
- const productId=document.getElementById('edQuoteDemoProduct')?.value||'';
+ const productSelect=document.getElementById('edQuoteDemoProduct');
+ const productIds=productSelect?[...productSelect.selectedOptions].map(o=>o.value).filter(Boolean):[];
  const revision=edDeliveryContextRevision();
  const origins=edDeliveryOriginsRead();
  const suppliers=edDeliverySuppliersRead();
- const eligible=edDeliveryQuoteDemoEligible(productId,origins,suppliers);
- if(!eligible||!eligible.length)return pending(productId?'Producto sin asociaciones verificadas y compatibles. Revisa el inventario y sus almacenes.':'No hay almacenes activos disponibles.');
+ const basket=productIds.length?edDeliveryQuoteDemoBasket(productIds,origins,suppliers):null;
+ const eligible=productIds.length?basket?.origins:edDeliveryQuoteDemoEligible('',origins,suppliers);
+ if(!eligible||!eligible.length)return pending(productIds.length?'Algún producto no tiene asociaciones verificadas y compatibles. Revisa inventario y almacenes.':'No hay almacenes activos disponibles.');
  // These ephemeral fixtures are NEVER road measurements. They exist solely for demonstration.
  const routes=synthetic?eligible.map((o,i)=>({originId:o.id,destinationId,km:2+i*3,status:'verified',contextRevision:revision})):[];
  const contract=window.EDOfflineQuote?.quoteDelivery;
@@ -3417,7 +3431,7 @@ function edDeliveryQuoteDemo(synthetic){
  if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
  if(!synthetic)return pending('No hay distancias viales verificadas.');
  const origin=eligible.find(o=>o.id===quote.originId);
- result.textContent='SIMULACIÓN FICTICIA · '+(productId?'Producto '+productId+' · ':'')+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
+ result.textContent='SIMULACIÓN FICTICIA · '+(productIds.length?productIds.length+' producto(s) · '+eligible.length+' almacén(es) vinculados · ':'')+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
  return true;
 }
 
