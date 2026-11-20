@@ -2145,11 +2145,11 @@ function edDeliveryDestinationsMoveSelected(){
  if(ids.some(id=>!known.has(id))){alert('Hay destinos seleccionados que ya no existen.');return false}
  const selected=new Set(ids),affected=items.filter(d=>selected.has(d.id)&&d.municipality!==target);
  if(!affected.length){alert('Los destinos seleccionados ya pertenecen a ese municipio.');return false}
- if(!confirm('Cambiar el municipio de '+affected.length+' destino(s) a '+target+'? Revisa también sus direcciones y coordenadas manuales.'))return false;
+ if(!confirm('Cambiar el municipio de '+affected.length+' destino(s) a '+target+'? Se borrarán sus coordenadas anteriores para evitar ubicaciones incorrectas. Revisa también sus direcciones manuales.'))return false;
  let unchanged=false;
  try{unchanged=localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===snapshot}catch(e){}
  if(!unchanged){alert('Los destinos cambiaron durante la confirmación.');return false}
- const updated=items.map(d=>selected.has(d.id)?{...d,municipality:target}:d);
+ const updated=items.map(d=>selected.has(d.id)&&d.municipality!==target?{...d,municipality:target,lat:null,lng:null}:d);
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_DESTINATIONS_KEY,updated,'destinations_bulk_municipality',snapshot))return false;
  adminTab('delivery');return true;
 }
