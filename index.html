@@ -2028,6 +2028,7 @@ function edDeliveryOriginsPanel(){
  const rows=items.map(p=>'<div class="panel" style="padding:12px;margin:10px 0"><strong>'+esc(p.name)+'</strong> · '+(p.type==='proveedor'?'Proveedor':'Almacén propio')+
  '<p class="note">'+esc([p.address,p.municipality,'La Habana'].filter(Boolean).join(', '))+'</p>'+
  '<p class="note">'+(p.type==='proveedor'?(edDeliverySuppliersRead().find(x=>x.id===p.supplierId)?.name||'Proveedor sin asignar')+' · ':'')+'Mapa: '+(Number.isFinite(p.lat)&&Number.isFinite(p.lng)?esc(p.lat+', '+p.lng):'ubicación pendiente')+' · '+(p.active===false?'Inactivo':'Activo')+' · '+assignedCount(p.id)+' producto(s) asociado(s)</p>'+
+ (assignedCount(p.id)?'<div class="field"><fieldset id="edReassignProducts-'+esc(p.id)+'"'+(locked?' disabled':'')+'><legend>Productos a reasignar</legend>'+Object.entries(associations).filter(([key,ids])=>Array.isArray(ids)&&ids.includes(p.id)).map(([key])=>{const product=Array.isArray(state.products)?state.products.find(item=>String(item.id)===key):null;return '<label style="display:block;padding:5px"><input type="checkbox" value="'+esc(key)+'" checked> '+esc(product?.nombre||product?.name||key)+' ('+esc(key)+')</label>'}).join('')+'</fieldset></div>':'')+
  (assignedCount(p.id)?'<div class="field"><label>Reasignar productos a otro almacén compatible</label><select id="edReassignTarget-'+esc(p.id)+'"><option value="">Selecciona almacén destino</option>'+items.filter(o=>o.id!==p.id&&o.active!==false&&o.type===p.type&&(p.type==='propio'||o.supplierId===p.supplierId&&edDeliverySuppliersRead().some(s=>s.id===p.supplierId&&s.active!==false))).map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+'</option>').join('')+'</select><button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryReassignWarehouse('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Reasignar productos</button> <button type="button" class="secondary"'+lockAttribute+' onclick="edDeliveryUnlinkWarehouseProducts('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Desvincular productos</button></div>':'')+
  '<button type="button" class="secondary" aria-label="Editar punto de salida '+esc(p.name)+'"'+lockAttribute+' onclick="edDeliveryOriginEdit('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">Editar</button> '+
  (p.type==='proveedor'?'<button type="button" class="secondary" aria-label="Establecer almacén predeterminado '+esc(p.name)+'"'+lockAttribute+(p.active===false||!edDeliverySuppliersRead().some(x=>x.id===p.supplierId&&x.active!==false)?' disabled':'')+' onclick="edDeliveryOriginSetDefault('+JSON.stringify(p.id).replace(/"/g,'&quot;')+')">'+(p.defaultForSupplier===true?'Predeterminado':'Hacer predeterminado')+'</button> ':'')+
@@ -2150,9 +2151,9 @@ function edDeliveryReassignWarehouse(sourceId){
   if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot)throw Error('Inventario compartido no verificado');
   inventoryVersion=edInventorySnapshot;
  }catch(e){alert('No se puede reasignar: '+e.message);return false}
- const productSelection=prompt('Productos a reasignar (IDs separados por coma; vacío = todos):\\n'+affected.map(([key])=>key).join(', '),'');
- if(productSelection===null)return false;
- const chosenKeys=productSelection.trim()?productSelection.split(',').map(key=>key.trim()):affected.map(([key])=>key);
+ const selectionPanel=document.getElementById('edReassignProducts-'+sourceId);
+ if(!selectionPanel)return false;
+ const chosenKeys=[...selectionPanel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
  const validKeys=new Set(affected.map(([key])=>key));
  if(!chosenKeys.length||new Set(chosenKeys).size!==chosenKeys.length||chosenKeys.some(key=>!validKeys.has(key))){alert('Selecciona IDs únicos de productos asociados a este almacén.');return false}
  const chosenSet=new Set(chosenKeys);
