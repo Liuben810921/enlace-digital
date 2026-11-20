@@ -41,9 +41,8 @@ alter table ed_delivery_private.entities enable row level security;
 alter table ed_delivery_private.links enable row level security;
 alter table ed_delivery_private.operations enable row level security;
 revoke all on all tables in schema ed_delivery_private from public, anon, authenticated;
--- The functions are SECURITY DEFINER owned by postgres; no BYPASSRLS is claimed.
--- Their only exposed capability is narrow and gated by auth.uid() + private allowlist.
--- Ownership/role must be reviewed before deployment; fail closed on absent membership.
+-- SECURITY DEFINER functions are transferred below to a dedicated NOBYPASSRLS role.
+-- RLS applies to that role; the authenticated caller must also be allowlisted.
 create or replace function public.ed_delivery_staging_read()
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
@@ -59,7 +58,7 @@ end $$;
 create or replace function public.ed_delivery_staging_write(p_operation_id uuid,p_kind text,p_id text,p_payload jsonb,p_expected_revision bigint,p_links jsonb default '[]'::jsonb)
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_user uuid:=auth.uid(); v_old bigint; v_revision bigint; v_existing record; v_result jsonb; v_link jsonb;
+declare v_user uuid:=auth.uid(); v_old bigint; v_revision bigint; v_existing record; v_result jsonb; v_link jsonb; v_target_kind text; v_target_id text;
 begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
@@ -86,8 +85,17 @@ begin
  delete from ed_delivery_private.links where source_kind=p_kind and source_id=p_id;
  for v_link in select value from jsonb_array_elements(p_links) loop
   if v_link->>'target_kind' is null or v_link->>'target_id' is null or not ( (p_kind='warehouse' and v_link->>'target_kind'='supplier') or (p_kind='product_origin' and v_link->>'target_kind' in ('warehouse','supplier')) or (p_kind='shipment_draft' and v_link->>'target_kind' in ('destination','product_origin')) ) or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
+  v_target_kind:=v_link->>'target_kind'; v_target_id:=v_link->>'target_id';
+  -- Lock the referenced row until commit so concurrent deactivation cannot race
+  -- the validation. Entity edits are serialized by the same advisory key.
+  perform 1 from ed_delivery_private.entities where kind=v_target_kind and id=v_target_id for share;
+  if not found then raise exception 'missing link target' using errcode='23503'; end if;
+  if p_kind='warehouse' and v_target_kind='supplier' and
+   not exists(select 1 from ed_delivery_private.entities where kind='supplier' and id=v_target_id and payload->>'active' is distinct from 'false') then
+    raise exception 'inactive supplier' using errcode='23514';
+  end if;
   insert into ed_delivery_private.links(source_kind,source_id,target_kind,target_id)
-  values(p_kind,p_id,v_link->>'target_kind',v_link->>'target_id');
+  values(p_kind,p_id,v_target_kind,v_target_id);
  end loop;
  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',v_revision);
  insert into ed_delivery_private.operations(operation_id,actor_id,payload,response)
@@ -153,6 +161,13 @@ begin
  perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
  select * into v_entity from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
  if not found or v_entity.revision<>p_expected_revision then raise exception 'revision conflict' using errcode='40001'; end if;
+ if p_kind in ('supplier','warehouse') and exists(
+  select 1 from ed_delivery_private.links l
+  join ed_delivery_private.entities e on e.kind=l.source_kind and e.id=l.source_id
+  where (l.target_kind=p_kind and l.target_id=p_id and e.payload->>'active' is distinct from 'false')
+   or (p_kind='supplier' and l.target_kind='warehouse' and l.source_kind='product_origin'
+       and exists(select 1 from ed_delivery_private.links w where w.source_kind='warehouse' and w.source_id=l.target_id and w.target_kind='supplier' and w.target_id=p_id))
+ ) then raise exception 'active dependencies prevent deactivation' using errcode='23503'; end if;
  update ed_delivery_private.entities set payload=jsonb_set(payload,'{active}','false'::jsonb,true),revision=revision+1,updated_at=now()
  where kind=p_kind and id=p_id;
  v_result:=jsonb_build_object('kind',p_kind,'id',p_id,'revision',p_expected_revision+1,'active',false);
