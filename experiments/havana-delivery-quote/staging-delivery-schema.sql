@@ -378,8 +378,12 @@ begin
     coalesce(v_item->'links','[]'::jsonb)));
   end if;
  end loop;
+ -- Never report an atomic batch as successful if any input item was skipped.
+ if jsonb_array_length(v_results)<>jsonb_array_length(p_items) then
+  raise exception 'batch result count mismatch' using errcode='22023';
+ end if;
  return v_results;
-end $$;
+end $;
 revoke all on function public.ed_delivery_staging_batch(jsonb) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticated;
 alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
