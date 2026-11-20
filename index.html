@@ -1869,6 +1869,7 @@ function edDeliverySupplierOptions(selected){
 function edDeliveryOriginTypeChange(){
  const supplier=document.getElementById('edOriginType').value==='proveedor';
  const field=document.getElementById('edOriginSupplierField');if(field)field.style.display=supplier?'':'none';
+ const defaultField=document.getElementById('edOriginDefaultField');if(defaultField)defaultField.style.display=supplier?'':'none';
 }
 function edDeliveryPreferredOrigin(items){
  if(!items.length)return null;
@@ -2478,7 +2479,7 @@ function edDeliveryOriginsPanel(){
  '<h4 id="edOriginFormTitle">Añadir punto de salida</h4><fieldset'+(locked?' disabled':'')+' style="border:0;padding:0;margin:0;min-width:0"><input type="hidden" id="edOriginId">'+
  '<div class="field"><label for="edOriginName">Nombre del punto</label><input id="edOriginName" maxlength="120" placeholder="Ej.: Almacén principal"></div>'+
  '<div class="field"><label for="edOriginType">Tipo</label><select id="edOriginType" onchange="edDeliveryOriginTypeChange()"><option value="propio">Almacén propio</option><option value="proveedor">Proveedor</option></select></div>'+
- '<div class="field" id="edOriginSupplierField" style="display:none"><label for="edOriginSupplier">Proveedor del almacén</label><select id="edOriginSupplier">'+edDeliverySupplierOptions('')+'</select></div>'+ '<div class="field"><label for="edOriginMunicipality">Municipio (La Habana)</label><select id="edOriginMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select></div>'+
+ '<div class="field" id="edOriginSupplierField" style="display:none"><label for="edOriginSupplier">Proveedor del almacén</label><select id="edOriginSupplier">'+edDeliverySupplierOptions('')+'</select></div>'+'<div class="field" id="edOriginDefaultField" style="display:none"><label><input type="checkbox" id="edOriginMakeDefault"> Establecer como almacén predeterminado de este proveedor</label></div>'+ '<div class="field"><label for="edOriginMunicipality">Municipio (La Habana)</label><select id="edOriginMunicipality"><option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('')+'</select></div>'+
  '<div class="field"><label for="edOriginAddress">Dirección de salida</label><textarea id="edOriginAddress" maxlength="300" rows="2" style="display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box" placeholder="Calle, número y referencias"></textarea></div>'+
  '<div class="field"><label for="edOriginOsmAnd">Pegar coordenadas GPS de OsmAnd</label><input id="edOriginOsmAnd" placeholder="23.13024 -82.36028"><button type="button" class="secondary" onclick="edApplyOsmAndCoordinates(\'edOriginOsmAnd\',\'edOriginLat\',\'edOriginLng\')">Aplicar coordenadas</button></div>'+'<p class="note">Ubicación de referencia para el futuro mapa. Las coordenadas son opcionales y deben verificarse; no se calculan automáticamente.</p>'+
  '<div class="grid2"><div class="field"><label for="edOriginLat">Latitud</label><input id="edOriginLat" type="number" min="-90" max="90" step="any" placeholder="Ej.: 23.13"></div>'+
@@ -2540,6 +2541,7 @@ function edDeliveryOriginSave(){
  const id=val('edOriginId'),name=val('edOriginName'),type=val('edOriginType'),municipality=val('edOriginMunicipality'),address=val('edOriginAddress');
  const supplierId=type==='proveedor'?val('edOriginSupplier'):null;
  if(type==='proveedor'&&!edDeliverySuppliersRead().some(p=>p.id===supplierId&&p.active!==false)){document.getElementById('edOriginSupplier').focus();alert('Selecciona un proveedor activo.');return}
+ const makeDefault=type==='proveedor'&&document.getElementById('edOriginMakeDefault')?.checked===true;
  const latRaw=val('edOriginLat'),lngRaw=val('edOriginLng');
  if(!name||!municipality||!address||!['propio','proveedor'].includes(type)){const first=!name?'edOriginName':!['propio','proveedor'].includes(type)?'edOriginType':!municipality?'edOriginMunicipality':'edOriginAddress';document.getElementById(first).focus();alert('Completa nombre, tipo, municipio y dirección.');return}
  if(!municipios.includes(municipality)){alert('Selecciona un municipio válido de La Habana.');return false}
@@ -2547,6 +2549,10 @@ function edDeliveryOriginSave(){
  const lat=latRaw===''?null:Number(latRaw),lng=lngRaw===''?null:Number(lngRaw);
  if(lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180)){document.getElementById(!Number.isFinite(lat)||lat< -90||lat>90?'edOriginLat':'edOriginLng').focus();alert('Coordenadas fuera de rango.');return}
  const items=edDeliveryOriginsRead();
+ let supplierSnapshot=null;
+ if(makeDefault){
+  try{supplierSnapshot=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)}catch(e){alert('No se pudo verificar el proveedor.');return false}
+ }
  if(id){
   let unchanged=false;
   try{unchanged=edDeliveryEditSnapshots.origin!==null&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===edDeliveryEditSnapshots.origin}catch(e){}
@@ -2568,14 +2574,24 @@ function edDeliveryOriginSave(){
    alert('Este almacén tiene productos asociados. Reasigna los productos antes de cambiar su tipo o proveedor.');return;
   }
  }
- const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false,defaultForSupplier:!!(existing?.defaultForSupplier&&type==='proveedor'&&existing.supplierId===supplierId)};
+ const point={version:(existing?.version||0)+1,supplierId,id:existing?.id||'origin-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),name,type,municipality,address,lat,lng,active:existing?.active!==false,defaultForSupplier:makeDefault||!!(existing?.defaultForSupplier&&type==='proveedor'&&existing.supplierId===supplierId)};
  if(existing)items.splice(items.indexOf(existing),1,point);else items.push(point);
+ if(makeDefault){
+  for(let i=0;i<items.length;i++){
+   const other=items[i];
+   if(other.id!==point.id&&other.type==='proveedor'&&other.supplierId===supplierId&&other.defaultForSupplier===true)items[i]={...other,defaultForSupplier:false,version:(Number.isSafeInteger(other.version)&&other.version>=0?other.version:0)+1};
+  }
+  let unchanged=false;
+  try{unchanged=localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===supplierSnapshot&&edDeliverySuppliersRead().some(s=>s.id===supplierId&&s.active!==false)}catch(e){}
+  if(!unchanged){alert('El proveedor cambió durante la edición. Vuelve a revisar el formulario.');return false}
+ }
  if(dependencyChange){
   let unchanged=false;
   try{unchanged=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===associationSnapshot}catch(e){}
   if(!unchanged){alert('Las asociaciones cambiaron durante la edición. Vuelve a revisar el almacén.');return false}
  }
- if((id?edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed',edDeliveryEditSnapshots.origin):edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed'))){adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus()}
+ if(!(id?edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed',edDeliveryEditSnapshots.origin):edDeliveryPersistAndInvalidate(ED_DELIVERY_ORIGINS_KEY,items,'warehouse_changed')))return false;
+ adminTab('delivery');document.getElementById('edDeliveryPanelTitle')?.focus();return true;
 }
 function edDeliveryOriginSetDefault(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica las asociaciones.');return false}
