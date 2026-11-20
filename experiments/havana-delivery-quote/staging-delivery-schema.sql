@@ -103,6 +103,13 @@ begin
  ) then raise exception 'draft destination missing' using errcode='23514'; end if;
  -- Serialize all default-warehouse changes for a supplier. This check applies
  -- to single writes and every item of a batch, not just the browser.
+ -- An inactive warehouse cannot be marked as default, and a supplier
+ -- warehouse must have exactly one supplier link.
+ if p_kind='warehouse' and p_payload->>'type'='proveedor' and p_payload->>'active'='true'
+    and not exists(select 1 from ed_delivery_private.entities e
+      where e.kind='supplier' and e.id=p_payload->>'supplierId'
+        and e.payload->>'active' is distinct from 'false')
+ then raise exception 'supplier is inactive or missing' using errcode='23514'; end if;
  if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true' then
   if p_payload->>'type' is distinct from 'proveedor' or nullif(p_payload->>'supplierId','') is null
    or p_payload->>'active' is distinct from 'true' then
