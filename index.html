@@ -1799,6 +1799,7 @@ function edDeliveryDestinationEdit(id){
  return true;
 }
 function edDeliveryDestinationCancelEdit(){
+ edDeliveryEditSnapshots.destination=null;
  for(const key of ['edDestinationId','edDestinationName','edDestinationMunicipality','edDestinationAddress','edDestinationLat','edDestinationLng','edDestinationOsmAnd']){
   const el=document.getElementById(key);if(el)el.value='';
  }
@@ -2042,8 +2043,10 @@ function edDeliveryOriginsPanel(){
  '<button type="button" class="secondary" onclick="edDeliveryOriginReset()">Limpiar</button></fieldset></div>';
 }
 function edDeliveryOriginReset(){
+ edDeliveryEditSnapshots.origin=null;
  for(const id of ['edOriginId','edOriginName','edOriginAddress','edOriginLat','edOriginLng'])document.getElementById(id).value='';
  document.getElementById('edOriginType').value='propio';
+ document.getElementById('edOriginSupplier').value='';
  document.getElementById('edOriginMunicipality').value='';edDeliveryOriginTypeChange();
  document.getElementById('edOriginFormTitle').textContent='Añadir punto de salida';
  document.getElementById('edOriginName').focus();
