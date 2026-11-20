@@ -362,3 +362,30 @@ function testBulkArchivedDestinationReconciliation(mode){
 testBulkArchivedDestinationReconciliation('success');
 testBulkArchivedDestinationReconciliation('conflict');
 console.log('PASS: 2 bulk archived destination scenarios with multiproduct preservation and stale warehouse reconciliation');
+
+
+function testBulkSupplierMixedOwnershipRepair(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'},{id:'p2',origen_producto:'proveedor'}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true},{id:'w2',type:'proveedor',supplierId:'s2',active:true}];
+ const suppliers=[{id:'s1',active:true},{id:'s2',active:true}],links={p1:['w1','w2'],p2:['w1']};
+ const store={origins:JSON.stringify(origins),suppliers:JSON.stringify(suppliers),links:JSON.stringify(links),'enlace_demo_v1':JSON.stringify({products})};
+ let saved=null;const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,
+  document:{getElementById:id=>id==='edOriginBulkSelection'?{disabled:false,querySelectorAll:()=>[{value:mode==='reject'?'w2':'w1'}]}:id==='edOriginBulkSupplier'?{value:'s2'}:null},
+  edDeliveryOriginsRead:()=>origins,edDeliverySuppliersRead:()=>suppliers,
+  ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_PRODUCT_ORIGINS_KEY:'links',
+  localStorage:{getItem:k=>store[k]??null},
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},
+  alert:m=>alerts.push(m),confirm:()=>{if(mode==='conflict')store.links='changed';return true},
+  edDeliveryPersistAndInvalidate:(k,v)=>{saved=v;return true},adminTab:()=>{}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryOriginsTransferSelectedSupplier'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryOriginsTransferSelectedSupplier();
+ if(mode==='success'){
+  assert.equal(result,true);assert.equal(saved[0].supplierId,'s2');assert.equal(saved[1].supplierId,'s2');
+  assert.equal(store.links,JSON.stringify(links));
+ }else{assert.equal(result,false);assert.equal(saved,null);assert(alerts.length>0);}
+}
+for(const mode of ['success','conflict','reject'])testBulkSupplierMixedOwnershipRepair(mode);
+console.log('PASS: 3 mixed supplier ownership repair cases');
