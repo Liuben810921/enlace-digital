@@ -3741,6 +3741,9 @@ function edDeliveryBulkReassignArchivedDestinations(){
  let raw,archive;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return pending('No se pudo leer el archivo de versiones.')}
  if(!Array.isArray(archive)||!archive.length||archive.length>30)return pending('El archivo debe contener entre 1 y 30 versiones.');
+ let before;
+ try{before={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias iniciales.')}
+ if(before.revision===null)return pending('Revisión inicial inválida.');
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
  const updates=[],skipped=[];
  for(let i=0;i<archive.length;i++){
@@ -3754,6 +3757,7 @@ function edDeliveryBulkReassignArchivedDestinations(){
  if(!confirm('Reasignar el destino de '+(archive.length-skipped.length)+' versiones a «'+destination.name+'» y dejar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
+ if(snapshot.revision===null||Object.keys(before).some(k=>before[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación. Reintenta.');
  const currentOrigins=edDeliveryOriginsRead(),currentSuppliers=edDeliverySuppliersRead();
  if(!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('El destino dejó de estar disponible.');
  for(let i=0;i<archive.length;i++){
