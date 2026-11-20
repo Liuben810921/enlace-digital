@@ -25,5 +25,17 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
   if(!Number.isSafeInteger(feeCup))return pending('FEE_OVERFLOW');
   return {status:'COTIZACION_SIMULADA',reason:null,feeCup,originId:farthest.originId,billableKm,roadKm:farthest.km,contextRevision};
 }
-if(typeof module!=='undefined'&&module.exports)module.exports={quoteDelivery};
-if(typeof window!=='undefined')window.EDOfflineQuote=Object.freeze({quoteDelivery});
+// Product-scoped adapter: never charge a customer for unrelated active warehouses.
+function quoteProductDelivery({productOriginIds, origins, suppliers=[], routes, ...tariff}={}) {
+ const pending=reason=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:tariff.contextRevision??null});
+ if(!Array.isArray(productOriginIds)||!productOriginIds.length||productOriginIds.some(id=>typeof id!=='string'||!id)||new Set(productOriginIds).size!==productOriginIds.length)return pending('INVALID_PRODUCT_ORIGINS');
+ if(!Array.isArray(origins)||new Set(origins.filter(o=>o&&typeof o.id==='string').map(o=>o.id)).size!==origins.length)return pending('INVALID_ORIGIN_CATALOG');
+ const selected=productOriginIds.map(id=>origins.find(o=>o&&o.id===id));
+ if(selected.some(o=>!o))return pending('PRODUCT_ORIGIN_MISSING');
+ if(new Set(selected.map(o=>o.type)).size!==1||selected[0].type==='proveedor'&&new Set(selected.map(o=>o.supplierId)).size!==1)return pending('PRODUCT_ORIGINS_INCOMPATIBLE');
+ if(selected.some(o=>o.active===false))return pending('PRODUCT_ORIGIN_INACTIVE');
+ if(selected.some(o=>o.type==='proveedor'&&!suppliers.some(p=>p&&p.id===o.supplierId&&p.active!==false)))return pending('PRODUCT_SUPPLIER_INACTIVE');
+ return quoteDelivery({...tariff,origins:selected,suppliers,routes});
+}
+if(typeof module!=='undefined'&&module.exports)module.exports={quoteDelivery,quoteProductDelivery};
+if(typeof window!=='undefined')window.EDOfflineQuote=Object.freeze({quoteDelivery,quoteProductDelivery});
