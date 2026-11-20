@@ -3428,10 +3428,15 @@ function edDeliveryPrepareShipment(){
  if(!output)return false;
  const pending=message=>{output.textContent='PENDIENTE · '+message;return false};
  if(edDeliveryIsQuarantined())return pending('Administración de entregas bloqueada.');
+ const keys=[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'];
+ const revision=edDeliveryContextRevision();
+ if(revision===null)return pending('Revisión local inválida.');
+ let snapshot;
+ try{snapshot=keys.map(k=>localStorage.getItem(k))}catch(e){return pending('No se pudieron leer las dependencias.')}
  const select=document.getElementById('edQuoteDemoProduct');
  const destinationId=document.getElementById('edQuoteDemoDestination')?.value;
  const ids=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
- if(!ids.length)return pending('Selecciona al menos un producto para preparar la entrega.');
+ if(!ids.length||new Set(ids).size!==ids.length)return pending('Selecciona productos únicos para preparar la entrega.');
  const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
  if(!destination)return pending('Selecciona un destino de referencia existente.');
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
@@ -3439,6 +3444,9 @@ function edDeliveryPrepareShipment(){
  if(!basket)return pending('Uno o más productos carecen de almacenes válidos y sincronizados.');
  const names=new Map(state.products.map(p=>[String(p.id),p.name||p.nombre||String(p.id)]));
  const lines=basket.groups.map(g=>(names.get(g.productId)||g.productId)+': '+g.origins.map(o=>o.name).join(', '));
+ let unchanged=false;
+ try{unchanged=revision===edDeliveryContextRevision()&&keys.every((k,i)=>localStorage.getItem(k)===snapshot[i])}catch(e){}
+ if(!unchanged)return pending('Las dependencias cambiaron durante la preparación. Reintenta.');
  output.textContent='PENDIENTE · Preparación offline para '+destination.name+' ('+destination.municipality+'). '+ids.length+' producto(s), '+basket.origins.length+' almacén(es) distintos. '+lines.join(' | ')+'. Faltan distancias viales verificadas; no se ha calculado ni autorizado ninguna tarifa o pedido.';
  return true;
 }
