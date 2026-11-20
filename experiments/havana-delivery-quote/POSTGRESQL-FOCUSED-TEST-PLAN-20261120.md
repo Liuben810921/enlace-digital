@@ -55,3 +55,30 @@
 - Controlled two-session synchronization is needed for UUID races.
 - The schema may require migration-owner SET ROLE rights; this plan does not grant them.
 - No Supabase, staging, production, real orders or real customer data are authorized.
+
+
+## Reproducibility corrections (documentation only)
+
+The matrix above defines intent but does **not** yet supply an executable harness. The following details remove concrete ambiguities; all commands are **examples for a future authorized disposable database**, not executed SQL.
+
+### Stable fixtures and call signatures
+
+- Use fixed synthetic UUIDs: A=`aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`, B=`bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`; operation U=`11111111-1111-4111-8111-111111111111`. For multi-item tests use `22222222-2222-4222-8222-222222222222` as the second operation UUID. Each test must start from a **clean snapshot**; UUIDs may be reused **between isolated tests**, never within one committed fixture except for intentional retries.
+- Synthetic entities: `supplier` S1/S2 payload `{"active":true}`; `warehouse` W1 payload `{"type":"proveedor","supplierId":"S1","active":true,"defaultForSupplier":false}` with `[{"target_kind":"supplier","target_id":"S1"}]`; W2 references S2 analogously. A `product_origin` P1 with `{"warehouseIds":["W1"]}` and `[{"target_kind":"warehouse","target_id":"W1"}]`. For L03 use W1/S1 and W2/S2, P1 `warehouseIds=["W1","W2"]` with both links. For L04 use W1/W2/W3, all created beforehand, and a mismatched W3 link.
+- All `ed_delivery_staging_write` calls use positional arguments `(operation_uuid::uuid, kind::text, id::text, payload::jsonb, expected_revision::bigint, links::jsonb)`. Create: revision 0; update: revision read from fixture. `ed_delivery_staging_deactivate` uses `(kind,id,expected_revision,operation_uuid)`. Batch uses one JSONB array of items with keys `operation_id`, `kind`, `id`, `payload`, `expected_revision`, `links`.
+- For **B01/B02/B04**, the canonical `kind:id` order is `supplier:S1` then `warehouse:W1`; this **does not exercise a reversed dependency order**. B02 proves only successful supplier-to-warehouse dependency, not reordering. A separate test would need canonically earlier kind whose execution phase is later, e.g. `product_origin:P1` and `warehouse:W1` in sorted input; warehouse must be created before product in execution and responses must still follow input order. Record this limitation instead of claiming B02 verifies reordering.
+- For U01/U02, S1 must use an explicit transaction, invoke the RPC, then **leave its transaction open** before COMMIT while S2 invokes the RPC asynchronously in another connection. Verify S2 is blocked **before** releasing S1; then COMMIT S1 and collect both results. Do not pause inside the RPC or rely on sleep timings. Use a bounded statement timeout and capture lock/wait evidence.
+- For U03/S05, enable B explicitly for the cross-actor tests. For S01 B must be absent from `admin_members`; for S02 B must exist with `enabled=false`. Restore the snapshot between these tests. A and B must have separate verified `auth.uid()` values in the test harness, not merely different SQL session labels.
+- For S04, `SET ROLE ed_delivery_staging_rpc` is valid only if the test executor is authorized to SET ROLE. Confirm `SELECT current_user, session_user, auth.uid(), row_security_active('ed_delivery_private.operations'::regclass)` under the intended context; the same `auth.uid()` value in both sessions invalidates the isolation test. Ensure that the synthetic identity mechanism cannot be controlled by an untrusted API caller.
+
+### Committed-state and evidence criteria
+
+For each scenario, capture before and after **committed** snapshots of `ed_delivery_private.entities` (kind,id,revision,payload), `links` (all four key columns), and `operations` (operation_id,actor_id,payload,response). For a failed RPC inside an explicit transaction, issue ROLLBACK or roll back to a savepoint and then query committed state using a separate authorized observer connection. An exception alone does not prove rollback.
+
+- **U01/U02:** exactly one operation U, and no additional entity revision. A conflict must not reveal another actor's stored response.
+- **B01/B03:** all fixture rows must match the pre-batch committed snapshot; verify no partial operation UUIDs.
+- **B02/B04:** compare the returned JSON array with the input's **ordinality**, plus exact stored response JSON by UUID.
+- **L01–L04:** verify both entity and link rows, not only the reported SQLSTATE.
+- **S01–S05:** capture SQL role identity, authenticated identity, RLS-active status, and grants. If role setup or identity simulation differs from the schema's assumptions, mark BLOCKED rather than PASS.
+
+A result is PASS only when the specified outcome, SQLSTATE where specified, and committed-state assertions all agree. Record FAIL for a demonstrated mismatch, and BLOCKED when infrastructure, identity or synchronization prerequisites are absent. All tests remain **PENDING / NOT EXECUTED**.
