@@ -106,12 +106,15 @@ begin
  for v_link in select value from jsonb_array_elements(p_links) loop
   if v_link->>'target_kind' is null or v_link->>'target_id' is null or not ( (p_kind='warehouse' and v_link->>'target_kind'='supplier') or (p_kind='product_origin' and v_link->>'target_kind' in ('warehouse','supplier')) or (p_kind='shipment_draft' and v_link->>'target_kind' in ('destination','product_origin')) ) or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
   v_target_kind:=v_link->>'target_kind'; v_target_id:=v_link->>'target_id';
+  -- Same transaction-scoped lock as deactivation and entity edits. The
+  -- subsequent active-state check is protected against concurrent changes.
+  perform pg_advisory_xact_lock(hashtextextended(v_target_kind||':'||v_target_id,1));
   -- Lock the referenced row until commit so concurrent deactivation cannot race
   -- the validation. Entity edits are serialized by the same advisory key.
   perform 1 from ed_delivery_private.entities where kind=v_target_kind and id=v_target_id for share;
   if not found then raise exception 'missing link target' using errcode='23503'; end if;
-  if p_kind='warehouse' and v_target_kind='supplier' and
-   not exists(select 1 from ed_delivery_private.entities where kind='supplier' and id=v_target_id and payload->>'active' is distinct from 'false') then
+  if ((p_kind='warehouse' and v_target_kind='supplier') or (p_kind='product_origin' and v_target_kind='warehouse')) and
+   not exists(select 1 from ed_delivery_private.entities where kind=v_target_kind and id=v_target_id and payload->>'active' is distinct from 'false') then
     raise exception 'inactive supplier' using errcode='23514';
   end if;
   insert into ed_delivery_private.links(source_kind,source_id,target_kind,target_id)
