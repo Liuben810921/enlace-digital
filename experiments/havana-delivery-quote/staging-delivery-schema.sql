@@ -108,7 +108,10 @@ do $ begin
  end if;
 end $;
 grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
+grant usage on schema auth to ed_delivery_staging_rpc;
+grant execute on function auth.uid() to ed_delivery_staging_rpc;
 grant select on ed_delivery_private.admin_members to ed_delivery_staging_rpc;
+grant usage on schema public to ed_delivery_staging_rpc;
 grant select,insert,update,delete on ed_delivery_private.entities to ed_delivery_staging_rpc;
 grant select,insert,delete on ed_delivery_private.links to ed_delivery_staging_rpc;
 grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc;
