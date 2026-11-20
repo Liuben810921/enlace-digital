@@ -3804,10 +3804,10 @@ function edDeliveryBulkAssignSelectedProducts(){
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
- const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'"'+(edQuoteDemoSelectedProductIds.includes(String(p.id))?' selected':'')+'>+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
+ const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'"'+(edQuoteDemoSelectedProductIds.includes(String(p.id))?' selected':'')+'>'+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
  let archives=[];try{const stored=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)||'[]');if(Array.isArray(stored))archives=stored.filter(d=>d&&typeof d.id==='string'&&typeof d.name==='string')}catch(e){}
  const archiveOptions=archives.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
- const options=destinations.map(d=>'<option value="'+esc(d.id)+'"'+(edQuoteDemoDestinationDraft===d.id?' selected':'')+'>+esc(d.name)+'</option>').join('');
+ const options=destinations.map(d=>'<option value="'+esc(d.id)+'"'+(edQuoteDemoDestinationDraft===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('');
  return '<section class="panel" aria-labelledby="edQuoteDemoTitle"><h3 id="edQuoteDemoTitle">Simulador local de mensajería · NO OPERATIVO</h3>'+
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
  '<p class="note">Almacenes elegibles: '+eligible.length+'. Destinos de prueba: '+destinations.length+'.</p>'+
