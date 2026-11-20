@@ -3587,13 +3587,21 @@ function edDeliveryRestoreArchivedDraft(){
  if(!output||edDeliveryIsQuarantined())return false;
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
  const id=document.getElementById('edQuoteDraftArchive')?.value;
- let archive,raw;
- try{archive=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)||'[]');raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY)}catch(e){return pending('Archivo de borradores ilegible.')}
+ let archive,raw,archiveRaw;
+ try{archiveRaw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(archiveRaw||'[]');raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY)}catch(e){return pending('Archivo de borradores ilegible.')}
  const item=Array.isArray(archive)?archive.find(d=>d.id===id):null;
- if(!item||item.version!==1||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length)return pending('Selecciona una versión válida.');
+ if(!item||item.version!==1||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length||item.productIds.some(v=>typeof v!=='string'||!v.trim())||new Set(item.productIds).size!==item.productIds.length||typeof item.destinationId!=='string'||!Array.isArray(item.warehouseIds)||item.warehouseIds.some(v=>typeof v!=='string'||!v.trim())||new Set(item.warehouseIds).size!==item.warehouseIds.length)return pending('Selecciona una versión válida.');
+ let snapshot;
+ try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron comprobar las dependencias.')}
+ if(snapshot.revision===null||!item.snapshot||Object.keys(snapshot).some(k=>snapshot[k]!==item.snapshot[k]))return pending('La versión archivada está desactualizada. Reconcíliala antes de restaurarla.');
+ if(!edDeliveryDestinationsRead().some(d=>d.id===item.destinationId))return pending('El destino archivado ya no existe.');
+ const basket=edDeliveryQuoteDemoBasket(item.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
+ if(!basket||basket.origins.length!==item.warehouseIds.length||basket.origins.some(o=>!item.warehouseIds.includes(o.id)))return pending('Los almacenes de la versión ya no son compatibles.');
  if(!confirm('Restaurar «'+item.name+'» como borrador de trabajo? Sustituirá el borrador actual; las dependencias se verificarán al recuperarlo.'))return false;
  try{
-  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('El borrador de trabajo cambió.');
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==archiveRaw)return pending('Los borradores cambiaron durante la restauración.');
+  const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+  if(Object.keys(snapshot).some(k=>snapshot[k]!==current[k]))return pending('Las dependencias cambiaron durante la restauración.');
   const {id:archiveId,name,archivedAt,...draft}=item;
   localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft));
  }catch(e){return pending('No se pudo restaurar la versión.')}
