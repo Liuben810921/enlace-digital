@@ -125,6 +125,18 @@ begin
         where l->>'target_kind'='product_origin' and l->>'target_id'=p.value))
   then raise exception 'draft links inconsistent' using errcode='23514'; end if;
  end if;
+ -- Reject duplicate links and malformed link objects before mutating entities.
+ -- Otherwise duplicate pairs can fail only after the entity has been written.
+ if exists(select 1 from jsonb_array_elements(p_links) l
+    where jsonb_typeof(l.value) is distinct from 'object'
+      or nullif(l.value->>'target_kind','') is null
+      or nullif(l.value->>'target_id','') is null)
+    or (select count(*) from (
+      select l.value->>'target_kind' as kind,l.value->>'target_id' as id
+      from jsonb_array_elements(p_links) l
+      group by 1,2 having count(*)>1
+    ) duplicates)>0
+ then raise exception 'duplicate or malformed links' using errcode='23514'; end if;
  -- Serialize all default-warehouse changes for a supplier. This check applies
  -- to single writes and every item of a batch, not just the browser.
  -- An inactive warehouse cannot be marked as default, and a supplier
@@ -335,7 +347,7 @@ begin
  perform pg_advisory_xact_lock(672045900001::bigint);
  -- Validate the complete input before any mutation.
  for v_item in select value from jsonb_array_elements(p_items) loop
-  if jsonb_typeof(v_item)<>'object' or v_item->>'kind' is null or v_item->>'id' is null then
+  if jsonb_typeof(v_item) is distinct from 'object' or nullif(v_item->>'kind','') is null or nullif(v_item->>'id','') is null then
    raise exception 'invalid batch item' using errcode='22023';
   end if;
   v_key:=(v_item->>'kind')||':'||(v_item->>'id');
