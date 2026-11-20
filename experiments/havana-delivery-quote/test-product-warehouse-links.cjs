@@ -389,3 +389,31 @@ function testBulkSupplierMixedOwnershipRepair(mode){
 }
 for(const mode of ['success','conflict','reject'])testBulkSupplierMixedOwnershipRepair(mode);
 console.log('PASS: 3 mixed supplier ownership repair cases');
+
+
+function testReconcileAllArchivedAfterWarehouseTransfer(mode){
+ const archive=[
+  {id:'a',version:1,status:'PENDIENTE',productIds:['p1','p2'],destinationId:'d',warehouseIds:['old']},
+  {id:'b',version:1,status:'PENDIENTE',productIds:['p2'],destinationId:'d',warehouseIds:['w2']}
+ ];
+ const store={archive:JSON.stringify(archive),'enlace_demo_v1':'i',links:'l',origins:'o',suppliers:'s',destinations:'d'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:null},edDeliveryIsQuarantined:()=>false,
+  localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryDestinationsRead:()=>[{id:'d'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:ids=>({origins:ids.map(id=>({id:id==='p1'?'w1':'w2'}))}),
+  edDeliveryContextRevision:()=>1,confirm:()=>{if(mode==='conflict')store.origins='changed';return true}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryReconcileAllArchivedDrafts'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryReconcileAllArchivedDrafts(),updated=JSON.parse(store.archive);
+ if(mode==='conflict'){assert.equal(result,false);assert.equal(JSON.stringify(updated),JSON.stringify(archive));}
+ else{
+  assert.equal(result,true);assert.equal(JSON.stringify(updated[0].warehouseIds),JSON.stringify(['w1','w2']));
+  assert(updated[0].snapshot);assert.equal(JSON.stringify(updated[1]),JSON.stringify(archive[1]));
+ }
+}
+testReconcileAllArchivedAfterWarehouseTransfer('success');
+testReconcileAllArchivedAfterWarehouseTransfer('conflict');
+console.log('PASS: 2 archived multiproduct reconciliation cases with unchanged draft preservation');
