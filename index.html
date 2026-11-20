@@ -2214,7 +2214,7 @@ function edDeliveryAssignProductWarehouse(){
   const shared=JSON.parse(inventorySnapshot||'null');
   if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot)throw Error('Inventario no sincronizado');
  }catch(e){alert('No se pudieron verificar las asociaciones o el inventario.');return false}
- if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!origins.some(o=>o.id===id)))){alert('Existen asociaciones inválidas. Revisa los datos antes de continuar.');return false}
+ if(!map||typeof map!=='object'||Array.isArray(map)||Object.entries(map).some(([key,ids])=>!Array.isArray(ids)||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!origins.some(o=>o.id===id))||ids.some(id=>{const o=origins.find(x=>x.id===id),first=origins.find(x=>x.id===ids[0]);return o.active===false||o.type!==first.type||(o.type==='proveedor'&&o.supplierId!==first.supplierId)})||!state.products.some(p=>String(p.id)===key&&ids.every(id=>origins.find(o=>o.id===id).type===p.origen_producto)))){alert('Existen asociaciones inválidas. Revisa los datos antes de continuar.');return false}
  const current=map[productId]||[];
  if(current.includes(warehouseId)){alert('El producto ya está asociado a ese almacén.');return false}
  const associated=current.map(id=>origins.find(o=>o.id===id));
