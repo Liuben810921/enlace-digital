@@ -3617,6 +3617,7 @@ function edDeliveryArchiveShipmentDraft(){
  const item={...draft,id,name,archivedAt:new Date().toISOString()};
  try{
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==collectionRaw)return pending('Los borradores cambiaron. Reintenta.');
+  if(edDeliveryIsQuarantined())return pending('Cuarentena activada antes del guardado.');
   const serializedArchive=JSON.stringify([...collection,item]);
   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,serializedArchive);
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==serializedArchive)return pending('No se pudo confirmar la persistencia de las versiones.');
@@ -3714,6 +3715,7 @@ function edDeliveryReplaceArchivedDraftProducts(){
  if(!confirm('Sustituir productos de «'+item.name+'» por '+productIds.length+' seleccionados? Se conserva su destino y se actualizan almacenes.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
+ if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la confirmación.');
  if(snapshot.revision===null||Object.keys(initialSnapshot).some(k=>initialSnapshot[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación.');
  const fresh=edDeliveryQuoteDemoBasket(productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!fresh||fresh.origins.map(o=>o.id).join('|')!==basket.origins.map(o=>o.id).join('|'))return pending('Los almacenes cambiaron durante la operación.');
@@ -3811,6 +3813,7 @@ function edDeliveryBulkReassignArchivedDestinations(){
  if(!confirm('Reasignar el destino de '+(archive.length-skipped.length)+' versiones a «'+destination.name+'» y dejar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
+ if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la confirmación.');
  if(snapshot.revision===null||Object.keys(before).some(k=>before[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación. Reintenta.');
  const currentOrigins=edDeliveryOriginsRead(),currentSuppliers=edDeliverySuppliersRead();
  if(!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('El destino dejó de estar disponible.');
