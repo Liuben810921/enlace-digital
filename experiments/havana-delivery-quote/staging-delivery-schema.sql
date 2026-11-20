@@ -163,4 +163,36 @@ revoke all on function public.ed_delivery_staging_deactivate(text,text,bigint,uu
 grant execute on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) to authenticated;
 alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owner to ed_delivery_staging_rpc;
 
+-- Atomic multi-entity transaction: either all revisions/links commit or none.
+-- Reject duplicate entities and require canonical order to avoid opposite-order deadlocks.
+create or replace function public.ed_delivery_staging_batch(p_items jsonb)
+returns jsonb language plpgsql security definer set search_path = ''
+as $
+declare v_actor uuid:=auth.uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb;
+begin
+ if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
+  raise exception 'not authorized' using errcode='42501';
+ end if;
+ if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 100 then
+  raise exception 'invalid batch size' using errcode='22023';
+ end if;
+ for v_item in select value from jsonb_array_elements(p_items) loop
+  if jsonb_typeof(v_item)<>'object' or v_item->>'kind' is null or v_item->>'id' is null then
+   raise exception 'invalid batch item' using errcode='22023';
+  end if;
+  v_key:=(v_item->>'kind')||':'||(v_item->>'id');
+  if v_key<=v_previous then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
+  v_previous:=v_key;
+  v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
+   (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
+   v_item->'payload',(v_item->>'expected_revision')::bigint,
+   coalesce(v_item->'links','[]'::jsonb)
+  ));
+ end loop;
+ return v_results;
+end $;
+revoke all on function public.ed_delivery_staging_batch(jsonb) from public,anon,authenticated;
+grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticated;
+alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
+
 commit;
