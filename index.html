@@ -3417,6 +3417,8 @@ function edDeliveryQuoteDemo(synthetic){
  if(!destinationId||!edDeliveryDestinationsRead().some(d=>d.id===destinationId))return pending('Selecciona un destino de referencia.');
  const productSelect=document.getElementById('edQuoteDemoProduct');
  const productIds=productSelect?[...productSelect.selectedOptions].map(o=>o.value).filter(Boolean):[];
+ let contextSnapshot;
+ try{contextSnapshot={origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),inventory:localStorage.getItem('enlace_demo_v1')}}catch(e){return pending('No se pudieron verificar las dependencias locales.')}
  const revision=edDeliveryContextRevision();
  const origins=edDeliveryOriginsRead();
  const suppliers=edDeliverySuppliersRead();
@@ -3430,6 +3432,9 @@ function edDeliveryQuoteDemo(synthetic){
  const quote=contract({origins:eligible,suppliers,routes,destinationId,rateCupPerKm,contextRevision:revision,quarantined:edDeliveryIsQuarantined()});
  if(quote.status!=='COTIZACION_SIMULADA')return pending(quote.reason||'No hay distancias viales verificadas.');
  if(!synthetic)return pending('No hay distancias viales verificadas.');
+ let unchanged=false;
+ try{unchanged=edDeliveryContextRevision()===revision&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===contextSnapshot.origins&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===contextSnapshot.suppliers&&localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)===contextSnapshot.destinations&&localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===contextSnapshot.associations&&localStorage.getItem('enlace_demo_v1')===contextSnapshot.inventory}catch(e){}
+ if(!unchanged)return pending('Los productos, almacenes o destinos cambiaron durante la simulación. Vuelve a calcular.');
  const origin=eligible.find(o=>o.id===quote.originId);
  result.textContent='SIMULACIÓN FICTICIA · '+(productIds.length?productIds.length+' producto(s) · '+eligible.length+' almacén(es) vinculados · ':'')+(origin?.name||quote.originId)+' · '+quote.roadKm+' km inventados para prueba · mínimo 3 km · '+quote.feeCup+' CUP de ejemplo. NO ES TARIFA REAL.';
  return true;
