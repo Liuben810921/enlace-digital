@@ -3375,7 +3375,14 @@ function deleteCategory(name){if(!state.categories.includes(name))return;const c
 /* Local-only quote demo. No checkout, no remote routing, no operational prices. */
 // In-memory only: preserve the user's demo input across administrative panel redraws.
 let edQuoteDemoRateDraft='200';
+let edQuoteDemoSelectedProductIds=[];
+let edQuoteDemoDestinationDraft='';
 function edQuoteDemoRateRemember(input){edQuoteDemoRateDraft=input.value;}
+function edQuoteDemoSelectionRemember(){
+ const select=document.getElementById('edQuoteDemoProduct');
+ edQuoteDemoSelectedProductIds=select?[...select.selectedOptions].map(o=>o.value):[];
+ edQuoteDemoDestinationDraft=document.getElementById('edQuoteDemoDestination')?.value||'';
+}
 
 function edDeliveryQuoteDemoEligible(productId,origins,suppliers){
  const activeSuppliers=new Set(suppliers.filter(p=>p.active!==false).map(p=>p.id));
@@ -3794,15 +3801,15 @@ function edDeliveryBulkAssignSelectedProducts(){
 function edDeliveryQuoteDemoPanel(){
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=edDeliveryDestinationsRead();
  const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||o.type==='proveedor'&&suppliers.some(s=>s.id===o.supplierId&&s.active!==false)));
- const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'">'+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
+ const productOptions=edInventoryLoaded&&Array.isArray(state.products)?state.products.map(p=>'<option value="'+esc(String(p.id))+'"'+(edQuoteDemoSelectedProductIds.includes(String(p.id))?' selected':'')+'>+esc(p.name||p.nombre||String(p.id))+'</option>').join(''):'';
  let archives=[];try{const stored=JSON.parse(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)||'[]');if(Array.isArray(stored))archives=stored.filter(d=>d&&typeof d.id==='string'&&typeof d.name==='string')}catch(e){}
  const archiveOptions=archives.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
- const options=destinations.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>').join('');
+ const options=destinations.map(d=>'<option value="'+esc(d.id)+'"'+(edQuoteDemoDestinationDraft===d.id?' selected':'')+'>+esc(d.name)+'</option>').join('');
  return '<section class="panel" aria-labelledby="edQuoteDemoTitle"><h3 id="edQuoteDemoTitle">Simulador local de mensajería · NO OPERATIVO</h3>'+
  '<p class="note">Solo usa almacenes activos y destinos de referencia guardados en este navegador. No consulta calles, no verifica rutas, no modifica el carrito ni genera pedidos. La tarifa mostrada es exclusivamente ficticia.</p>'+
  '<p class="note">Almacenes elegibles: '+eligible.length+'. Destinos de prueba: '+destinations.length+'.</p>'+
- '<div class="field"><label for="edQuoteDemoProduct">Productos para simular (selección múltiple)</label><select id="edQuoteDemoProduct" multiple size="5">'+productOptions+'</select><p class="note">Sin selección: demostración general. Con varios productos: se incluyen todos sus almacenes asociados; la distancia mayor determina el ejemplo de mensajería.</p></div>'+
- '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
+ '<div class="field"><label for="edQuoteDemoProduct">Productos para simular (selección múltiple)</label><select id="edQuoteDemoProduct" multiple size="5" onchange="edQuoteDemoSelectionRemember()">'+productOptions+'</select><p class="note">Sin selección: demostración general. Con varios productos: se incluyen todos sus almacenes asociados; la distancia mayor determina el ejemplo de mensajería.</p></div>'+
+ '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination" onchange="edQuoteDemoSelectionRemember()"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryPrepareShipment()">Preparar entrega multiproducto</button> '+
  '<button type="button" class="secondary" onclick="edDeliverySaveShipmentDraft()">Guardar borrador offline</button> <button type="button" class="secondary" onclick="edDeliveryLoadShipmentDraft()">Recuperar borrador</button> '+
