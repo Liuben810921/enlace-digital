@@ -25,12 +25,33 @@ export function parseRouteResponse(payload:unknown){
  if(typeof meters!=="number"||!Number.isFinite(meters)||meters<0||meters>300000||!["LineString","MultiLineString"].includes(f?.geometry?.type))return {status:"PENDIENTE",reason:"INVALID_ROUTE_DISTANCE"};
  return {status:"PENDIENTE",reason:"PROVIDER_ROUTE_REQUIRES_TRUST_VALIDATION",roadKm:meters/1000,provider:"geoapify"};
 }
+// No role is inferred from a client claim, body, or user_metadata.
+// A future adapter must verify the JWT signature and server-side admin membership.
+export type VerifiedOperator={userId:string;role:"principal"|"administrador_general";verifiedBy:"supabase-auth-and-db"};
+export function authorizeOperator(operator:unknown):{ok:true;userId:string}|{ok:false;reason:string}{
+ if(!operator||typeof operator!=="object")return {ok:false,reason:"OPERATOR_NOT_VERIFIED"};
+ const o=operator as Record<string,unknown>;
+ if(o.verifiedBy!=="supabase-auth-and-db"||!["principal","administrador_general"].includes(String(o.role))||typeof o.userId!=="string"||!/^[0-9a-f-]{36}$/i.test(o.userId))return {ok:false,reason:"OPERATOR_NOT_VERIFIED"};
+ return {ok:true,userId:o.userId};
+}
+// Quota reservation must be a single PostgreSQL transaction before calling Geoapify.
+// The function is intentionally not wired to a database RPC until staging approval.
+export function authorizeRoutePreflight({operator,request,quotaReservation}:{operator:unknown;request:unknown;quotaReservation:unknown}){
+ const auth=authorizeOperator(operator);
+ if(!auth.ok)return {ok:false,reason:auth.reason};
+ const valid=validateRequest(request);
+ if(!valid.ok)return {ok:false,reason:valid.reason};
+ if(!quotaReservation||typeof quotaReservation!=="object")return {ok:false,reason:"ATOMIC_QUOTA_NOT_RESERVED"};
+ const q=quotaReservation as Record<string,unknown>;
+ if(q.status!=="reserved"||q.userId!==auth.userId||typeof q.requestId!=="string"||!/^[a-zA-Z0-9_-]{12,64}$/.test(q.requestId)||q.contextRevision!==valid.data.contextRevision)return {ok:false,reason:"ATOMIC_QUOTA_NOT_RESERVED"};
+ return {ok:true,requestId:q.requestId};
+}
 Deno.serve(async(req)=>{
  if(req.method!=="POST")return json(405,{status:"PENDIENTE",reason:"METHOD_NOT_ALLOWED"});
- // Authorization gate and network gate are separate. No requests until BOTH approved.
  if(Deno.env.get("ED_STAGING_GEOAPIFY_ENABLED")!=="true")return json(503,{status:"PENDIENTE",reason:"STAGING_GEOAPIFY_DISABLED"});
  if(Deno.env.get("ED_STAGING_GEOAPIFY_NETWORK_ENABLED")!=="true")return json(503,{status:"PENDIENTE",reason:"PROVIDER_NETWORK_DISABLED"});
- // A verified, server-side operator identity and durable atomic quota ledger are NOT implemented.
- // Fail closed even when toggles are set. Never forward user-supplied keys.
- return json(503,{status:"PENDIENTE",reason:"OPERATOR_AUTH_AND_ATOMIC_QUOTA_NOT_IMPLEMENTED"});
+ // No adapter supplies a verified identity or durable reservation yet.
+ // These are mandatory, not optional configuration flags.
+ const gate=authorizeRoutePreflight({operator:null,request:null,quotaReservation:null});
+ return json(503,{status:"PENDIENTE",reason:gate.ok?"NETWORK_INTEGRATION_NOT_APPROVED":gate.reason});
 });
