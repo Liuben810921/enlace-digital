@@ -102,11 +102,11 @@ grant execute on function public.ed_delivery_staging_write(uuid,text,text,jsonb,
 -- owner-only action for an existing staging auth.users UUID; no anonymous bootstrap.
 -- This migration alone deliberately grants no administrator access.
 -- Non-bypass RPC owner; table ownership remains with migration owner.
-do $ begin
+do $$ begin
  if not exists(select 1 from pg_roles where rolname='ed_delivery_staging_rpc') then
   create role ed_delivery_staging_rpc nologin noinherit nobypassrls;
  end if;
-end $;
+end $$;
 grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
 grant usage on schema auth to ed_delivery_staging_rpc;
 grant execute on function auth.uid() to ed_delivery_staging_rpc;
