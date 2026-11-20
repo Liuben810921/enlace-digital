@@ -97,6 +97,18 @@ function init(){
  wrap('edDeliveryDestinationSave',destination);
  wrap('edProductOriginsSave',association);
  wrap('edDeliverySaveShipmentDraft',draft);
+ // Prevent unsupported local-only mutations from being mistaken for remote saves.
+ const unsupported=['edDeliveryPersistAndInvalidate','edDeliverySupplierDelete','edDeliverySupplierToggle',
+ 'edDeliverySuppliersDeleteSelected','edDeliverySuppliersSetSelectedActive','edDeliverySupplierTransferWarehouses',
+ 'edDeliveryOriginsDeleteSelected','edDeliveryOriginsSetSelectedActive','edDeliveryOriginsTransferSelectedSupplier',
+ 'edDeliveryOriginsMoveSelected','edDeliveryOriginDelete','edDeliveryOriginSetDefault',
+ 'edDeliveryArchiveShipmentDraft','edDeliveryOriginsDuplicateSelected','edDeliverySuppliersDuplicateSelected'];
+ for(const name of unsupported){
+  if(typeof window[name]!=='function')continue;
+  const original=window[name];
+  window[name]=function(...args){if(enabled()){tell('Operación no habilitada en staging: '+name+'. No se han modificado datos.');return false}return original.apply(this,args)};
+ }
+
  const original=window.adminTab;window.adminTab=function(...args){const result=original.apply(this,args);if(args[0]==='delivery')panel();return result};
  if(document.getElementById('edDeliveryPanelTitle'))panel();
 }
