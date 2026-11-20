@@ -103,7 +103,7 @@ begin
  -- Serialize all default-warehouse changes for a supplier. This check applies
  -- to single writes and every item of a batch, not just the browser.
  if p_kind='warehouse' and p_payload->>'defaultForSupplier'='true' then
-  if p_payload->>'type'<>'proveedor' or nullif(p_payload->>'supplierId','') is null
+  if p_payload->>'type' is distinct from 'proveedor' or nullif(p_payload->>'supplierId','') is null
    or p_payload->>'active'='false' then
    raise exception 'invalid default warehouse' using errcode='23514';
   end if;
@@ -252,7 +252,6 @@ begin
   if v_previous.actor_id<>v_actor or v_previous.payload<>v_args then raise exception 'idempotency conflict' using errcode='23505'; end if;
   return v_previous.response;
  end if;
- perform pg_advisory_xact_lock(672045900001::bigint);
  perform pg_advisory_xact_lock(hashtextextended(p_kind||':'||p_id,1));
  select * into v_entity from ed_delivery_private.entities where kind=p_kind and id=p_id for update;
  if not found or v_entity.revision<>p_expected_revision then raise exception 'revision conflict' using errcode='40001'; end if;
@@ -296,7 +295,7 @@ begin
    raise exception 'invalid batch item' using errcode='22023';
   end if;
   v_key:=(v_item->>'kind')||':'||(v_item->>'id');
-  if v_key<=v_previous then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
+  if v_key collate "C" <= v_previous collate "C" then raise exception 'batch must be sorted and unique' using errcode='22023'; end if;
   v_previous:=v_key;
  end loop;
  -- Clear existing defaults before assigning replacements; all changes are
