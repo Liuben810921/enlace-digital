@@ -63,7 +63,7 @@ begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
  end if;
- if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
+ if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) is distinct from 'object' or jsonb_typeof(p_links) is distinct from 'array' then
   raise exception 'invalid request' using errcode='22023';
  end if;
  perform pg_advisory_xact_lock(672045900001::bigint); -- global staging write lock: serialize all mutation paths
@@ -96,7 +96,7 @@ begin
        <>jsonb_array_length(p_payload->'warehouseIds'))
  then raise exception 'duplicate or empty warehouse associations' using errcode='23514'; end if;
  if p_kind='product_origin' and (
-   jsonb_typeof(p_payload->'warehouseIds')<>'array' or
+   jsonb_typeof(p_payload->'warehouseIds') is distinct from 'array' or
    jsonb_array_length(p_payload->'warehouseIds')<>jsonb_array_length(p_links) or
    exists(select 1 from jsonb_array_elements(p_links) l where l->>'target_kind' is distinct from 'warehouse') or
    exists(select 1 from jsonb_array_elements_text(p_payload->'warehouseIds') w
@@ -241,7 +241,7 @@ grant usage on schema auth to ed_delivery_staging_rpc;
 grant execute on function auth.uid() to ed_delivery_staging_rpc;
 grant select on ed_delivery_private.admin_members to ed_delivery_staging_rpc;
 grant usage,create on schema public to ed_delivery_staging_rpc; -- temporary, revoked before commit
-grant select,insert,update,delete on ed_delivery_private.entities to ed_delivery_staging_rpc;
+grant select,insert,update on ed_delivery_private.entities to ed_delivery_staging_rpc;
 grant select,insert,delete on ed_delivery_private.links to ed_delivery_staging_rpc;
 grant select,insert on ed_delivery_private.operations to ed_delivery_staging_rpc;
 -- SECURITY DEFINER owner also needs sequence permissions if serial IDs are added later; none exist here.
@@ -322,7 +322,10 @@ begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
   raise exception 'not authorized' using errcode='42501';
  end if;
- if jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items) not between 1 and 100 then
+ if jsonb_typeof(p_items) is distinct from 'array' then
+  raise exception 'invalid batch type' using errcode='22023';
+ end if;
+ if jsonb_array_length(p_items) not between 1 and 100 then
   raise exception 'invalid batch size' using errcode='22023';
  end if;
  perform pg_advisory_xact_lock(672045900001::bigint);
