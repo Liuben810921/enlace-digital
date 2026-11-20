@@ -2107,7 +2107,7 @@ function edDeliveryOriginsSetSelectedActive(active){
  if(edDeliveryIsQuarantined())return false;
  const panel=document.getElementById('edOriginBulkSelection');
  if(!panel||panel.disabled)return false;
- const ids=[...panel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
+ const ids=[...panel.querySelectorAll('.edOriginBulkCheck:checked')].map(el=>el.value);
  if(!ids.length||new Set(ids).size!==ids.length){alert('Selecciona almacenes válidos.');return false}
  let rawOrigins,rawAssociations,rawSuppliers,items,associations,suppliers;
  try{
@@ -2136,7 +2136,7 @@ function edDeliveryOriginsDeleteSelected(){
  if(edDeliveryIsQuarantined())return false;
  const panel=document.getElementById('edOriginBulkSelection');
  if(!panel||panel.disabled)return false;
- const ids=[...panel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
+ const ids=[...panel.querySelectorAll('.edOriginBulkCheck:checked')].map(el=>el.value);
  if(!ids.length||new Set(ids).size!==ids.length){alert('Selecciona almacenes válidos para eliminar.');return false}
  let rawOrigins,rawAssociations,rawSuppliers,items,associations;
  try{
@@ -2163,7 +2163,7 @@ function edDeliveryOriginsMoveSelected(){
  if(edDeliveryIsQuarantined())return false;
  const panel=document.getElementById('edOriginBulkSelection'),target=document.getElementById('edOriginBulkMunicipality')?.value;
  if(!panel||panel.disabled||!municipios.includes(target)){alert('Selecciona un municipio válido.');return false}
- const ids=[...panel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
+ const ids=[...panel.querySelectorAll('.edOriginBulkCheck:checked')].map(el=>el.value);
  if(!ids.length||new Set(ids).size!==ids.length){alert('Selecciona almacenes válidos.');return false}
  let snapshot,items;
  try{snapshot=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);items=edDeliveryOriginsRead()}catch(e){alert('No se pudieron verificar los almacenes.');return false}
