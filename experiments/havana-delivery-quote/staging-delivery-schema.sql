@@ -99,7 +99,19 @@ begin
    not exists(select 1 from jsonb_array_elements(p_links) l
     where l->>'target_kind'='destination' and l->>'target_id'=p_payload->>'destinationId')
  ) then raise exception 'draft destination missing' using errcode='23514'; end if;
- v_revision:=coalesce(v_old,0)+1;
+ -- Guard the ordinary write RPC against bypassing the dedicated deactivation
+ -- dependency checks by simply setting payload.active=false.
+ if p_kind='warehouse' and p_payload->>'active'='false' and exists(
+  select 1 from ed_delivery_private.links l where l.target_kind='warehouse'
+   and l.target_id=p_id and l.source_kind='product_origin'
+ ) then raise exception 'warehouse has product associations' using errcode='23503'; end if;
+ if p_kind='supplier' and p_payload->>'active'='false' and exists(
+  select 1 from ed_delivery_private.links l
+   join ed_delivery_private.entities w on w.kind='warehouse' and w.id=l.source_id
+   where l.source_kind='warehouse' and l.target_kind='supplier' and l.target_id=p_id
+    and w.payload->>'active' is distinct from 'false'
+ ) then raise exception 'supplier has active warehouses' using errcode='23503'; end if;
+  v_revision:=coalesce(v_old,0)+1;
  insert into ed_delivery_private.entities(kind,id,payload,revision) values(p_kind,p_id,p_payload,v_revision)
  on conflict(kind,id) do update set payload=excluded.payload,revision=excluded.revision,updated_at=now();
  delete from ed_delivery_private.links where source_kind=p_kind and source_id=p_id;
