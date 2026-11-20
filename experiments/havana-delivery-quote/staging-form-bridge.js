@@ -29,7 +29,15 @@ async function connect(){
  if(!key.startsWith('sb_publishable_')||!email||!password)throw Error('Faltan credenciales de staging');
  const res=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
  const data=await res.json();if(!res.ok||!data.access_token)throw Error('Autenticación rechazada por staging');
- const candidate=EDDeliveryStaging.create({publishableKey:key,getAccessToken:async()=>data.access_token});
+ let access=data.access_token,refreshToken=data.refresh_token,expires=Date.now()+Math.max(0,(Number(data.expires_in)||300)-60)*1000;
+ const candidate=EDDeliveryStaging.create({publishableKey:key,getAccessToken:async()=>{
+  if(Date.now()<expires)return access;
+  if(!refreshToken)throw Error('Sesión staging caducada; vuelve a conectar');
+  const renewal=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+  const next=await renewal.json();if(!renewal.ok||!next.access_token)throw Error('No se pudo renovar la sesión staging');
+  access=next.access_token;refreshToken=next.refresh_token;expires=Date.now()+Math.max(0,(Number(next.expires_in)||300)-60)*1000;
+  return access;
+ }});
  const check=await candidate.readAll();if(!Array.isArray(check.entities)||!Array.isArray(check.links))throw Error('Permiso administrativo no confirmado');
  api=candidate;items=check.entities;links=check.links;
  adminTab('delivery');tell('Conectado a staging. Los guardados de los formularios son remotos.');
