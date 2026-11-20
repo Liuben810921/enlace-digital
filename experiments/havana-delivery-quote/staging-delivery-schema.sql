@@ -371,17 +371,21 @@ begin
   raise exception 'duplicate operation IDs in batch' using errcode='23505';
  end if;
  -- Input remains canonically sorted, but execution must honor dependencies:
- -- warehouse default demotions, suppliers, destinations, warehouses,
- -- product associations, then drafts. All phases share one transaction.
- for v_phase in 1..6 loop
+ -- warehouse default demotions, suppliers, destinations, active warehouses,
+ -- product associations, drafts, then warehouse deactivations. Deferring
+ -- deactivation permits product reassignment in the same atomic batch.
+ -- All phases share one transaction.
+ for v_phase in 1..7 loop
   for v_item in select value from jsonb_array_elements(p_items) loop
-   if (v_phase=1 and v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false')
+   if (v_phase=1 and v_item->>'kind'='warehouse' and v_item->'payload'->>'defaultForSupplier'='false' and v_item->'payload'->>'active' is distinct from 'false')
     or (v_phase=2 and v_item->>'kind'='supplier')
     or (v_phase=3 and v_item->>'kind'='destination')
     or (v_phase=4 and v_item->>'kind'='warehouse' and
+        v_item->'payload'->>'active' is distinct from 'false' and
         (v_item->'payload'->>'defaultForSupplier'='false') is not true)
     or (v_phase=5 and v_item->>'kind'='product_origin')
     or (v_phase=6 and v_item->>'kind'='shipment_draft')
+    or (v_phase=7 and v_item->>'kind'='warehouse' and v_item->'payload'->>'active'='false')
    then
     v_results:=v_results||jsonb_build_array(public.ed_delivery_staging_write(
      (v_item->>'operation_id')::uuid,v_item->>'kind',v_item->>'id',
