@@ -3458,7 +3458,11 @@ function edDeliverySaveShipmentDraft(){
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
  if(snapshot.revision===null)return pending('Revisión de entregas inválida.');
  const draft={version:1,status:'PENDIENTE',productIds,destinationId,warehouseIds:basket.origins.map(o=>o.id),snapshot,createdAt:new Date().toISOString()};
- try{localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft))}catch(e){return pending('No se pudo guardar el borrador local.')}
+ try{
+  const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+  if(Object.keys(snapshot).some(k=>snapshot[k]!==current[k]))return pending('Dependencias modificadas durante la preparación; repite el guardado.');
+  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft));
+ }catch(e){return pending('No se pudo guardar el borrador local.')}
  output.textContent='PENDIENTE · Borrador offline guardado: '+productIds.length+' producto(s), '+basket.origins.length+' almacén(es), destino '+destination.name+'. No es un pedido ni una cotización.';
  return true;
 }
