@@ -100,3 +100,30 @@ assert.notEqual(restored.draft,'OLD');
 assert.equal(staleArchive.result,false);assert.equal(staleArchive.draft,'OLD');
 assert.equal(changedArchive.result,false);assert.equal(changedArchive.draft,'OLD');
 console.log('PASS: 3 focused archive restore cases (valid, stale, changed during confirmation)');
+
+
+const assignFrom=html.indexOf('function edDeliveryAssignProductWarehouse(){');
+const assignTo=html.indexOf('function ',assignFrom+12);
+assert(assignFrom>=0&&assignTo>assignFrom,'Missing product warehouse assignment');
+function testAssignmentDuplicate(duplicate){
+ const products=[{id:'p1',origen_producto:'propio'}];
+ const origins=[{id:'w1',type:'propio',active:true,name:'Principal'}];
+ if(duplicate)origins.push({...origins[0]});
+ const store={links:'{}',origins:JSON.stringify(origins),suppliers:'[]','enlace_demo_v1':JSON.stringify({products})};
+ const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,edInventoryLoaded:true,edInventoryPendingSaves:0,
+  edInventorySnapshot:JSON.stringify(products),state:{products},
+  document:{getElementById:id=>({edAssignProduct:{value:'p1'},edAssignWarehouse:{value:'w1'},edAssignOperation:{value:'add'}})[id]},
+  edDeliveryOriginsRead:()=>origins,edDeliverySuppliersRead:()=>[],
+  localStorage:{getItem:k=>store[k]??null},
+  ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  alert:m=>alerts.push(m),confirm:()=>false
+ };
+ vm.createContext(ctx);vm.runInContext(html.slice(assignFrom,assignTo),ctx,{timeout:1000});
+ ctx.edDeliveryAssignProductWarehouse();
+ return alerts;
+}
+assert.match(testAssignmentDuplicate(true).join(' '),/identificadores duplicados/);
+assert.equal(testAssignmentDuplicate(false).length,0);
+console.log('PASS: 2 focused assignment cases (duplicate IDs rejected; valid IDs reach confirmation)');
