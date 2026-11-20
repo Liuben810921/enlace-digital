@@ -1369,6 +1369,28 @@ async function edOfficialTemporarySave(){
   await edOfficialOrderPreview('location:'+saved.id);
  }catch(e){status.textContent=e.message;btn.disabled=false}
 }
+function edDeliveryCheckoutPreview(lines){
+ const pending=reason=>({status:'PENDIENTE',reason,rows:[]});
+ if(edDeliveryIsQuarantined())return pending('Asociaciones en cuarentena');
+ const contract=window.EDOfflineQuote?.quoteProductDelivery;
+ if(typeof contract!=='function')return pending('Cotizador offline no disponible');
+ let map,origins,suppliers;
+ try{
+  const raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+  map=JSON.parse(raw===null?'{}':raw);
+  origins=edDeliveryOriginsRead();suppliers=edDeliverySuppliersRead();
+ }catch(e){return pending('Asociaciones ilegibles')}
+ if(!map||typeof map!=='object'||Array.isArray(map))return pending('Asociaciones inválidas');
+ const rows=[];
+ for(const entry of lines){
+  const id=String(entry.product.id),ids=map[id];
+  if(!Array.isArray(ids)||!ids.length){rows.push({name:entry.product.name||id,status:'PENDIENTE',reason:'Producto sin punto de salida'});continue}
+  const quote=contract({productOriginIds:ids,origins,suppliers,routes:[],destinationId:'checkout-unverified',rateCupPerKm:200,minKm:3,contextRevision:edDeliveryContextRevision(),quarantined:edDeliveryIsQuarantined()});
+  const labels=ids.map(originId=>origins.find(o=>o.id===originId)?.name||'Punto no disponible');
+  rows.push({name:entry.product.name||id,origins:labels,status:'PENDIENTE',reason:quote.reason||'Distancia vial no verificada'});
+ }
+ return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows};
+}
 async function edOfficialOrderPreview(selectedId=null){
  const availability=validateCart();
  if(availability.removed||availability.adjusted){
@@ -1391,11 +1413,14 @@ async function edOfficialOrderPreview(selectedId=null){
   return;
  }
  const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
+ const deliveryPreview=edDeliveryCheckoutPreview(lines);
  modal('<h2>Finalizar compra</h2><p class="alert">MODO PRUEBA: no se registran ni envían pedidos reales, no se cobra y no se descuenta inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
  '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
  lines.map(x=>'<div class="row"><span>'+esc(x.product.name)+(x.line.color?' · '+esc(x.line.color):'')+' × '+x.line.qty+'</span><strong>'+money(Number(x.product.price)*x.line.qty)+' USD</strong></div>').join('')+
- '<p><strong>Importe total: '+money(total)+' USD</strong></p><p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
+ '<p><strong>Importe total: '+money(total)+' USD</strong></p>'+
+ '<section class="panel"><strong>Vista previa de mensajería · PENDIENTE</strong><p class="note">Sin rutas viales verificadas ni precio de mensajería. No es una cotización.</p>'+deliveryPreview.rows.map(r=>'<p>'+esc(r.name)+' · '+esc((r.origins||[]).join(', ')||'Sin punto de salida')+' · '+esc(r.reason)+'</p>').join('')+'</section>'+
+ '<p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
  '<button class="primary" style="width:100%;margin:10px 0" onclick="edConfirmSimulatedCheckout()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
 }
 function edConfirmSimulatedCheckout(){
