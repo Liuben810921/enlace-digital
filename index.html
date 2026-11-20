@@ -1715,19 +1715,32 @@ function edDeliverySupplierToggle(id){
  if(edDeliveryIsQuarantined()){alert('Administración de entregas bloqueada: verifica y desbloquea primero las asociaciones.');return false}
  const items=edDeliverySuppliersRead(),supplier=items.find(p=>p.id===id);if(!supplier)return false;
  if(supplier.active!==false){
-  const warehouses=edDeliveryOriginsRead().filter(o=>o.type==='proveedor'&&o.supplierId===id);
-  const associations=edProductOriginsRead();
-  if(Object.values(associations).some(ids=>!Array.isArray(ids))){
-   alert('Hay asociaciones que requieren revisión. No se puede desactivar el proveedor hasta resolverlas.');return false;
+  let originsRaw,associationsRaw,associations;
+  try{
+   originsRaw=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY);
+   associationsRaw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
+   associations=JSON.parse(associationsRaw===null?'{}':associationsRaw);
+  }catch(e){alert('No se pudieron verificar las dependencias del proveedor.');return false}
+  if(!associations||typeof associations!=='object'||Array.isArray(associations)||Object.values(associations).some(ids=>!Array.isArray(ids)||ids.some(value=>typeof value!=='string'))){
+   alert('Hay asociaciones inválidas. No se puede desactivar el proveedor.');return false;
   }
+  const warehouses=edDeliveryOriginsRead().filter(o=>o.type==='proveedor'&&o.supplierId===id);
   const warehouseIds=new Set(warehouses.map(o=>o.id));
   const affected=Object.values(associations).filter(ids=>ids.some(warehouseId=>warehouseIds.has(warehouseId))).length;
-  if((warehouses.length||affected)&&!confirm('Desactivar este proveedor dejará inactivos '+warehouses.length+' almacén(es) y afectará a '+affected+' producto(s) asociado(s). ¿Continuar?'))return false;
+  if(affected){
+   alert('El proveedor tiene '+affected+' producto(s) asociados a sus almacenes. Reasigna o desvincula esos productos antes de desactivarlo.');
+   return false;
+  }
+  if(warehouses.length&&!confirm('Desactivar este proveedor dejará indisponibles '+warehouses.length+' almacén(es) sin productos asociados. ¿Continuar?'))return false;
+  let same=false;
+  try{same=localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsRaw&&localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)===associationsRaw}catch(e){}
+  if(!same){alert('Las dependencias cambiaron. Revisa antes de desactivar el proveedor.');return false}
  }
  supplier.active=supplier.active===false;
  if(!edDeliveryPersistAndInvalidate(ED_DELIVERY_SUPPLIERS_KEY,items,'supplier_status'))return false;
  adminTab('delivery');return true;
 }
+
 function edDeliverySupplierAdd(){
  if(edDeliveryIsQuarantined())return false;
  const name=document.getElementById('edSupplierName').value.trim();
