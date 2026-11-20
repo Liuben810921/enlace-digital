@@ -3619,6 +3619,7 @@ function edDeliveryArchiveShipmentDraft(){
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==collectionRaw)return pending('Los borradores cambiaron. Reintenta.');
   if(edDeliveryIsQuarantined())return pending('Cuarentena activada antes del guardado.');
   const serializedArchive=JSON.stringify([...collection,item]);
+  if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la preparación del archivo.');
   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,serializedArchive);
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==serializedArchive)return pending('No se pudo confirmar la persistencia de las versiones.');
  }catch(e){return pending('No se pudo guardar la versión.')}
