@@ -2137,6 +2137,16 @@ function edDeliveryReassignWarehouse(sourceId){
  if(!map||typeof map!=='object'||Array.isArray(map)||Object.values(map).some(ids=>!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)){alert('Asociaciones inválidas.');return false}
  const affected=Object.entries(map).filter(([key,ids])=>ids.includes(sourceId));
  if(!affected.length)return false;
+ // Reassign only dependencies of verified, currently synchronized products.
+ let inventoryVersion;
+ try{
+  if(!Array.isArray(state.products)||edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot)throw Error('Inventario no sincronizado');
+  const byId=new Map(state.products.map(p=>[String(p.id),p]));
+  if(byId.size!==state.products.length||affected.some(([key])=>!byId.has(key)||byId.get(key).origen_producto!==source.type))throw Error('Asociaciones huérfanas o incompatibles');
+  const shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');
+  if(!shared||JSON.stringify(shared.products)!==edInventorySnapshot)throw Error('Inventario compartido no verificado');
+  inventoryVersion=edInventorySnapshot;
+ }catch(e){alert('No se puede reasignar: '+e.message);return false}
  if(!confirm('Reasignar '+affected.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
  const updated={...map};
  for(const [key,ids] of affected){
@@ -2152,6 +2162,9 @@ function edDeliveryReassignWarehouse(sourceId){
  let unchanged=false;
  try{unchanged=previous===snapshot&&localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)===originsSnapshot&&localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)===suppliersSnapshot}catch(e){}
  if(!unchanged){alert('Las asociaciones cambiaron mientras confirmabas. Revisa los productos y vuelve a intentar.');return false}
+ let inventoryUnchanged=false;
+ try{const shared=JSON.parse(localStorage.getItem('enlace_demo_v1')||'null');inventoryUnchanged=edInventoryLoaded&&edInventoryPendingSaves===0&&edInventorySnapshot===inventoryVersion&&JSON.stringify(state.products)===inventoryVersion&&!!shared&&JSON.stringify(shared.products)===inventoryVersion}catch(e){}
+ if(!inventoryUnchanged){alert('El inventario cambió durante la confirmación. Revisa antes de reasignar.');return false}
  if(!edDeliveryPersistAndInvalidate(ED_PRODUCT_ORIGINS_KEY,updated,'warehouse_reassigned',snapshot)){
   alert('Reasignación no confirmada; revisa las asociaciones.');return false;
  }
