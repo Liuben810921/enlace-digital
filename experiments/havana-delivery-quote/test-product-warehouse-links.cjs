@@ -127,3 +127,28 @@ function testAssignmentDuplicate(duplicate){
 assert.match(testAssignmentDuplicate(true).join(' '),/identificadores duplicados/);
 assert.equal(testAssignmentDuplicate(false).length,0);
 console.log('PASS: 2 focused assignment cases (duplicate IDs rejected; valid IDs reach confirmation)');
+
+
+const transferFrom=html.indexOf('function edDeliverySupplierTransferWarehouses(');
+const transferTo=html.indexOf('\nfunction ',transferFrom+12);
+assert(transferFrom>=0&&transferTo>transferFrom,'Missing supplier transfer');
+function testSupplierTransferIds(duplicate){
+ const suppliers=[{id:'s1',name:'Origen',active:true},{id:'s2',name:'Destino',active:true}];
+ const origins=[{id:'w1',type:'proveedor',supplierId:'s1',active:true,name:'Almacen'}];
+ if(duplicate)origins.push({...origins[0]});
+ const store={links:'{}',origins:JSON.stringify(origins),suppliers:JSON.stringify(suppliers)},alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,edDeliverySuppliersRead:()=>suppliers,edDeliveryOriginsRead:()=>origins,
+  edInventoryLoadGeneration:0,edInventorySnapshot:'[]',
+  ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  localStorage:{getItem:k=>store[k]??null},
+  document:{getElementById:id=>id==='edTransferWarehouses-s1'?{querySelectorAll:()=>[{value:'w1'}]}:id==='edTransferSupplier-s1'?{value:'s2'}:id==='edTransferMakeDefault-s1'?{checked:false}:null},
+  alert:m=>alerts.push(m),confirm:()=>false
+ };
+ vm.createContext(ctx);vm.runInContext(html.slice(transferFrom,transferTo),ctx,{timeout:1000});
+ ctx.edDeliverySupplierTransferWarehouses('s1');
+ return alerts;
+}
+assert.match(testSupplierTransferIds(true).join(' '),/Identificadores duplicados/);
+assert.equal(testSupplierTransferIds(false).length,0);
+console.log('PASS: 2 supplier transfer checks (duplicate records blocked; valid IDs reach confirmation)');
