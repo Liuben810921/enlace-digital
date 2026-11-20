@@ -203,3 +203,40 @@ function testSupplierTransferExecution(conflict){
 }
 testSupplierTransferExecution(false);testSupplierTransferExecution(true);
 console.log('PASS: 6 execution cases (supplier transfer, warehouse and destination bulk moves; success and conflict)');
+
+
+function testBulkProductAssignment(duplicate,conflict){
+ const products=[{id:'p1',origen_producto:'propio'},{id:'p2',origen_producto:'propio'}],origins=[{id:'w1',name:'Almacen',type:'propio',active:true}];
+ if(duplicate)origins.push({...origins[0]});
+ const store={links:'{}',origins:JSON.stringify(origins),suppliers:'[]','enlace_demo_v1':JSON.stringify({products})};
+ let persisted=null;const alerts=[];
+ const ctx={
+  edDeliveryIsQuarantined:()=>false,edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),state:{products},
+  document:{getElementById:id=>id==='edQuoteDemoProduct'?{selectedOptions:[{value:'p1'},{value:'p2'}]}:id==='edAssignWarehouse'?{value:'w1'}:id==='edAssignOperation'?{value:'add'}:null},
+  edDeliveryOriginsRead:()=>origins,edDeliverySuppliersRead:()=>[],ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  localStorage:{getItem:k=>store[k]??null},alert:m=>alerts.push(m),confirm:()=>{if(conflict)store.links='changed';return true},
+  edDeliveryPersistAndInvalidate:(k,v)=>{persisted=v;return true},adminTab:()=>{}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryBulkAssignSelectedProducts'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryBulkAssignSelectedProducts();
+ if(duplicate||conflict){assert.equal(result,false);assert.equal(persisted,null);assert(alerts.length>0);}
+ else{assert.equal(result,true);assert.equal(JSON.stringify(persisted),JSON.stringify({p1:['w1'],p2:['w1']}));}
+}
+testBulkProductAssignment(false,false);testBulkProductAssignment(true,false);testBulkProductAssignment(false,true);
+function testBulkArchiveDestinations(conflict){
+ const draft={id:'a',version:1,status:'PENDIENTE',productIds:['p1'],destinationId:'old',warehouseIds:['w1']};
+ const store={archive:JSON.stringify([draft]),links:'l',origins:'o',suppliers:'s',destinations:'d'};
+ const output={textContent:''};
+ const ctx={
+  document:{getElementById:id=>id==='edQuoteDemoResult'?output:id==='edQuoteDemoDestination'?{value:'new'}:null},
+  edDeliveryIsQuarantined:()=>false,edDeliveryDestinationsRead:()=>[{id:'new',name:'Centro'}],edDeliveryOriginsRead:()=>[],edDeliverySuppliersRead:()=>[],
+  edDeliveryQuoteDemoBasket:()=>({origins:[{id:'w1'}]}),localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v}},
+  ED_DELIVERY_DRAFT_COLLECTION_KEY:'archive',ED_PRODUCT_ORIGINS_KEY:'links',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',ED_DELIVERY_DESTINATIONS_KEY:'destinations',
+  edDeliveryContextRevision:()=>1,confirm:()=>{if(conflict)store.origins='changed';return true}
+ };
+ vm.createContext(ctx);vm.runInContext(extractDeliveryFunction('edDeliveryBulkReassignArchivedDestinations'),ctx,{timeout:1000});
+ const result=ctx.edDeliveryBulkReassignArchivedDestinations();
+ assert.equal(result,!conflict);assert.equal(JSON.parse(store.archive)[0].destinationId,conflict?'old':'new');
+}
+testBulkArchiveDestinations(false);testBulkArchiveDestinations(true);
+console.log('PASS: 5 multiproduct and archive bulk operation cases');
