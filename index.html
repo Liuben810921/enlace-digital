@@ -3715,10 +3715,14 @@ function edDeliveryBulkEditArchivedProducts(){
   if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length||!destinations.has(draft.destinationId)){skipped.push(i);updates.push(draft);continue}
   const existing=draft.productIds;
   const next=operation==='replace'?[...selected]:operation==='add'?[...existing,...selected.filter(id=>!existing.includes(id))]:existing.filter(id=>!selected.includes(id));
-  if(!next.length||next.length>100||new Set(next).size!==next.length||next.join('|')===existing.join('|')){skipped.push(i);updates.push(draft);continue}
+  if(!next.length||next.length>100||new Set(next).size!==next.length){skipped.push(i);updates.push(draft);continue}
   const basket=edDeliveryQuoteDemoBasket(next,origins,suppliers);
   if(!basket){skipped.push(i);updates.push(draft);continue}
-  updates.push({...draft,productIds:next,warehouseIds:basket.origins.map(o=>o.id)});
+  const warehouseIds=basket.origins.map(o=>o.id);
+  const productsUnchanged=next.length===existing.length&&next.every((id,j)=>id===existing[j]);
+  const warehousesUnchanged=Array.isArray(draft.warehouseIds)&&warehouseIds.length===draft.warehouseIds.length&&warehouseIds.every((id,j)=>id===draft.warehouseIds[j]);
+  if(productsUnchanged&&warehousesUnchanged){skipped.push(i);updates.push(draft);continue}
+  updates.push({...draft,productIds:next,warehouseIds});
  }
  const changed=archive.length-skipped.length;
  if(!changed)return pending('Ninguna versión admite la edición. Revisa productos, existencias, proveedores, almacenes y destinos.');
