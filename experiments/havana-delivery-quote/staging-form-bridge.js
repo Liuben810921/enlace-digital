@@ -50,7 +50,9 @@ async function save(kind,id,payload,targets=[]){
   const old=get(kind,id),rev=old?old.revision:0;
   if(!Number.isSafeInteger(rev))throw Error('Revisión de entidad inválida');
   const result=await api.save(map[kind],id,payload,rev,targets,crypto.randomUUID());
-  await refresh();
+  // A confirmed write must not be reported as failed merely because the refresh fails.
+  let refreshed=true;try{await refresh()}catch(refreshError){refreshed=false}
+  if(!refreshed){tell('Guardado confirmado por staging (revisión '+result.revision+'), pero no se pudo actualizar la vista. Reconecta para comprobar los datos.');return true}
   adminTab('delivery');tell('Staging confirmó '+kind+' '+id+' · revisión '+result.revision);
   return true;
  }catch(e){tell('No se guardó en staging: '+e.message);return false}finally{busy=false}
@@ -68,7 +70,7 @@ function origin(){
  const lat=field('edOriginLat'),lng=field('edOriginLng');
  if(Boolean(lat)!==Boolean(lng)||lat&&(!Number.isFinite(+lat)||!Number.isFinite(+lng)||Math.abs(+lat)>90||Math.abs(+lng)>180)){tell('Coordenadas inválidas');return false}
  const prev=get('warehouse',id)?.payload||{};
- if(prev.type&&prev.type!==type&&links.some(l=>l.target_kind==='warehouse'&&l.target_id===id)){tell('Reasigna las asociaciones antes de cambiar el tipo');return false}
+ if(prev.type&&(prev.type!==type||prev.supplierId!==supplierId)&&links.some(l=>l.target_kind==='warehouse'&&l.target_id===id)){tell('Reasigna las asociaciones antes de cambiar el tipo');return false}
  return save('warehouse',id,{...prev,name,type,municipality,address,supplierId,lat:lat?+lat:null,lng:lng?+lng:null,active:prev.active!==false,defaultForSupplier:document.getElementById('edOriginMakeDefault')?.checked===true},supplierId?[{target_kind:'supplier',target_id:supplierId}]:[]);
 }
 function destination(){
@@ -79,7 +81,7 @@ function destination(){
 function association(productId,ids,expectedType){
  if(!productId||!Array.isArray(ids)||new Set(ids).size!==ids.length){tell('Asociaciones inválidas');return false}
  const warehouses=ids.map(id=>get('warehouse',id));
- if(warehouses.some(x=>!x||x.payload.active===false)||warehouses.some(x=>expectedType&&x.payload.type!==expectedType)){tell('Almacén no disponible en staging');return false}
+ if(!ids.length||warehouses.some(x=>!x||x.payload.active===false)||warehouses.some(x=>expectedType&&x.payload.type!==expectedType)){tell('Almacén no disponible en staging');return false}
  if(warehouses.some(x=>x.payload.type!==warehouses[0]?.payload.type||(x.payload.type==='proveedor'&&x.payload.supplierId!==warehouses[0]?.payload.supplierId))){tell('Almacenes de origen incompatible');return false}
  return save('product_origin',String(productId),{productId:String(productId),warehouseIds:ids},ids.map(id=>({target_kind:'warehouse',target_id:id})));
 }
