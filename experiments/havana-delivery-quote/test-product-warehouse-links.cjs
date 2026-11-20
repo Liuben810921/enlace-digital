@@ -919,3 +919,36 @@ function testQuarantineChangeDuringRemoval(mode){
 for(const mode of ['normal','links-on-remove','inventory-on-remove','suppliers-on-remove'])
  testQuarantineChangeDuringRemoval(mode);
 console.log('PASS: 4 quarantine-removal race cases');
+
+
+function testQuarantineReactivationWriteFailure(mode){
+ const products=[{id:'p1',origen_producto:'proveedor'}];
+ const store={q:'1',origins:JSON.stringify([{id:'w1',type:'proveedor',supplierId:'s1'}]),
+  suppliers:JSON.stringify([{id:'s1'}]),links:JSON.stringify({p1:['w1']}),
+  'enlace_demo_v1':JSON.stringify({products})};
+ const ctx={
+  ED_DELIVERY_QUARANTINE_KEY:'q',ED_DELIVERY_ORIGINS_KEY:'origins',ED_DELIVERY_SUPPLIERS_KEY:'suppliers',
+  ED_PRODUCT_ORIGINS_KEY:'links',edDeliveryQuarantinedInSession:true,
+  edInventoryLoaded:true,edInventoryPendingSaves:0,edInventorySnapshot:JSON.stringify(products),
+  state:{products},edDeliveryContextInvalidate:()=>1,
+  localStorage:{
+   getItem:k=>store[k]??null,
+   removeItem:k=>{delete store[k];if(mode!=='normal')store.links=JSON.stringify({p1:['missing']})},
+   setItem:(k,v)=>{
+    if(mode==='reactivation-throws')throw Error('quota');
+    if(mode!=='reactivation-silent')store[k]=v;
+   }
+  }
+ };
+ vm.createContext(ctx);
+ for(const name of ['edDeliveryIsQuarantined','edDeliveryQuarantine','edDeliveryRecoverQuarantine'])
+  vm.runInContext(extractDeliveryFunction(name),ctx,{timeout:1000});
+ const success=mode==='normal';
+ assert.equal(ctx.edDeliveryRecoverQuarantine(),success,mode+' recovery');
+ assert.equal(ctx.edDeliveryIsQuarantined(),!success,mode+' session quarantine');
+ assert.equal(store.q??null,null,mode+' observed persisted marker');
+ if(!success)assert.equal(ctx.edDeliveryQuarantinedInSession,true,mode+' fail-closed session');
+}
+for(const mode of ['normal','reactivation-silent','reactivation-throws'])
+ testQuarantineReactivationWriteFailure(mode);
+console.log('PASS: 3 quarantine reactivation write-failure cases (cross-tab persistence remains PENDING)');
