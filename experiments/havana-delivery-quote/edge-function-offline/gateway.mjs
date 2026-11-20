@@ -15,7 +15,7 @@ export function validate(b){
 export async function handleGateway(request,deps={}){
  try{
   if(request.method!=='POST')return {httpStatus:405,body:pending('METHOD_NOT_ALLOWED')};
-  if(!deps.authenticate||!deps.reserveAtomic)return {httpStatus:503,body:pending('GATEWAY_NOT_CONFIGURED')};
+  if(typeof deps.authenticate!=='function'||typeof deps.reserveAtomic!=='function'||typeof deps.authorizeDispatch!=='function')return {httpStatus:503,body:pending('GATEWAY_NOT_CONFIGURED')};
   const identity=await deps.authenticate(request);
   if(!identity||identity.verified!==true||identity.authorized!==true||identity.role!=='routing-tester'||typeof identity.subject!=='string'||!identity.subject)return {httpStatus:401,body:pending('UNAUTHORIZED')};
   if(!/^application\/json(?:\s*;|\s*$)/i.test(request.headers?.get?.('content-type')||''))return {httpStatus:415,body:pending('UNSUPPORTED_MEDIA_TYPE')};
@@ -24,7 +24,11 @@ export async function handleGateway(request,deps={}){
   let body;try{body=JSON.parse(raw)}catch{return {httpStatus:400,body:pending('INVALID_JSON')}};
   const error=validate(body);if(error)return {httpStatus:400,body:pending(error)};
   const receipt=await deps.reserveAtomic({principal:identity.subject,operationId:body.operationId,revision:body.contextRevision,credits:body.origins.length,scope:body.origins.map(o=>o.id).join(','),destination:body.destination});
-  if(!receipt||receipt.committed!==true||typeof receipt.reservationId!=='string'||!receipt.reservationId)return {httpStatus:429,body:pending('BUDGET_NOT_RESERVED')};
+  if(!receipt||receipt.committed!==true||typeof receipt.reservationId!=='string'||!receipt.reservationId||!['RESERVED','REPLAY_RESERVED'].includes(receipt.reason)||receipt.lifecycle!=='RESERVED')return {httpStatus:409,body:pending('RESERVATION_NOT_DISPATCHABLE')};
+  // Offline contract check only: never dispatch to a provider. The trusted adapter
+  // must enforce the SQL transition atomically and reject released/review/expired records.
+  const gate=await deps.authorizeDispatch({principal:identity.subject,operationId:body.operationId,reservationId:receipt.reservationId,expectedLifecycle:'RESERVED',contextRevision:body.contextRevision});
+  if(!gate||gate.authorized!==true||gate.lifecycle!=='DISPATCHED'||gate.reservationId!==receipt.reservationId||gate.operationId!==body.operationId)return {httpStatus:409,body:pending('DISPATCH_NOT_AUTHORIZED')};
   return {httpStatus:503,body:pending('PROVIDER_NOT_CONNECTED')};
  }catch{return {httpStatus:503,body:pending('GATEWAY_ERROR')}}
 }
