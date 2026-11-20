@@ -16,9 +16,9 @@ create table ed_delivery_private.entities (
  primary key(kind,id)
 );
 create table ed_delivery_private.links (
- source_kind text not null,
+ source_kind text not null check(source_kind in ('warehouse','product_origin','shipment_draft')),
  source_id text not null,
- target_kind text not null,
+ target_kind text not null check(target_kind in ('supplier','warehouse','destination','product_origin')),
  target_id text not null,
  primary key(source_kind,source_id,target_kind,target_id),
  foreign key(source_kind,source_id) references ed_delivery_private.entities(kind,id) on delete cascade,
@@ -64,7 +64,7 @@ begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
  end if;
- if p_operation_id is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
+ if p_expected_revision is null or p_expected_revision < 0 or p_operation_id is null or p_kind not in ('supplier','warehouse','product_origin','destination','shipment_draft') or p_id is null or length(p_id) not between 1 and 160 or jsonb_typeof(p_payload) <> 'object' or jsonb_typeof(p_links)<>'array' then
   raise exception 'invalid request' using errcode='22023';
  end if;
  perform pg_advisory_xact_lock(hashtextextended(p_operation_id::text,0));
@@ -85,7 +85,7 @@ begin
  on conflict(kind,id) do update set payload=excluded.payload,revision=excluded.revision,updated_at=now();
  delete from ed_delivery_private.links where source_kind=p_kind and source_id=p_id;
  for v_link in select value from jsonb_array_elements(p_links) loop
-  if v_link->>'target_kind' is null or v_link->>'target_id' is null or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
+  if v_link->>'target_kind' is null or v_link->>'target_id' is null or not ( (p_kind='warehouse' and v_link->>'target_kind'='supplier') or (p_kind='product_origin' and v_link->>'target_kind' in ('warehouse','supplier')) or (p_kind='shipment_draft' and v_link->>'target_kind' in ('destination','product_origin')) ) or not exists (select 1 from ed_delivery_private.entities e where e.kind=v_link->>'target_kind' and e.id=v_link->>'target_id') then raise exception 'invalid or missing link target' using errcode='23503'; end if;
   insert into ed_delivery_private.links(source_kind,source_id,target_kind,target_id)
   values(p_kind,p_id,v_link->>'target_kind',v_link->>'target_id');
  end loop;
@@ -94,8 +94,11 @@ begin
  values(p_operation_id,v_user,jsonb_build_object('kind',p_kind,'id',p_id,'payload',p_payload,'expected_revision',p_expected_revision,'links',p_links),v_result);
  return v_result;
 end $$;
-revoke all on function public.ed_delivery_staging_read() from public,anon;
-revoke all on function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) from public,anon;
+revoke all on function public.ed_delivery_staging_read() from public,anon,authenticated;
+revoke all on function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) from public,anon,authenticated;
 grant execute on function public.ed_delivery_staging_read() to authenticated;
 grant execute on function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) to authenticated;
+-- IMPORTANT: first admin_members row must be provisioned via a separately authorized
+-- owner-only action for an existing staging auth.users UUID; no anonymous bootstrap.
+-- This migration alone deliberately grants no administrator access.
 commit;
