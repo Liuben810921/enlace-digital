@@ -3865,6 +3865,7 @@ function edDeliveryQuoteDemo(synthetic){
  const basket=edDeliveryQuoteDemoBasket(productIds,origins,suppliers);
  if(!basket)return pending('Productos o asociaciones de almacenes no verificados.');
  const revision=edDeliveryContextRevision();
+ if(revision===null)return pending('Versión de contexto inválida; revisa el almacenamiento local.');
  let snapshot;
  try{snapshot=[ED_DELIVERY_ORIGINS_KEY,ED_DELIVERY_SUPPLIERS_KEY,ED_DELIVERY_DESTINATIONS_KEY,ED_PRODUCT_ORIGINS_KEY,'enlace_demo_v1'].map(k=>localStorage.getItem(k))}catch(e){return pending('No se pudieron leer los datos locales.')}
  if(!synthetic)return pending('Sin distancias viales verificadas. La cotización real continúa desactivada.');
