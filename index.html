@@ -3813,9 +3813,30 @@ function edDeliveryQuoteDemoPanel(){
  '<button type="button" class="secondary" onclick="edDeliveryReplaceArchivedDraftProducts()">Actualizar productos de versión</button> '+
  '<select id="edQuoteArchiveProductOperation" aria-label="Operación multiproducto sobre versiones archivadas"><option value="add">Agregar productos a versiones</option><option value="remove">Quitar productos de versiones</option><option value="replace">Sustituir productos de versiones</option></select> <button type="button" class="secondary" onclick="edDeliveryBulkEditArchivedProducts()">Aplicar productos a versiones válidas</button> <button type="button" class="secondary" onclick="edDeliveryReconcileAllArchivedDrafts()">Reconciliar todas las versiones</button> <button type="button" class="secondary" onclick="edDeliveryBulkReassignArchivedDestinations()">Cambiar destino de todas las versiones válidas</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryBulkAssignSelectedProducts()">Aplicar almacén a productos seleccionados</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryRouteReadiness()">Comprobar preparación de rutas</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(false)">Comprobar estado PENDIENTE</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryQuoteDemo(true)">Simular distancias ficticias</button>'+
  '<p id="edQuoteDemoResult" role="status" aria-live="polite"><strong>PENDIENTE</strong> · No hay distancias viales verificadas.</p></section>';
+}
+function edDeliveryRouteReadiness(){
+ const result=document.getElementById('edQuoteDemoResult');
+ if(!result)return false;
+ if(edDeliveryIsQuarantined()){result.textContent='PENDIENTE · Administración de entregas en cuarentena.';return false}
+ const select=document.getElementById('edQuoteDemoProduct');
+ const ids=select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
+ const destinationId=document.getElementById('edQuoteDemoDestination')?.value||'';
+ if(!ids.length||!destinationId){result.textContent='PENDIENTE · Selecciona productos y destino para comprobar coordenadas.';return false}
+ const destination=edDeliveryDestinationsRead().find(d=>d.id===destinationId);
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const basket=edDeliveryQuoteDemoBasket(ids,origins,suppliers);
+ if(!destination||!basket){result.textContent='PENDIENTE · Destino o asociaciones de productos inválidos.';return false}
+ const coordinate=(lat,lon)=>Number.isFinite(Number(lat))&&Number.isFinite(Number(lon))&&String(lat??'').trim()!==''&&String(lon??'').trim()!==''&&Number(lat)>=22.7&&Number(lat)<=23.3&&Number(lon)>=-83&&Number(lon)<=-81.9;
+ const issues=[];
+ if(!coordinate(destination.lat,destination.lng??destination.lon))issues.push('Destino sin coordenadas válidas para La Habana');
+ for(const o of basket.origins)if(!coordinate(o.lat,o.lng??o.lon))issues.push('Almacén sin coordenadas válidas: '+o.name);
+ if(edDeliveryContextRevision()===null)issues.push('Versión de contexto ilegible');
+ result.textContent='PENDIENTE · Diagnóstico local: '+(issues.length?issues.join(' | '):'Coordenadas de origen y destino completas; faltan autorización de operador, reserva de cuota, rutas Geoapify verificadas y servicio staging aprobado.')+' · No se ha enviado ninguna solicitud externa ni generado una tarifa real.';
+ return issues.length===0;
 }
 function edDeliveryQuoteDemo(synthetic){
  const result=document.getElementById('edQuoteDemoResult');
