@@ -13,7 +13,7 @@ function planDelivery({province,lines,origins,roadDistancesKm,rateCupPerKm=200,m
  for(const line of lines){
   if(!line||!line.productId||!Array.isArray(line.allowedOriginIds)||!line.allowedOriginIds.length)
    return {available:false,reason:'missing_product_origin'};
-  const candidates=line.allowedOriginIds.map(id=>originMap.get(id)).filter(o=>o&&o.active===true&&
+  const candidates=[...new Set(line.allowedOriginIds)].map(id=>originMap.get(id)).filter(o=>o&&o.active===true&&
    (line.type==='propio'?o.type==='propio':line.type==='proveedor'&&o.type==='proveedor'&&o.supplierId===line.supplierId));
   if(!candidates.length)return {available:false,reason:'no_active_compatible_origin',productId:line.productId};
   // Explicit dispatch choice takes precedence. Never silently choose the farthest warehouse.
