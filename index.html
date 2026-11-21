@@ -1433,6 +1433,9 @@ function edDeliverySaveCheckoutPreparation(){
  if(edDeliveryIsQuarantined())return alert('Administración bloqueada: no se puede guardar la preparación.');
  const review=edSimulatedCheckoutReview;
  if(!review)return alert('Revisa primero la compra.');
+ let dependenciesBefore;
+ try{dependenciesBefore=[localStorage.getItem('enlace_demo_v1'),localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),edDeliveryContextRevision()]}catch(e){return alert('No se pudieron leer las dependencias.')}
+ if(dependenciesBefore[4]===null)return alert('Revisión de dependencias inválida.');
  const cartSnapshot=JSON.stringify(cart.map(line=>({id:line.id,qty:line.qty,color:line.color||''})));
  const lines=cart.map(line=>({line,product:state.products.find(p=>p.id===line.id)}));
  if(lines.some(x=>!x.product)||!lines.length)return alert('Carrito no válido.');
@@ -1445,6 +1448,10 @@ function edDeliverySaveCheckoutPreparation(){
   if(!product||!canOrder(product,item.qty,item.color||undefined))return alert('Existencias insuficientes o producto no disponible.');
  }
  if(JSON.stringify(cart.map(line=>({id:line.id,qty:line.qty,color:line.color||''})))!==cartSnapshot||assignments.length!==cart.length||assignments.some((item,i)=>String(item.productId)!==String(cart[i].id)||item.qty!==cart[i].qty||(item.color||'')!==(cart[i].color||'')))return alert('El carrito cambió. Revisa la preparación.');
+ try{
+  const after=[localStorage.getItem('enlace_demo_v1'),localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),edDeliveryContextRevision()];
+  if(after.some((value,i)=>value!==dependenciesBefore[i]))return alert('Las dependencias cambiaron durante la preparación. Revisa nuevamente.');
+ }catch(e){return alert('No se pudieron comprobar las dependencias.')}
  const draft={version:1,status:'PENDIENTE',assignments,createdAt:new Date().toISOString()};
  try{
   const encoded=JSON.stringify(draft);
@@ -1509,6 +1516,7 @@ function edDeliveryCreateCheckoutShipmentDraft(){
  try{
   const after={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(before.revision===null||Object.keys(before).some(k=>before[k]!==after[k])||localStorage.getItem(ED_CHECKOUT_PREPARATION_DRAFT_KEY)!==raw)return pending('Dependencias modificadas; reintenta.');
+  if(!edDeliveryCheckoutAssignmentsValidate(lines))return pending('Asociaciones, proveedores o existencias cambiaron antes del guardado.');
   const serialized=JSON.stringify(draft);
   localStorage.setItem(ED_DELIVERY_DRAFT_KEY,serialized);
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==serialized)return pending('No se pudo verificar el borrador guardado.');
