@@ -43,4 +43,15 @@ assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2,sup1:0}}).fe
 assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2.99,sup1:3.01}}).feeCup,602);
 assert.equal(run([own('own1'),sup('sup1')],{roadDistancesKm:{own1:2,sup1:5,own2:99,other:100}}).farthestKm,5);
 
+// Supplier ownership must be explicit; undefined === undefined is not authorization.
+assert.equal(run([{productId:'missing-both',type:'proveedor',allowedOriginIds:['unowned']}],{
+ origins:[...origins,{id:'unowned',type:'proveedor',active:true}],
+ roadDistancesKm:{...roadDistancesKm,unowned:5}
+}).reason,'invalid_origin_catalog');
+assert.equal(run([{productId:'missing-line-supplier',type:'proveedor',allowedOriginIds:['sup1']}]).reason,'missing_supplier_identity');
+assert.equal(run([{productId:'blank-line-supplier',type:'proveedor',supplierId:' ',allowedOriginIds:['sup1']}]).reason,'missing_supplier_identity');
+assert.equal(run([{productId:'matching-supplier',type:'proveedor',supplierId:'supplierA',allowedOriginIds:['sup1']}]).available,true);
+assert.equal(run([{productId:'wrong-supplier',type:'proveedor',supplierId:'supplierB',allowedOriginIds:['sup1']}]).reason,'no_active_compatible_origin');
+assert.equal(run([own('own1'),sup('sup1')]).selectedOrigins.length,2);
+
 console.log('PASS synthetic dispatch: own/supplier compatibility, explicit origin, farthest USED, missing road distance, Havana, minimum');
