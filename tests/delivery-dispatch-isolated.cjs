@@ -6,6 +6,8 @@ function planDelivery({province,lines,origins,roadDistancesKm,rateCupPerKm=200,m
  if(province!=='La Habana')return {available:false,reason:'outside_coverage'};
  if(!Array.isArray(lines)||!lines.length||!Array.isArray(origins)||!roadDistancesKm||typeof roadDistancesKm!=='object')
   return {available:false,reason:'invalid_input'};
+ if(origins.some(o=>!o||typeof o.id!=='string'||!o.id.trim()||(o.active!==undefined&&typeof o.active!=='boolean')||(o.type!=='propio'&&o.type!=='proveedor'))||new Set(origins.map(o=>o.id)).size!==origins.length)
+  return {available:false,reason:'invalid_origin_catalog'};
  const originMap=new Map(origins.map(o=>[o.id,o]));
  const selected=[],unresolved=[];
  for(const line of lines){
