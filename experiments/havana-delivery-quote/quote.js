@@ -9,9 +9,9 @@ function quoteDelivery(input={}) {
   if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId) return pending('INVALID_INPUT');
   if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||minKm>300||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
   if(specialFeeCup!==null&&(!Number.isSafeInteger(specialFeeCup)||specialFeeCup<0)) return pending('INVALID_SPECIAL_FEE');
-  if(suppliers.some(s=>!s||typeof s.id!=='string'||!s.id.trim())||new Set(suppliers.map(s=>s.id)).size!==suppliers.length)return pending('INVALID_SUPPLIER_CATALOG');
+  if(suppliers.some(s=>!s||typeof s.id!=='string'||!s.id.trim()||(s.active!==undefined&&typeof s.active!=='boolean'))||new Set(suppliers.map(s=>s.id)).size!==suppliers.length)return pending('INVALID_SUPPLIER_CATALOG');
   const activeSuppliers=new Set(suppliers.filter(s=>s.active!==false).map(s=>s.id));
-  if(origins.some(o=>!o||typeof o.id!=='string'||!o.id.trim()||(o.type!=='propio'&&o.type!=='proveedor'))||new Set(origins.map(o=>o.id)).size!==origins.length)return pending('INVALID_ORIGIN_CATALOG');
+  if(origins.some(o=>!o||typeof o.id!=='string'||!o.id.trim()||(o.active!==undefined&&typeof o.active!=='boolean')||(o.type!=='propio'&&o.type!=='proveedor'))||new Set(origins.map(o=>o.id)).size!==origins.length)return pending('INVALID_ORIGIN_CATALOG');
   const eligible=origins.filter(o=>o.active!==false&&(o.type==='propio'||activeSuppliers.has(o.supplierId)));
   if(origins.some(o=>o&&o.type==='proveedor'&&(typeof o.supplierId!=='string'||!o.supplierId.trim())))return pending('INVALID_SUPPLIER_REFERENCE');
   if(origins.some(o=>o.type==='proveedor'&&o.active!==false&&!activeSuppliers.has(o.supplierId)))return pending('PRODUCT_SUPPLIER_INACTIVE');
