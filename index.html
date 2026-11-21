@@ -3814,7 +3814,7 @@ function edDeliveryBulkReassignArchivedDestinations(){
   const basket=edDeliveryQuoteDemoBasket(draft.productIds,origins,suppliers);
   if(!basket){skipped.push(i);updates.push(draft);continue}
   const warehouseIds=basket.origins.map(o=>o.id);
-  if(draft.destinationId===destinationId&&Array.isArray(draft.warehouseIds)&&draft.warehouseIds.length===warehouseIds.length&&draft.warehouseIds.every((id,j)=>id===warehouseIds[j])){skipped.push(i);updates.push(draft);continue}
+  if(draft.destinationId===destinationId&&Array.isArray(draft.warehouseIds)&&draft.warehouseIds.length===warehouseIds.length&&draft.warehouseIds.every((id,j)=>id===warehouseIds[j])&&draft.snapshot&&Object.keys(before).every(k=>draft.snapshot[k]===before[k])){skipped.push(i);updates.push(draft);continue}
   updates.push({...draft,destinationId,warehouseIds});
  }
  if(skipped.length===archive.length)return pending('Ninguna versión requiere reasignación o reconciliación de almacenes.');
