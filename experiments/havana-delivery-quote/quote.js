@@ -1,6 +1,8 @@
 'use strict';
 // Isolated, network-free contract. Not connected to checkout or production.
-function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPerKm, minKm=3, minFeeCup=600, specialFeeCup=null, contextRevision, quarantined=false}={}) {
+function quoteDelivery(input={}) {
+  if(!input||typeof input!=='object'||Array.isArray(input)) input={};
+  const {origins, suppliers=[], routes, destinationId, rateCupPerKm, minKm=3, minFeeCup=600, specialFeeCup=null, contextRevision, quarantined=false}=input;
   const pending=(reason)=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:contextRevision??null});
   if(quarantined) return pending('QUARANTINE');
   if(!Number.isSafeInteger(contextRevision)||contextRevision<0) return pending('INVALID_REVISION');
@@ -42,6 +44,7 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
 // Strict boundary for any future non-synthetic route: require independently
 // supplied provenance, while never treating it as independently verified.
 function quoteVerifiedRoadDelivery(input={}) {
+ if(!input||typeof input!=='object'||Array.isArray(input)) input={};
  const pending=reason=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:input.contextRevision??null});
  if(!Array.isArray(input.routes)||!input.routes.length)return pending('ROAD_DISTANCE_MISSING');
  if(input.routes.some(r=>!r||r.status!=='verified'||!r.provenance||r.provenance.source!=='osrm'||typeof r.provenance.datasetId!=='string'||!r.provenance.datasetId.trim()||typeof r.provenance.routeId!=='string'||!r.provenance.routeId.trim()))return pending('ROAD_PROVENANCE_MISSING');
@@ -49,7 +52,9 @@ function quoteVerifiedRoadDelivery(input={}) {
  return pending('ROAD_DATASET_NOT_TRUSTED');
 }
 // Product-scoped adapter: never charge a customer for unrelated active warehouses.
-function quoteProductDelivery({productOriginIds, origins, suppliers=[], routes, ...tariff}={}) {
+function quoteProductDelivery(input={}) {
+ if(!input||typeof input!=='object'||Array.isArray(input)) input={};
+ const {productOriginIds, origins, suppliers=[], routes, ...tariff}=input;
  const pending=reason=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:tariff.contextRevision??null});
  if(!Array.isArray(productOriginIds)||!productOriginIds.length||productOriginIds.some(id=>typeof id!=='string'||!id)||new Set(productOriginIds).size!==productOriginIds.length)return pending('INVALID_PRODUCT_ORIGINS');
  if(!Array.isArray(origins)||new Set(origins.filter(o=>o&&typeof o.id==='string').map(o=>o.id)).size!==origins.length)return pending('INVALID_ORIGIN_CATALOG');
