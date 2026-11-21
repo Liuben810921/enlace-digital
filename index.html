@@ -3925,7 +3925,26 @@ function edDeliveryReassignArchivedDraftDestination(){
  let raw,archive;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return pending('Archivo ilegible.')}
  const item=Array.isArray(archive)?archive.find(d=>d.id===id):null;
- if(!item||item.version!==1||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length||new Set(item.productIds).size!==item.productIds.length)return pending('Selecciona una versión válida.');
+ if(!item||(item.version!==1&&!(item.version===2&&item.source==='checkout-simulado'))||item.status!=='PENDIENTE'||!Array.isArray(item.productIds)||!item.productIds.length||new Set(item.productIds).size!==item.productIds.length)return pending('Selecciona una versión válida.');
+ if(item.version===2){
+  const lines=edDeliveryCheckoutAssignmentsValidate(item.assignments);
+  if(!lines||JSON.stringify([...new Set(lines.map(x=>x.productId))])!==JSON.stringify(item.productIds)||JSON.stringify([...new Set(lines.map(x=>x.originId))])!==JSON.stringify(item.warehouseIds))return pending('Las asignaciones del checkout archivado ya no son válidas.');
+  let initial;
+  try{initial={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer las dependencias.')}
+  if(initial.revision===null)return pending('Revisión inválida.');
+  if(!confirm('Cambiar el destino de «'+item.name+'» a '+destination.name+'? Se conservará el almacén responsable de cada producto.'))return false;
+  if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
+  try{
+   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('El archivo cambió.');
+   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+   if(Object.keys(initial).some(k=>initial[k]!==current[k])||!edDeliveryDestinationsRead().some(d=>d.id===destinationId)||!edDeliveryCheckoutAssignmentsValidate(item.assignments))return pending('Las dependencias cambiaron.');
+   const updated=archive.map(d=>d.id===id?{...d,destinationId,snapshot:current,reconciledAt:new Date().toISOString()}:d);
+   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify(updated));
+   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==JSON.stringify(updated))return pending('No se pudo confirmar el guardado.');
+  }catch(e){return pending('No se pudo actualizar la versión.')}
+  output.textContent='PENDIENTE · Destino de «'+item.name+'» actualizado. Asignaciones por producto conservadas; sin pedidos ni tarifas.';
+  return true;
+ }
  const basket=edDeliveryQuoteDemoBasket(item.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!basket)return pending('Los productos de la versión no tienen almacenes compatibles. Reasigna primero sus dependencias.');
  let initialSnapshot;
