@@ -1425,7 +1425,7 @@ async function edOfficialOrderPreview(selectedId=null){
  const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
  if(!Number.isFinite(total)){alert('El importe total no es válido. Revisa los precios y cantidades.');return;}
  const deliveryPreview=edDeliveryCheckoutPreview(lines);
- const reviewFingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[]})),recipient,choice,profile:edCustomerProfile});
+ const reviewFingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[],origen_producto:x.product.origen_producto,disponible:x.product.disponible,archivado:x.product.archivado})),recipient,choice,profile:edCustomerProfile});
  edSimulatedCheckoutReview={fingerprint:reviewFingerprint,choice};
  modal('<h2>Finalizar compra</h2><p class="alert">MODO PRUEBA: no se registran ni envían pedidos reales, no se cobra y no se descuenta inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
@@ -1452,7 +1452,7 @@ function edConfirmSimulatedCheckout(){
  const loc=choice?.startsWith('location:')?edCustomerDeliveryLocations.find(r=>String(r.id)===choice.slice(9)):null;
  const recipient=isSelf?{nombre:profile.nombre,telefono:profile.telefono,provincia:profile.provincia,municipio:profile.municipio,barrio:profile.barrio,direccion:profile.direccion_habitual}:loc?{nombre:loc.nombre_receptor,telefono:loc.telefono_receptor,provincia:loc.provincia,municipio:loc.municipio,barrio:loc.barrio,direccion:loc.direccion,referencias:loc.referencias}:edCustomerRecipients.find(r=>String(r.id)===choice);
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)}));
- const fingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>x.product?({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[]}):null),recipient,choice,profile});
+ const fingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>x.product?({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[],origen_producto:x.product.origen_producto,disponible:x.product.disponible,archivado:x.product.archivado}):null),recipient,choice,profile});
  if(!review||!recipient||review.fingerprint!==fingerprint){
   return modal('<h2>Revisión necesaria</h2><p class="alert">El carrito, el inventario o el destinatario cambió desde la vista previa. Revisa nuevamente la compra antes de confirmar la prueba.</p><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Volver a revisar</button>');
  }
