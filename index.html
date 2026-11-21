@@ -3782,6 +3782,29 @@ function edDeliveryReconcileShipmentDraft(){
  if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
  let raw,draft;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);draft=JSON.parse(raw||'null')}catch(e){return pending('Borrador ilegible.')}
+ if(draft?.version===2&&draft.source==='checkout-simulado'){
+  if(draft.status!=='PENDIENTE'||!Array.isArray(draft.assignments)||!Array.isArray(draft.productIds)||!Array.isArray(draft.warehouseIds))return pending('Borrador de checkout inválido.');
+  const lines=edDeliveryCheckoutAssignmentsValidate(draft.assignments);
+  if(!lines||JSON.stringify([...new Set(lines.map(x=>x.productId))])!==JSON.stringify(draft.productIds)||JSON.stringify([...new Set(lines.map(x=>x.originId))])!==JSON.stringify(draft.warehouseIds))return pending('Asignaciones, proveedores o inventario inválidos; edita la preparación original.');
+  if(!edDeliveryDestinationsRead().some(d=>d.id===draft.destinationId))return pending('El destino ya no existe; reasigna el destino antes de reconciliar.');
+  const readSnapshot=()=>({inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()});
+  let initial;
+  try{initial=readSnapshot()}catch(e){return pending('No se pudieron leer las dependencias.')}
+  if(initial.revision===null)return pending('Revisión inválida.');
+  if(!confirm('Actualizar las dependencias del borrador multiproducto? Se conservarán los almacenes responsables de cada línea.'))return false;
+  if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
+  try{
+   const current=readSnapshot();
+   if(Object.keys(initial).some(k=>initial[k]!==current[k])||localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('Las dependencias o el borrador cambiaron.');
+   const verified=edDeliveryCheckoutAssignmentsValidate(draft.assignments);
+   if(!verified||JSON.stringify(verified)!==JSON.stringify(lines)||!edDeliveryDestinationsRead().some(d=>d.id===draft.destinationId))return pending('Asignaciones o destino cambiaron.');
+   const serialized=JSON.stringify({...draft,assignments:verified,snapshot:current,reconciledAt:new Date().toISOString()});
+   localStorage.setItem(ED_DELIVERY_DRAFT_KEY,serialized);
+   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==serialized)return pending('No se pudo confirmar la actualización.');
+  }catch(e){return pending('No se pudo actualizar el borrador.')}
+  output.textContent='PENDIENTE · Borrador multiproducto reconciliado sin modificar almacenes responsables ni inventario.';
+  return true;
+ }
  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No existe un borrador recuperable.');
  const products=document.getElementById('edQuoteDemoProduct'),destinations=document.getElementById('edQuoteDemoDestination');
  if(!products||!destinations||draft.productIds.some(id=>![...products.options].some(o=>o.value===id))||![...destinations.options].some(o=>o.value===draft.destinationId))return pending('El destino o algún producto fue eliminado. Reconfigura la entrega manualmente.');
