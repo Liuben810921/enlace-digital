@@ -3782,7 +3782,7 @@ function edDeliveryBulkEditArchivedProducts(){
  for(let i=0;i<archive.length;i++){
   if(skipped.includes(i))continue;
   const basket=edDeliveryQuoteDemoBasket(updates[i].productIds,latestOrigins,latestSuppliers);
-  if(!basket||!latestDestinations.has(updates[i].destinationId)||basket.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Las dependencias cambiaron durante la confirmación.');
+  if(!basket||!latestDestinations.has(updates[i].destinationId)||JSON.stringify(basket.origins.map(o=>o.id))!==JSON.stringify(updates[i].warehouseIds))return pending('Las dependencias cambiaron durante la confirmación.');
  }
  try{
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('Las versiones cambiaron. Reintenta.');
@@ -3833,7 +3833,7 @@ function edDeliveryBulkReassignArchivedDestinations(){
  for(let i=0;i<archive.length;i++){
   if(skipped.includes(i))continue;
   const fresh=edDeliveryQuoteDemoBasket(archive[i].productIds,currentOrigins,currentSuppliers);
-  if(!fresh||fresh.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Las asociaciones cambiaron. Reintenta.');
+  if(!fresh||JSON.stringify(fresh.origins.map(o=>o.id))!==JSON.stringify(updates[i].warehouseIds))return pending('Las asociaciones cambiaron. Reintenta.');
  }
  try{
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('El archivo cambió durante la confirmación.');
@@ -3880,7 +3880,7 @@ function edDeliveryReconcileAllArchivedDrafts(){
  for(let i=0;i<archive.length;i++){
   if(skipped.includes(i))continue;
   const fresh=edDeliveryQuoteDemoBasket(archive[i].productIds,latestOrigins,latestSuppliers);
-  if(!fresh||!latestDestinations.has(archive[i].destinationId)||fresh.origins.map(o=>o.id).join('|')!==updates[i].warehouseIds.join('|'))return pending('Cambios detectados durante la confirmación.');
+  if(!fresh||!latestDestinations.has(archive[i].destinationId)||JSON.stringify(fresh.origins.map(o=>o.id))!==JSON.stringify(updates[i].warehouseIds))return pending('Cambios detectados durante la confirmación.');
  }
  try{
   if(edDeliveryIsQuarantined())return pending('La cuarentena se activó antes del guardado.');
