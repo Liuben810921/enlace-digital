@@ -9,8 +9,10 @@ function quoteDelivery(input={}) {
   if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId) return pending('INVALID_INPUT');
   if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||minKm>300||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
   if(specialFeeCup!==null&&(!Number.isSafeInteger(specialFeeCup)||specialFeeCup<0)) return pending('INVALID_SPECIAL_FEE');
-  const activeSuppliers=new Set(suppliers.filter(s=>s&&typeof s.id==='string'&&s.active!==false).map(s=>s.id));
+  if(suppliers.some(s=>!s||typeof s.id!=='string'||!s.id.trim())||new Set(suppliers.map(s=>s.id)).size!==suppliers.length)return pending('INVALID_SUPPLIER_CATALOG');
+  const activeSuppliers=new Set(suppliers.filter(s=>s.active!==false).map(s=>s.id));
   const eligible=origins.filter(o=>o&&typeof o.id==='string'&&o.id&&o.active!==false&&(o.type==='propio'||(o.type==='proveedor'&&activeSuppliers.has(o.supplierId))));
+  if(origins.some(o=>o&&o.type==='proveedor'&&(typeof o.supplierId!=='string'||!o.supplierId.trim())))return pending('INVALID_SUPPLIER_REFERENCE');
   if(!eligible.length) return pending('NO_ACTIVE_ORIGINS');
   if(new Set(eligible.map(o=>o.id)).size!==eligible.length) return pending('DUPLICATE_ORIGIN');
   const distances=[];
