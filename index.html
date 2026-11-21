@@ -3574,7 +3574,7 @@ function edDeliveryReconcileShipmentDraft(){
  if(snapshot.revision===null)return pending('Revisión de entregas inválida.');
  if(initialRevision!==snapshot.revision||keys.some((k,i)=>initial[i]!==snapshot[({[ED_DELIVERY_ORIGINS_KEY]:'origins',[ED_DELIVERY_SUPPLIERS_KEY]:'suppliers',[ED_DELIVERY_DESTINATIONS_KEY]:'destinations',[ED_PRODUCT_ORIGINS_KEY]:'associations','enlace_demo_v1':'inventory'})[k]]))return pending('Las dependencias cambiaron durante la reconciliación; repite la operación.');
  const fresh=edDeliveryQuoteDemoBasket(draft.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
- if(!fresh||fresh.origins.map(o=>o.id).join('|')!==newWarehouses.join('|'))return pending('Las asociaciones cambiaron durante la confirmación.');
+ if(!fresh||JSON.stringify(fresh.origins.map(o=>o.id))!==JSON.stringify(newWarehouses))return pending('Las asociaciones cambiaron durante la confirmación.');
  try{
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('El borrador cambió durante la confirmación.');
   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
