@@ -4,6 +4,7 @@ function inspectCandidateDelivery(input={},prepare,quoteVerified) {
  const pending=reason=>({status:'PENDIENTE',reason,quote:null,routes:[]});
  if(!input||typeof input!=='object'||Array.isArray(input)||typeof prepare!=='function'||typeof quoteVerified!=='function')return pending('INVALID_INPUT');
  const {origins,suppliers=[],productOriginIds,destinationId,contextRevision}=input;
+ if(input.quarantined)return pending('QUARANTINE');
  if(!Array.isArray(origins)||!origins.length||!Array.isArray(suppliers)||!Array.isArray(productOriginIds)||!productOriginIds.length)return pending('INVALID_ASSOCIATIONS');
  const ids=new Set(),supplierIds=new Set();
  for(const s of suppliers){if(!s||typeof s.id!=='string'||!s.id.trim()||supplierIds.has(s.id)||s.active!==undefined&&typeof s.active!=='boolean')return pending('INVALID_SUPPLIERS');supplierIds.add(s.id)}
