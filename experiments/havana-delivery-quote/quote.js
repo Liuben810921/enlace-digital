@@ -42,6 +42,7 @@ function quoteProductDelivery({productOriginIds, origins, suppliers=[], routes, 
  const pending=reason=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:tariff.contextRevision??null});
  if(!Array.isArray(productOriginIds)||!productOriginIds.length||productOriginIds.some(id=>typeof id!=='string'||!id)||new Set(productOriginIds).size!==productOriginIds.length)return pending('INVALID_PRODUCT_ORIGINS');
  if(!Array.isArray(origins)||new Set(origins.filter(o=>o&&typeof o.id==='string').map(o=>o.id)).size!==origins.length)return pending('INVALID_ORIGIN_CATALOG');
+ if(!Array.isArray(suppliers)||!Array.isArray(routes))return pending('INVALID_INPUT');
  const selected=productOriginIds.map(id=>origins.find(o=>o&&o.id===id));
  if(selected.some(o=>!o))return pending('PRODUCT_ORIGIN_MISSING');
  if(new Set(selected.map(o=>o.type)).size!==1||selected[0].type==='proveedor'&&new Set(selected.map(o=>o.supplierId)).size!==1)return pending('PRODUCT_ORIGINS_INCOMPATIBLE');
