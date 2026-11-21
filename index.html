@@ -3022,7 +3022,8 @@ function edProductOriginsCollect(mode){
  if(!target)return [];
  const type=document.getElementById(mode==='edit'?'editOrigin':'porigin')?.value||'propio';
  const supplierId=type==='proveedor'?target.querySelector('.ed-product-supplier')?.value:null;
- return [...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value).filter(id=>edDeliveryOriginEligible(id,type,supplierId));
+ // Preserve every checked ID: edProductOriginsSave must reject incompatible selections, never silently discard them.
+ return [...target.querySelectorAll('.ed-product-origin:checked')].map(el=>el.value);
 }
 
 function deliveryBarrios(){let m=document.getElementById('admM').value;document.getElementById('admB').innerHTML=(barrios[m]||['Zona central (por configurar)']).map(b=>`<option>${esc(b)}</option>`).join('');deliveryPrice()}function deliveryPrice(){let m=document.getElementById('admM').value,b=document.getElementById('admB').value;document.getElementById('admFee').value=state.fees[m+'|'+b]??''}function changeProduct(id,k,v){
