@@ -3612,7 +3612,7 @@ function edDeliveryArchiveShipmentDraft(){
   collectionRaw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);
   collection=JSON.parse(collectionRaw||'[]');
  }catch(e){return pending('No se pudieron leer los borradores.')}
- if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!Array.isArray(draft.warehouseIds)||!Array.isArray(collection)||collection.length>=30)return pending('Borrador inválido o límite de 30 versiones alcanzado.');
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!draft.destinationId.trim()||!Array.isArray(draft.warehouseIds)||!draft.warehouseIds.length||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length||!draft.snapshot||typeof draft.snapshot!=='object'||draft.snapshot.revision===null||draft.snapshot.revision===undefined||!Array.isArray(collection)||collection.length>=30)return pending('Borrador inválido o límite de 30 versiones alcanzado.');
  const name=document.getElementById('edQuoteDraftName')?.value.trim();
  if(!name||name.length>80)return pending('Introduce un nombre de hasta 80 caracteres.');
  const id='draft-'+Date.now()+'-'+Math.random().toString(36).slice(2,9);
