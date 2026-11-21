@@ -3775,6 +3775,7 @@ function edDeliveryBulkEditArchivedProducts(){
  if(!changed)return pending('Ninguna versión admite la edición. Revisa productos, existencias, proveedores, almacenes y destinos.');
  if(!confirm('Aplicar «'+operation+'» con '+selected.length+' producto(s) a '+changed+' versiones? '+skipped.length+' se conservarán sin cambios. No genera pedidos ni tarifas.'))return false;
  if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la confirmación.');
+ if(document.getElementById('edQuoteArchiveProductOperation')?.value!==operation||!select||[...select.selectedOptions].map(o=>o.value).filter(Boolean).join('\u0000')!==selected.join('\u0000'))return pending('La operación o la selección de productos cambió durante la confirmación. Reintenta.');
  if(!edInventoryLoaded||edInventoryPendingSaves>0||JSON.stringify(state.products)!==edInventorySnapshot)return pending('El inventario cambió durante la confirmación.');
  const latestOrigins=edDeliveryOriginsRead(),latestSuppliers=edDeliverySuppliersRead(),latestDestinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
  for(let i=0;i<archive.length;i++){
