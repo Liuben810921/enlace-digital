@@ -3654,7 +3654,9 @@ function edDeliveryRestoreArchivedDraft(){
   if(Object.keys(snapshot).some(k=>snapshot[k]!==current[k]))return pending('Las dependencias cambiaron durante la restauración.');
   if(item.productIds.some(id=>![...productSelect.options].some(o=>o.value===id))||![...destinationSelect.options].some(o=>o.value===item.destinationId))return pending('Los selectores cambiaron durante la restauración. Se conserva el borrador de trabajo.');
   const {id:archiveId,name,archivedAt,...draft}=item;
-  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft));
+  const restoredDraft=JSON.stringify(draft);
+  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,restoredDraft);
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==restoredDraft)return pending('No se pudo confirmar la restauración; se conserva el borrador activo.');
  }catch(e){return pending('No se pudo restaurar la versión.')}
  return edDeliveryLoadShipmentDraft();
 }
