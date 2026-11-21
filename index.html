@@ -1419,6 +1419,58 @@ function edDeliveryPreparationChoices(lines,map,origins,suppliers){
   return {productId:product.id,color:line.color||'',name:product.name||String(product.id),qty:line.qty,options};
  });
 }
+const ED_CHECKOUT_PREPARATION_DRAFT_KEY='ed_checkout_preparation_offline_v1';
+function edDeliverySelectedPreparation(choices){
+ const assignments=[];
+ for(let i=0;i<choices.length;i++){
+  const selected=document.getElementById('edPreparationOrigin'+i)?.value;
+  if(!selected||!choices[i].options.some(o=>o.id===selected))return null;
+  assignments.push({productId:choices[i].productId,color:choices[i].color,qty:choices[i].qty,originId:selected});
+ }
+ return assignments;
+}
+function edDeliverySaveCheckoutPreparation(){
+ if(edDeliveryIsQuarantined())return alert('Administración bloqueada: no se puede guardar la preparación.');
+ const review=edSimulatedCheckoutReview;
+ if(!review)return alert('Revisa primero la compra.');
+ const lines=cart.map(line=>({line,product:state.products.find(p=>p.id===line.id)}));
+ if(lines.some(x=>!x.product)||!lines.length)return alert('Carrito no válido.');
+ const current=edDeliveryCheckoutPreview(lines),choices=current.preparation?.choices||[];
+ if(choices.length!==lines.length)return alert('No se pudieron verificar los almacenes.');
+ const assignments=edDeliverySelectedPreparation(choices);
+ if(!assignments)return alert('Selecciona un almacén activo para cada producto.');
+ for(const item of assignments){
+  const product=state.products.find(p=>p.id===item.productId);
+  if(!product||!canOrder(product,item.qty,item.color||undefined))return alert('Existencias insuficientes o producto no disponible.');
+ }
+ const draft={version:1,status:'PENDIENTE',assignments,createdAt:new Date().toISOString()};
+ try{
+  const encoded=JSON.stringify(draft);
+  localStorage.setItem(ED_CHECKOUT_PREPARATION_DRAFT_KEY,encoded);
+  if(localStorage.getItem(ED_CHECKOUT_PREPARATION_DRAFT_KEY)!==encoded)throw Error('persistencia');
+ }catch(e){return alert('No se pudo guardar la preparación offline.')}
+ alert('Preparación guardada para Administración de entregas. No se creó un pedido ni se reservó inventario.');
+}
+function edDeliveryLoadCheckoutPreparation(){
+ const output=document.getElementById('edQuoteDemoResult');
+ if(!output)return false;
+ const pending=message=>{output.textContent='PENDIENTE · '+message;return false};
+ if(edDeliveryIsQuarantined())return pending('Administración bloqueada.');
+ let draft;
+ try{draft=JSON.parse(localStorage.getItem(ED_CHECKOUT_PREPARATION_DRAFT_KEY)||'null')}catch(e){return pending('Preparación ilegible.')}
+ if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.assignments)||!draft.assignments.length)return pending('No hay preparación de checkout guardada.');
+ const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
+ const lines=[];
+ for(const item of draft.assignments){
+  if(!item||!Number.isSafeInteger(item.qty)||item.qty<1||typeof item.originId!=='string')return pending('Línea de preparación inválida.');
+  const product=state.products.find(p=>String(p.id)===String(item.productId));
+  const eligible=edDeliveryQuoteDemoEligible(String(item.productId),origins,suppliers);
+  if(!product||!eligible?.some(o=>o.id===item.originId)||!canOrder(product,item.qty,item.color||undefined))return pending('Asociación, proveedor o existencias modificados. Revisa y prepara nuevamente.');
+  lines.push({name:product.name||String(product.id),qty:item.qty,color:item.color||'',origin:origins.find(o=>o.id===item.originId)?.name||item.originId});
+ }
+ output.textContent='PENDIENTE · Preparación del checkout: '+lines.map(x=>x.name+(x.color?' ('+x.color+')':'')+' × '+x.qty+' → '+x.origin).join(' | ')+'. Selecciones verificadas en este momento; sin reserva, pedido ni tarifa.';
+ return true;
+}
 function edDeliveryPreparationConfirm(){
  const review=edSimulatedCheckoutReview;
  if(!review)return edOfficialRecipientCheckout();
@@ -1503,6 +1555,7 @@ async function edOfficialOrderPreview(selectedId=null){
  '</section>'+
  '<section class="panel"><strong>Vista previa de mensajería · PENDIENTE</strong><p class="note">Sin rutas viales verificadas ni precio de mensajería. No es una cotización.</p>'+deliveryPreview.rows.map(r=>'<p>'+esc(r.name)+' · '+esc((r.origins||[]).join(', ')||'Sin punto de salida')+' · '+esc(r.reason)+'</p>').join('')+'</section>'+
  '<p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
+ '<button class="secondary" style="width:100%;margin:10px 0" onclick="edDeliverySaveCheckoutPreparation()">Guardar preparación para Administración de entregas</button>'+
  '<button class="primary" style="width:100%;margin:10px 0" onclick="edDeliveryPreparationConfirm()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
 }
 let edSimulatedCheckoutReview=null;
@@ -4063,6 +4116,7 @@ function edDeliveryQuoteDemoPanel(){
  '<div class="field"><label for="edQuoteDemoDestination">Destino de referencia</label><select id="edQuoteDemoDestination" onchange="edQuoteDemoSelectionRemember()"><option value="">Seleccionar destino</option>'+options+'</select></div>'+
  '<div class="field"><label for="edQuoteDemoRate">Tarifa ficticia CUP/km</label><input id="edQuoteDemoRate" type="number" min="1" step="any" oninput="edQuoteDemoRateRemember(this)" value="'+esc(edQuoteDemoRateDraft)+'"></div>'+
  '<button type="button" class="secondary" onclick="edDeliveryPrepareShipment()">Preparar entrega multiproducto</button> '+
+ '<button type="button" class="secondary" onclick="edDeliveryLoadCheckoutPreparation()">Ver preparación del checkout</button> '+
  '<button type="button" class="secondary" onclick="edDeliverySaveShipmentDraft()">Guardar borrador offline</button> <button type="button" class="secondary" onclick="edDeliveryLoadShipmentDraft()">Recuperar borrador</button> '+
  '<button type="button" class="secondary" onclick="edDeliveryReconcileShipmentDraft()">Reconciliar dependencias</button> <button type="button" class="secondary" onclick="edDeliveryDeleteShipmentDraft()">Eliminar borrador</button> '+
  '<div class="field"><label>Nombre de versión del borrador</label><input id="edQuoteDraftName" maxlength="80" placeholder="Ej. Entrega Vedado"></div><button type="button" class="secondary" onclick="edDeliveryArchiveShipmentDraft()">Guardar versión</button> '+
