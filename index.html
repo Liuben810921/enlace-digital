@@ -3581,7 +3581,9 @@ function edDeliveryReconcileShipmentDraft(){
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('El borrador cambió durante la confirmación.');
   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(Object.keys(snapshot).some(k=>snapshot[k]!==current[k]))return pending('Las dependencias cambiaron durante la confirmación.');
-  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify({...draft,warehouseIds:newWarehouses,snapshot,reconciledAt:new Date().toISOString()}));
+  const reconciledDraft=JSON.stringify({...draft,warehouseIds:newWarehouses,snapshot,reconciledAt:new Date().toISOString()});
+  localStorage.setItem(ED_DELIVERY_DRAFT_KEY,reconciledDraft);
+  if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==reconciledDraft)return pending('No se pudo confirmar la persistencia del borrador reconciliado.');
  }catch(e){return pending('No se pudo actualizar el borrador.')}
  for(const option of products.options)option.selected=draft.productIds.includes(option.value);
  destinations.value=draft.destinationId;
