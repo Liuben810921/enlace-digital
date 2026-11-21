@@ -1326,7 +1326,7 @@ function edOfficialSelfDelivery(){
 }
 function edOfficialOtherDelivery(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
- const cards=edCustomerRecipients.map(r=>'<button class="secondary" style="display:block;width:100%;text-align:left;margin:10px 0;padding:14px" onclick="edOfficialOrderPreview('+Number(r.id)+')"><strong>'+esc(r.nombre)+'</strong><div class="note">'+esc(r.telefono)+'</div><div class="note">'+esc([r.provincia,r.municipio,r.barrio,r.direccion].filter(Boolean).join(', '))+'</div></button>').join('');
+ const cards=edCustomerRecipients.map(r=>'<button class="secondary" style="display:block;width:100%;text-align:left;margin:10px 0;padding:14px" onclick="edOfficialOrderPreview('+Number(r.id)+')"><strong>'+esc(r.nombre)+'</strong><div class="note">'+esc(r.telefono)+'</div><div class="note">'+esc([r.provincia,r.municipio,r.barrio,r.direccion].filter(Boolean).join(', '))+'</div></button><button class="secondary" style="width:100%;margin:-5px 0 12px" onclick="edOfficialRecipientEdit('+Number(r.id)+')">Editar datos de este destinatario</button>').join('');
  modal('<h2>Otra persona recibirá la compra</h2><p class="note">Selecciona un destinatario registrado o añade uno nuevo.</p>'+cards+
  '<button class="primary" style="width:100%;margin-top:10px" onclick="edOfficialRecipientNew()">Añadir nuevo destinatario</button>'+
  '<button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialRecipientCheckout()">Volver</button>');
@@ -1341,6 +1341,23 @@ function edMunicipalitiesChange(prefix){
  const province=document.getElementById(prefix+'Province')?.value,select=document.getElementById(prefix+'Municipality');
  if(!select)return;
  select.innerHTML='<option value="">Seleccionar municipio</option>'+(ED_CUBA_MUNICIPIOS[province]||[]).map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+}
+function edOfficialRecipientEdit(id){
+ if(!edCustomerProfile)return edOfficialCustomerLogin();
+ const recipient=edCustomerRecipients.find(r=>String(r.id)===String(id));
+ if(!recipient)return edOfficialOtherDelivery();
+ modal('<h2>Editar destinatario</h2><p class="note">Actualiza los datos de entrega de esta persona. No se genera ningún pedido.</p>'+
+ ['Nombre completo|Name','Teléfono cubano|Phone'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ edProvinceMunicipalityFields('edDelivery')+
+ ['Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ '<input type="hidden" id="edDeliveryChoice" value="'+Number(recipient.id)+'"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar cambios y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOtherDelivery()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
+ const values={Name:recipient.nombre,Phone:recipient.telefono,Neighborhood:recipient.barrio,Address:recipient.direccion,References:recipient.referencias};
+ for(const [key,value] of Object.entries(values))document.getElementById('edDelivery'+key).value=value||'';
+ const province=document.getElementById('edDeliveryProvince');
+ if([...province.options].some(o=>o.value===recipient.provincia))province.value=recipient.provincia;
+ edMunicipalitiesChange('edDelivery');
+ const municipality=document.getElementById('edDeliveryMunicipality');
+ if([...municipality.options].some(o=>o.value===recipient.municipio))municipality.value=recipient.municipio;
 }
 function edOfficialRecipientNew(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
