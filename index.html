@@ -1417,12 +1417,13 @@ async function edOfficialOrderPreview(selectedId=null){
  if(!recipient){alert('Selecciona una dirección o un destinatario válido.');return;}
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)})).filter(x=>x.product&&Number.isInteger(x.line.qty)&&x.line.qty>0);
  if(!lines.length)return alert('Añade productos al carrito para preparar el pedido.');
- if(lines.length!==cart.length||lines.some(x=>!Number.isFinite(Number(x.product.price))||Number(x.product.price)<0)){
+ if(lines.length!==cart.length||lines.some(x=>x.product.price===null||String(x.product.price).trim()===''||!Number.isFinite(Number(x.product.price))||Number(x.product.price)<0||!Number.isFinite(Number(x.product.price)*x.line.qty))){
   const status=document.getElementById('edDeliveryStatus');
   if(status)status.textContent='Hay productos o precios no válidos. Revisa el carrito.';else alert('Hay productos o precios no válidos. Revisa el carrito.');
   return;
  }
  const total=lines.reduce((sum,x)=>sum+Number(x.product.price)*x.line.qty,0);
+ if(!Number.isFinite(total)){alert('El importe total no es válido. Revisa los precios y cantidades.');return;}
  const deliveryPreview=edDeliveryCheckoutPreview(lines);
  const reviewFingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[]})),recipient,choice,profile:edCustomerProfile});
  edSimulatedCheckoutReview={fingerprint:reviewFingerprint,choice};
