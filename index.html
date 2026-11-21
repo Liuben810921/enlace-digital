@@ -1438,6 +1438,12 @@ async function edOfficialOrderPreview(selectedId=null){
 }
 let edSimulatedCheckoutReview=null;
 function edConfirmSimulatedCheckout(){
+ const availability=validateCart();
+ if(availability.removed||availability.adjusted){
+  edSimulatedCheckoutReview=null;
+  renderFloatingCart();
+  return modal('<h2>Revisión necesaria</h2><p class="alert">La disponibilidad del carrito cambió. Revisa nuevamente la compra antes de confirmar la prueba.</p><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Volver a revisar</button>');
+ }
  const review=edSimulatedCheckoutReview;
  edSimulatedCheckoutReview=null;
  const choice=review?.choice;
