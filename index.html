@@ -3683,6 +3683,7 @@ function edDeliveryReassignArchivedDraftDestination(){
  try{initialSnapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias iniciales.')}
  if(initialSnapshot.revision===null)return pending('Revisión inicial inválida.');
  if(!confirm('Cambiar el destino de «'+item.name+'» a '+destination.name+' y actualizar sus almacenes? La versión seguirá PENDIENTE.'))return false;
+ if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la confirmación.');
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
  if(snapshot.revision===null||Object.keys(initialSnapshot).some(k=>initialSnapshot[k]!==snapshot[k]))return pending('Las dependencias cambiaron durante la confirmación.');
@@ -3692,6 +3693,7 @@ function edDeliveryReassignArchivedDraftDestination(){
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('Las versiones cambiaron.');
   const now={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(Object.keys(snapshot).some(k=>snapshot[k]!==now[k]))return pending('Las dependencias cambiaron.');
+  if(edDeliveryIsQuarantined())return pending('Cuarentena activada antes del guardado.');
   const updated=archive.map(d=>d.id===id?{...d,destinationId,warehouseIds:basket.origins.map(o=>o.id),snapshot,reconciledAt:new Date().toISOString()}:d);
   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,JSON.stringify(updated));
  }catch(e){return pending('No se pudo actualizar la versión.')}
