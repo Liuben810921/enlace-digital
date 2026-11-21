@@ -1435,6 +1435,7 @@ async function edOfficialOrderPreview(selectedId=null){
  '<p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
  '<button class="primary" style="width:100%;margin:10px 0" onclick="edConfirmSimulatedCheckout()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
 }
+let edSimulatedCheckoutReview=null;
 function edConfirmSimulatedCheckout(){
  const review=edSimulatedCheckoutReview;
  edSimulatedCheckoutReview=null;
