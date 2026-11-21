@@ -1402,6 +1402,12 @@ async function edOfficialOrderPreview(selectedId=null){
   renderFloatingCart();return;
  }
  try{await edCustomerToken()}catch(e){return edOfficialCustomerLogin()}
+ const refreshedAvailability=validateCart();
+ if(refreshedAvailability.removed||refreshedAvailability.adjusted){
+  const status=document.getElementById('edDeliveryStatus');
+  if(status)status.textContent='El carrito cambió por disponibilidad. Revísalo antes de preparar el pedido.';else alert('El carrito cambió por disponibilidad. Revísalo antes de preparar el pedido.');
+  renderFloatingCart();return;
+ }
  if(!edCustomerProfile)return edOfficialCustomerLogin();
  const choice=selectedId===null?document.getElementById('edDeliveryChoice')?.value:String(selectedId);
  const isSelf=choice==='self'&&edCustomerProfile.residencia==='cuba'&&!!edCustomerProfile.direccion_habitual;
