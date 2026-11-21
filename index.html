@@ -3755,6 +3755,7 @@ function edDeliveryBulkEditArchivedProducts(){
   if(!inventory||JSON.stringify(inventory.products)!==edInventorySnapshot)throw Error('Inventario desincronizado');
  }catch(e){return pending('No se pudo verificar el inventario y las versiones.')}
  if(!Array.isArray(archive)||!archive.length||archive.length>30)return pending('El archivo debe contener entre 1 y 30 versiones.');
+ if(snapshot.revision===null)return pending('Revisión inicial de entregas inválida.');
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead(),destinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
  const updates=[],skipped=[];
  for(let i=0;i<archive.length;i++){
@@ -3787,6 +3788,7 @@ function edDeliveryBulkEditArchivedProducts(){
   if(localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==raw)return pending('Las versiones cambiaron. Reintenta.');
   const now={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(Object.keys(snapshot).some(k=>snapshot[k]!==now[k]))return pending('El inventario o las dependencias cambiaron.');
+  if(now.revision===null)return pending('Revisión de entregas inválida antes del guardado.');
   if(edDeliveryIsQuarantined())return pending('Cuarentena activada antes de guardar las versiones.');
   const stamp=new Date().toISOString();
   const serializedArchive=JSON.stringify(updates.map((d,i)=>skipped.includes(i)?d:{...d,snapshot,reconciledAt:stamp}));
