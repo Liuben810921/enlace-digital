@@ -3843,6 +3843,9 @@ function edDeliveryReconcileAllArchivedDrafts(){
  let raw,archive;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY);archive=JSON.parse(raw||'[]')}catch(e){return pending('Archivo de versiones ilegible.')}
  if(!Array.isArray(archive)||!archive.length||archive.length>30)return pending('No hay versiones válidas para procesar.');
+ let before;
+ try{before={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer dependencias iniciales.')}
+ if(before.revision===null)return pending('Revisión inicial inválida.');
  const destinations=new Set(edDeliveryDestinationsRead().map(d=>d.id));
  const origins=edDeliveryOriginsRead(),suppliers=edDeliverySuppliersRead();
  const updates=[],skipped=[];
@@ -3852,13 +3855,10 @@ function edDeliveryReconcileAllArchivedDrafts(){
   const basket=edDeliveryQuoteDemoBasket(draft.productIds,origins,suppliers);
   if(!basket){skipped.push(index);updates.push(draft);continue}
   const warehouseIds=basket.origins.map(o=>o.id);
-  if(Array.isArray(draft.warehouseIds)&&warehouseIds.length===draft.warehouseIds.length&&warehouseIds.every((id,j)=>id===draft.warehouseIds[j])){skipped.push(index);updates.push(draft);continue}
+  if(Array.isArray(draft.warehouseIds)&&warehouseIds.length===draft.warehouseIds.length&&warehouseIds.every((id,j)=>id===draft.warehouseIds[j])&&draft.snapshot&&Object.keys(before).every(k=>draft.snapshot[k]===before[k])){skipped.push(index);updates.push(draft);continue}
   updates.push({...draft,warehouseIds});
  }
  if(updates.length===skipped.length)return pending('Ninguna versión requiere reconciliación de almacenes.');
- let before;
- try{before={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron leer dependencias iniciales.')}
- if(before.revision===null)return pending('Revisión inicial inválida.');
  if(!confirm('Reconciliar '+(updates.length-skipped.length)+' versiones y conservar '+skipped.length+' sin cambios? No genera pedidos ni tarifas.'))return false;
  let snapshot;
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar dependencias.')}
