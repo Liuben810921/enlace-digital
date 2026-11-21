@@ -1406,6 +1406,34 @@ function edDeliveryPreparationGroups(lines,map,origins,suppliers){
  }
  return {groups:[...groups.values()],unassigned:rows};
 }
+function edDeliveryPreparationChoices(lines,map,origins,suppliers){
+ return lines.map(({line,product})=>{
+  const ids=Array.isArray(map[String(product.id)])?map[String(product.id)]:[];
+  const options=[...new Set(ids)].map(id=>{
+   const origin=origins.find(o=>o.id===id);
+   const supplier=origin?.type==='proveedor'?suppliers.find(p=>p.id===origin.supplierId):null;
+   if(!origin||origin.active===false||(origin.type==='proveedor'&&(!supplier||supplier.active===false)))return null;
+   if(origin.type!=='proveedor'&&origin.type!=='propio')return null;
+   return {id,name:origin.name||id,supplier:origin.type==='proveedor'?supplier.name:'Inventario propio'};
+  }).filter(Boolean);
+  return {productId:product.id,color:line.color||'',name:product.name||String(product.id),qty:line.qty,options};
+ });
+}
+function edDeliveryPreparationConfirm(){
+ const review=edSimulatedCheckoutReview;
+ if(!review)return edOfficialRecipientCheckout();
+ const current=edDeliveryCheckoutPreview(cart.map(line=>({line,product:state.products.find(p=>p.id===line.id)})).filter(x=>x.product));
+ const choices=current.preparation?.choices||[];
+ if(choices.length!==cart.length)return alert('No se pudo verificar la preparación. Revisa el carrito.');
+ const assignments=[];
+ for(let i=0;i<choices.length;i++){
+  const chosen=document.getElementById('edPreparationOrigin'+i)?.value;
+  if(!chosen||!choices[i].options.some(o=>o.id===chosen))return alert('Selecciona un almacén activo para cada producto antes de continuar.');
+  assignments.push({productId:choices[i].productId,color:choices[i].color,originId:chosen});
+ }
+ review.assignments=assignments;
+ edConfirmSimulatedCheckout();
+}
 function edDeliveryCheckoutPreview(lines){
  const pending=reason=>({status:'PENDIENTE',reason,rows:[]});
  if(edDeliveryIsQuarantined())return pending('Asociaciones en cuarentena');
@@ -1419,6 +1447,7 @@ function edDeliveryCheckoutPreview(lines){
  }catch(e){return pending('Asociaciones ilegibles')}
  if(!map||typeof map!=='object'||Array.isArray(map))return pending('Asociaciones inválidas');
  const preparation=edDeliveryPreparationGroups(lines,map,origins,suppliers);
+ preparation.choices=edDeliveryPreparationChoices(lines,map,origins,suppliers);
  const rows=[];
  for(const entry of lines){
   const id=String(entry.product.id),ids=map[id];
@@ -1469,10 +1498,12 @@ async function edOfficialOrderPreview(selectedId=null){
  '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
  lines.map(x=>'<div class="row"><span>'+esc(x.product.name)+(x.line.color?' · '+esc(x.line.color):'')+' × '+x.line.qty+'</span><strong>'+money(Number(x.product.price)*x.line.qty)+' USD</strong></div>').join('')+
  '<p><strong>Importe total: '+money(total)+' USD</strong></p>'+
- '<section class="panel"><strong>Preparación multiproducto por almacén</strong><p class="note">Lista operativa provisional. Un producto asociado a varios almacenes aparece en cada uno como candidato; no se reserva ni descuenta inventario.</p>'+((deliveryPreview.preparation?.groups||[]).map(g=>'<p><strong>'+esc(g.originName)+' · '+esc(g.supplierName)+' · '+esc(g.status)+'</strong></p>'+g.lines.map(l=>'<div class="row"><span>'+esc(l.name)+(l.color?' · '+esc(l.color):'')+' × '+l.qty+'</span><span>'+esc(l.status)+'</span></div>').join('')).join('')||'<p>Sin almacenes asignados.</p>')+(deliveryPreview.preparation?.unassigned||[]).map(l=>'<p>'+esc(l.name)+' × '+l.qty+' · PENDIENTE: '+esc(l.reason)+'</p>').join('')+'</section>'+
+ '<section class="panel"><strong>Preparación multiproducto por almacén</strong><p class="note">Selecciona un almacén responsable para cada línea. La selección es solo para esta prueba: no reserva ni descuenta inventario.</p>'+
+ (deliveryPreview.preparation?.choices||[]).map((item,i)=>'<div class="field"><label for="edPreparationOrigin'+i+'">'+esc(item.name)+(item.color?' · '+esc(item.color):'')+' × '+item.qty+'</label><select id="edPreparationOrigin'+i+'"><option value="">Seleccionar almacén</option>'+item.options.map(o=>'<option value="'+esc(o.id)+'">'+esc(o.name)+' · '+esc(o.supplier)+'</option>').join('')+'</select>'+(item.options.length?'':'<p class="alert">PENDIENTE: sin almacén activo asociado.</p>')+'</div>').join('')+
+ '</section>'+
  '<section class="panel"><strong>Vista previa de mensajería · PENDIENTE</strong><p class="note">Sin rutas viales verificadas ni precio de mensajería. No es una cotización.</p>'+deliveryPreview.rows.map(r=>'<p>'+esc(r.name)+' · '+esc((r.origins||[]).join(', ')||'Sin punto de salida')+' · '+esc(r.reason)+'</p>').join('')+'</section>'+
  '<p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
- '<button class="primary" style="width:100%;margin:10px 0" onclick="edConfirmSimulatedCheckout()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
+ '<button class="primary" style="width:100%;margin:10px 0" onclick="edDeliveryPreparationConfirm()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
 }
 let edSimulatedCheckoutReview=null;
 function edConfirmSimulatedCheckout(){
@@ -1491,6 +1522,9 @@ function edConfirmSimulatedCheckout(){
  const recipient=isSelf?{nombre:profile.nombre,telefono:profile.telefono,provincia:profile.provincia,municipio:profile.municipio,barrio:profile.barrio,direccion:profile.direccion_habitual}:loc?{nombre:loc.nombre_receptor,telefono:loc.telefono_receptor,provincia:loc.provincia,municipio:loc.municipio,barrio:loc.barrio,direccion:loc.direccion,referencias:loc.referencias}:edCustomerRecipients.find(r=>String(r.id)===choice);
  const lines=cart.map(c=>({line:c,product:state.products.find(p=>p.id===c.id)}));
  const fingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>x.product?({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[],origen_producto:x.product.origen_producto,disponible:x.product.disponible,archivado:x.product.archivado}):null),recipient,choice,profile});
+ if(!review?.assignments||review.assignments.length!==cart.length){
+  return modal('<h2>Revisión necesaria</h2><p class="alert">Selecciona un almacén responsable para cada producto antes de confirmar la prueba.</p><button class="secondary" onclick="edOfficialRecipientCheckout()">Volver a revisar</button>');
+ }
  if(!review||!recipient||review.fingerprint!==fingerprint){
   return modal('<h2>Revisión necesaria</h2><p class="alert">El carrito, el inventario o el destinatario cambió desde la vista previa. Revisa nuevamente la compra antes de confirmar la prueba.</p><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Volver a revisar</button>');
  }
