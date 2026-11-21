@@ -3734,6 +3734,18 @@ function edDeliveryLoadShipmentDraft(){
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
  let draft,raw;
  try{raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);draft=JSON.parse(raw||'null')}catch(e){return pending('Borrador local ilegible.')}
+ if(draft?.version===2&&draft.source==='checkout-simulado'){
+  if(draft.status!=='PENDIENTE'||!Array.isArray(draft.assignments))return pending('Borrador de checkout inválido.');
+  const destination=edDeliveryDestinationsRead().find(d=>d.id===draft.destinationId);
+  const lines=edDeliveryCheckoutAssignmentsValidate(draft.assignments);
+  if(!destination||!lines||JSON.stringify([...new Set(lines.map(x=>x.originId))])!==JSON.stringify(draft.warehouseIds)||JSON.stringify([...new Set(lines.map(x=>x.productId))])!==JSON.stringify(draft.productIds))return pending('Destino, almacenes, asociaciones o inventario cambiaron.');
+  try{
+   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+   if(!draft.snapshot||Object.keys(current).some(k=>current[k]!==draft.snapshot[k])||localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw)return pending('Dependencias modificadas; vuelve a preparar el borrador.');
+  }catch(e){return pending('No se pudieron comprobar las dependencias.')}
+  output.textContent='PENDIENTE · Borrador de checkout recuperado: '+lines.map(x=>x.productId+' × '+x.qty+' → '+x.originId).join(' | ')+'; destino '+destination.name+'. Sin pedido, reserva ni tarifa.';
+  return true;
+ }
  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||draft.productIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.productIds).size!==draft.productIds.length||typeof draft.destinationId!=='string'||!Array.isArray(draft.warehouseIds)||draft.warehouseIds.some(id=>typeof id!=='string'||!id.trim())||new Set(draft.warehouseIds).size!==draft.warehouseIds.length)return pending('No hay un borrador válido.');
  const select=document.getElementById('edQuoteDemoProduct'),destinationSelect=document.getElementById('edQuoteDemoDestination');
  if(!select||!destinationSelect)return pending('No están disponibles los selectores.');
