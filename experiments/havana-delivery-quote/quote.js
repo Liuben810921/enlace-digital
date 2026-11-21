@@ -6,7 +6,7 @@ function quoteDelivery(input={}) {
   const pending=(reason)=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:contextRevision??null});
   if(quarantined) return pending('QUARANTINE');
   if(!Number.isSafeInteger(contextRevision)||contextRevision<0) return pending('INVALID_REVISION');
-  if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId) return pending('INVALID_INPUT');
+  if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId.trim()) return pending('INVALID_INPUT');
   if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||minKm>300||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
   if(specialFeeCup!==null&&(!Number.isSafeInteger(specialFeeCup)||specialFeeCup<0)) return pending('INVALID_SPECIAL_FEE');
   if(suppliers.some(s=>!s||typeof s.id!=='string'||!s.id.trim()||(s.active!==undefined&&typeof s.active!=='boolean'))||new Set(suppliers.map(s=>s.id)).size!==suppliers.length)return pending('INVALID_SUPPLIER_CATALOG');
