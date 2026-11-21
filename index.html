@@ -2785,6 +2785,8 @@ function edDeliveryReassignWarehouse(sourceId){
  if(!chosenKeys.length||new Set(chosenKeys).size!==chosenKeys.length||chosenKeys.some(key=>!validKeys.has(key))){alert('Selecciona IDs únicos de productos asociados a este almacén.');return false}
  const chosenSet=new Set(chosenKeys);
  if(!confirm('Reasignar '+chosenKeys.length+' producto(s) de '+source.name+' a '+target.name+'?'))return false;
+ const confirmedKeys=[...selectionPanel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
+ if(confirmedKeys.length!==chosenKeys.length||confirmedKeys.some((key,i)=>key!==chosenKeys[i])){alert('La selección de productos cambió durante la confirmación. Revisa antes de reasignar.');return false}
  const updated={...map};
  for(const [key,ids] of affected.filter(([key])=>chosenSet.has(key))){
   const next=[...new Set(ids.map(id=>id===sourceId?targetId:id))];
