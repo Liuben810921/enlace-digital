@@ -2840,6 +2840,8 @@ function edDeliveryUnlinkWarehouseProducts(sourceId){
  const allowedKeys=new Set(affected.map(([key])=>key));
  if(!selectedKeys.length||new Set(selectedKeys).size!==selectedKeys.length||selectedKeys.some(key=>!allowedKeys.has(key))){alert('Selecciona productos válidos para desvincular.');return false}
  if(!confirm('Desvincular '+selectedKeys.length+' producto(s) de '+source.name+'? Los productos que no tengan otro almacén quedarán sin punto de salida asignado.'))return false;
+ const confirmedKeys=[...selectionPanel.querySelectorAll('input[type="checkbox"]:checked')].map(el=>el.value);
+ if(confirmedKeys.length!==selectedKeys.length||confirmedKeys.some((key,i)=>key!==selectedKeys[i])){alert('La selección de productos cambió durante la confirmación. Revisa antes de desvincular.');return false}
  const updated={...map};
  for(const key of selectedKeys)updated[key]=map[key].filter(id=>id!==sourceId);
  let previous;
