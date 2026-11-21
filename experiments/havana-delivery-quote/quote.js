@@ -5,13 +5,14 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
   if(quarantined) return pending('QUARANTINE');
   if(!Number.isSafeInteger(contextRevision)||contextRevision<0) return pending('INVALID_REVISION');
   if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId) return pending('INVALID_INPUT');
-  if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
+  if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||minKm>300||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
   if(specialFeeCup!==null&&(!Number.isSafeInteger(specialFeeCup)||specialFeeCup<0)) return pending('INVALID_SPECIAL_FEE');
   const activeSuppliers=new Set(suppliers.filter(s=>s&&typeof s.id==='string'&&s.active!==false).map(s=>s.id));
   const eligible=origins.filter(o=>o&&typeof o.id==='string'&&o.id&&o.active!==false&&(o.type==='propio'||(o.type==='proveedor'&&activeSuppliers.has(o.supplierId))));
   if(!eligible.length) return pending('NO_ACTIVE_ORIGINS');
   if(new Set(eligible.map(o=>o.id)).size!==eligible.length) return pending('DUPLICATE_ORIGIN');
   const distances=[];
+  let provenanceDataset=null,provenanceMode=null;
   for(const o of eligible){
     const matching=routes.filter(r=>r&&r.originId===o.id&&r.destinationId===destinationId);
     if(matching.length!==1) return pending('ROAD_DISTANCE_MISSING');
@@ -20,6 +21,13 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
     // A caller-supplied 'verified' flag alone cannot prove a road measurement.
     // Synthetic fixtures remain usable only in this explicitly simulated contract.
     if(r.provenance!==undefined&&(!r.provenance||typeof r.provenance!=='object'||r.provenance.source!=='osrm'||typeof r.provenance.datasetId!=='string'||!r.provenance.datasetId.trim()||typeof r.provenance.routeId!=='string'||!r.provenance.routeId.trim()))return pending('ROAD_PROVENANCE_INVALID');
+    const hasProvenance=r.provenance!==undefined;
+    if(provenanceMode!==null&&provenanceMode!==hasProvenance)return pending('ROAD_PROVENANCE_INCONSISTENT');
+    provenanceMode=hasProvenance;
+    if(hasProvenance){
+      if(provenanceDataset!==null&&provenanceDataset!==r.provenance.datasetId)return pending('ROAD_DATASET_MISMATCH');
+      provenanceDataset=r.provenance.datasetId;
+    }
     distances.push({originId:o.id,km:r.km});
   }
   distances.sort((a,b)=>b.km-a.km||a.originId.localeCompare(b.originId));
