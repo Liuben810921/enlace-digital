@@ -13,6 +13,7 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
   if(new Set(eligible.map(o=>o.id)).size!==eligible.length) return pending('DUPLICATE_ORIGIN');
   const distances=[];
   let provenanceDataset=null,provenanceMode=null;
+  const provenanceRouteIds=new Set();
   for(const o of eligible){
     const matching=routes.filter(r=>r&&r.originId===o.id&&r.destinationId===destinationId);
     if(matching.length!==1) return pending('ROAD_DISTANCE_MISSING');
@@ -26,6 +27,8 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
     provenanceMode=hasProvenance;
     if(hasProvenance){
       if(provenanceDataset!==null&&provenanceDataset!==r.provenance.datasetId)return pending('ROAD_DATASET_MISMATCH');
+      if(provenanceRouteIds.has(r.provenance.routeId))return pending('ROAD_ROUTE_ID_DUPLICATE');
+      provenanceRouteIds.add(r.provenance.routeId);
       provenanceDataset=r.provenance.datasetId;
     }
     distances.push({originId:o.id,km:r.km});
