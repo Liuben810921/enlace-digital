@@ -3648,6 +3648,7 @@ function edDeliveryRestoreArchivedDraft(){
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==archiveRaw)return pending('Los borradores cambiaron durante la restauración.');
   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
   if(Object.keys(snapshot).some(k=>snapshot[k]!==current[k]))return pending('Las dependencias cambiaron durante la restauración.');
+  if(item.productIds.some(id=>![...productSelect.options].some(o=>o.value===id))||![...destinationSelect.options].some(o=>o.value===item.destinationId))return pending('Los selectores cambiaron durante la restauración. Se conserva el borrador de trabajo.');
   const {id:archiveId,name,archivedAt,...draft}=item;
   localStorage.setItem(ED_DELIVERY_DRAFT_KEY,JSON.stringify(draft));
  }catch(e){return pending('No se pudo restaurar la versión.')}
