@@ -1,11 +1,11 @@
 'use strict';
 // Isolated, network-free contract. Not connected to checkout or production.
-function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPerKm, minKm=3, specialFeeCup=null, contextRevision, quarantined=false}={}) {
+function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPerKm, minKm=3, minFeeCup=600, specialFeeCup=null, contextRevision, quarantined=false}={}) {
   const pending=(reason)=>({status:'PENDIENTE',reason,feeCup:null,originId:null,billableKm:null,contextRevision:contextRevision??null});
   if(quarantined) return pending('QUARANTINE');
   if(!Number.isSafeInteger(contextRevision)||contextRevision<0) return pending('INVALID_REVISION');
   if(!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(routes)||typeof destinationId!=='string'||!destinationId) return pending('INVALID_INPUT');
-  if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3) return pending('INVALID_TARIFF');
+  if(!Number.isFinite(rateCupPerKm)||rateCupPerKm<=0||!Number.isFinite(minKm)||minKm<3||!Number.isSafeInteger(minFeeCup)||minFeeCup<0) return pending('INVALID_TARIFF');
   if(specialFeeCup!==null&&(!Number.isSafeInteger(specialFeeCup)||specialFeeCup<0)) return pending('INVALID_SPECIAL_FEE');
   const activeSuppliers=new Set(suppliers.filter(s=>s&&typeof s.id==='string'&&s.active!==false).map(s=>s.id));
   const eligible=origins.filter(o=>o&&typeof o.id==='string'&&o.id&&o.active!==false&&(o.type==='propio'||(o.type==='proveedor'&&activeSuppliers.has(o.supplierId))));
@@ -24,7 +24,7 @@ function quoteDelivery({origins, suppliers=[], routes, destinationId, rateCupPer
   }
   distances.sort((a,b)=>b.km-a.km||a.originId.localeCompare(b.originId));
   const farthest=distances[0], billableKm=Math.max(minKm,farthest.km);
-  const feeCup=specialFeeCup===null?Math.ceil(billableKm*rateCupPerKm):specialFeeCup;
+  const feeCup=specialFeeCup===null?Math.max(minFeeCup,Math.ceil(billableKm*rateCupPerKm)):specialFeeCup;
   if(!Number.isSafeInteger(feeCup))return pending('FEE_OVERFLOW');
   return {status:'COTIZACION_SIMULADA',reason:null,feeCup,originId:farthest.originId,billableKm,roadKm:farthest.km,contextRevision};
 }
