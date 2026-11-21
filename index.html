@@ -3832,7 +3832,7 @@ function edDeliveryArchiveShipmentDraft(){
  const output=document.getElementById('edQuoteDemoResult');
  if(!output||edDeliveryIsQuarantined())return false;
  const pending=msg=>{output.textContent='PENDIENTE · '+msg;return false};
- let draft,raw,collectionRaw,collection;
+ let draft,raw,collectionRaw,collection,validatedSnapshot=null;
  try{
   raw=localStorage.getItem(ED_DELIVERY_DRAFT_KEY);
   draft=JSON.parse(raw||'null');
@@ -3845,7 +3845,8 @@ function edDeliveryArchiveShipmentDraft(){
   if(!lines||JSON.stringify([...new Set(lines.map(x=>x.originId))])!==JSON.stringify(draft.warehouseIds)||JSON.stringify([...new Set(lines.map(x=>x.productId))])!==JSON.stringify(draft.productIds)||!edDeliveryDestinationsRead().some(d=>d.id===draft.destinationId))return pending('Líneas, almacenes o destino del checkout inválidos.');
   let current;
   try{current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron verificar las dependencias.')}
-  if(Object.keys(current).some(k=>current[k]!==draft.snapshot[k]))return pending('Dependencias del checkout modificadas.');
+  if(current.revision===null||Object.keys(current).some(k=>current[k]!==draft.snapshot[k]))return pending('Dependencias del checkout modificadas.');
+  validatedSnapshot=current;
  }
  const name=document.getElementById('edQuoteDraftName')?.value.trim();
  if(!name||name.length>80)return pending('Introduce un nombre de hasta 80 caracteres.');
@@ -3854,6 +3855,12 @@ function edDeliveryArchiveShipmentDraft(){
  try{
   if(localStorage.getItem(ED_DELIVERY_DRAFT_KEY)!==raw||localStorage.getItem(ED_DELIVERY_DRAFT_COLLECTION_KEY)!==collectionRaw)return pending('Los borradores cambiaron. Reintenta.');
   if(edDeliveryIsQuarantined())return pending('Cuarentena activada antes del guardado.');
+  if(draft.version===2){
+   const lines=edDeliveryCheckoutAssignmentsValidate(draft.assignments);
+   if(!lines||JSON.stringify([...new Set(lines.map(x=>x.originId))])!==JSON.stringify(draft.warehouseIds)||JSON.stringify([...new Set(lines.map(x=>x.productId))])!==JSON.stringify(draft.productIds)||!edDeliveryDestinationsRead().some(d=>d.id===draft.destinationId))return pending('Líneas o destino modificados durante el archivo.');
+   const current={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()};
+   if(Object.keys(validatedSnapshot).some(k=>current[k]!==validatedSnapshot[k]))return pending('Dependencias modificadas durante el archivo.');
+  }
   const serializedArchive=JSON.stringify([...collection,item]);
   if(edDeliveryIsQuarantined())return pending('Cuarentena activada durante la preparación del archivo.');
   localStorage.setItem(ED_DELIVERY_DRAFT_COLLECTION_KEY,serializedArchive);
