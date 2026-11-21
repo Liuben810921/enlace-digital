@@ -3759,7 +3759,7 @@ function edDeliveryBulkEditArchivedProducts(){
  const updates=[],skipped=[];
  for(let i=0;i<archive.length;i++){
   const draft=archive[i];
-  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length||!destinations.has(draft.destinationId)){skipped.push(i);updates.push(draft);continue}
+  if(!draft||draft.version!==1||draft.status!=='PENDIENTE'||!Array.isArray(draft.productIds)||(operation!=='replace'&&(!draft.productIds.length||new Set(draft.productIds).size!==draft.productIds.length))||!destinations.has(draft.destinationId)){skipped.push(i);updates.push(draft);continue}
   const existing=draft.productIds;
   const next=operation==='replace'?[...selected]:operation==='add'?[...existing,...selected.filter(id=>!existing.includes(id))]:existing.filter(id=>!selected.includes(id));
   if(!next.length||next.length>100||new Set(next).size!==next.length){skipped.push(i);updates.push(draft);continue}
