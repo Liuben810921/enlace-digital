@@ -1387,6 +1387,25 @@ async function edOfficialTemporarySave(){
   await edOfficialOrderPreview('location:'+saved.id);
  }catch(e){status.textContent=e.message;btn.disabled=false}
 }
+function edDeliveryPreparationGroups(lines,map,origins,suppliers){
+ const groups=new Map();
+ const rows=[];
+ for(const entry of lines){
+  const product=entry.product,ids=map[String(product.id)];
+  if(!Array.isArray(ids)||!ids.length){rows.push({name:product.name||String(product.id),qty:entry.line.qty,status:'PENDIENTE',reason:'Producto sin almacén asociado'});continue}
+  for(const id of [...new Set(ids)]){
+   const origin=origins.find(o=>o.id===id);
+   const supplier=origin?.type==='proveedor'?suppliers.find(p=>p.id===origin.supplierId):null;
+   const valid=!!origin&&origin.active!==false&&(origin.type!=='proveedor'||!!supplier&&supplier.active!==false);
+   const key=String(id);
+   if(!groups.has(key))groups.set(key,{originId:key,originName:origin?.name||'Almacén no disponible',supplierName:origin?.type==='proveedor'?supplier?.name||'Proveedor no disponible':'Inventario propio',status:valid?'PREPARACIÓN':'PENDIENTE',lines:[]});
+   const group=groups.get(key);
+   if(!valid)group.status='PENDIENTE';
+   group.lines.push({id:product.id,name:product.name||String(product.id),qty:entry.line.qty,color:entry.line.color||'',status:valid?'PREPARACIÓN':'PENDIENTE'});
+  }
+ }
+ return {groups:[...groups.values()],unassigned:rows};
+}
 function edDeliveryCheckoutPreview(lines){
  const pending=reason=>({status:'PENDIENTE',reason,rows:[]});
  if(edDeliveryIsQuarantined())return pending('Asociaciones en cuarentena');
@@ -1399,6 +1418,7 @@ function edDeliveryCheckoutPreview(lines){
   origins=edDeliveryOriginsRead();suppliers=edDeliverySuppliersRead();
  }catch(e){return pending('Asociaciones ilegibles')}
  if(!map||typeof map!=='object'||Array.isArray(map))return pending('Asociaciones inválidas');
+ const preparation=edDeliveryPreparationGroups(lines,map,origins,suppliers);
  const rows=[];
  for(const entry of lines){
   const id=String(entry.product.id),ids=map[id];
@@ -1410,7 +1430,7 @@ function edDeliveryCheckoutPreview(lines){
   const labels=ids.map(originId=>origins.find(o=>o.id===originId)?.name||'Punto no disponible');
   rows.push({name:entry.product.name||id,origins:labels,status:'PENDIENTE',reason:routeState.reason||quote.reason||'Distancia vial no verificada'});
  }
- return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows};
+ return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows,preparation};
 }
 async function edOfficialOrderPreview(selectedId=null){
  const availability=validateCart();
@@ -1449,6 +1469,7 @@ async function edOfficialOrderPreview(selectedId=null){
  '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
  lines.map(x=>'<div class="row"><span>'+esc(x.product.name)+(x.line.color?' · '+esc(x.line.color):'')+' × '+x.line.qty+'</span><strong>'+money(Number(x.product.price)*x.line.qty)+' USD</strong></div>').join('')+
  '<p><strong>Importe total: '+money(total)+' USD</strong></p>'+
+ '<section class="panel"><strong>Preparación multiproducto por almacén</strong><p class="note">Lista operativa provisional. Un producto asociado a varios almacenes aparece en cada uno como candidato; no se reserva ni descuenta inventario.</p>'+((deliveryPreview.preparation?.groups||[]).map(g=>'<p><strong>'+esc(g.originName)+' · '+esc(g.supplierName)+' · '+esc(g.status)+'</strong></p>'+g.lines.map(l=>'<div class="row"><span>'+esc(l.name)+(l.color?' · '+esc(l.color):'')+' × '+l.qty+'</span><span>'+esc(l.status)+'</span></div>').join('')).join('')||'<p>Sin almacenes asignados.</p>')+(deliveryPreview.preparation?.unassigned||[]).map(l=>'<p>'+esc(l.name)+' × '+l.qty+' · PENDIENTE: '+esc(l.reason)+'</p>').join('')+'</section>'+
  '<section class="panel"><strong>Vista previa de mensajería · PENDIENTE</strong><p class="note">Sin rutas viales verificadas ni precio de mensajería. No es una cotización.</p>'+deliveryPreview.rows.map(r=>'<p>'+esc(r.name)+' · '+esc((r.origins||[]).join(', ')||'Sin punto de salida')+' · '+esc(r.reason)+'</p>').join('')+'</section>'+
  '<p class="note">La mensajería y las condiciones de pago están pendientes de habilitación. La confirmación de prueba no genera pedidos reales.</p>'+
  '<button class="primary" style="width:100%;margin:10px 0" onclick="edConfirmSimulatedCheckout()">Confirmar pedido de prueba</button><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Cambiar quién recibe o dirección</button>');
