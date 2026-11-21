@@ -3639,6 +3639,8 @@ function edDeliveryRestoreArchivedDraft(){
  try{snapshot={inventory:localStorage.getItem('enlace_demo_v1'),associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),revision:edDeliveryContextRevision()}}catch(e){return pending('No se pudieron comprobar las dependencias.')}
  if(snapshot.revision===null||!item.snapshot||Object.keys(snapshot).some(k=>snapshot[k]!==item.snapshot[k]))return pending('La versión archivada está desactualizada. Reconcíliala antes de restaurarla.');
  if(!edDeliveryDestinationsRead().some(d=>d.id===item.destinationId))return pending('El destino archivado ya no existe.');
+ const productSelect=document.getElementById('edQuoteDemoProduct'),destinationSelect=document.getElementById('edQuoteDemoDestination');
+ if(!productSelect||!destinationSelect||item.productIds.some(id=>![...productSelect.options].some(o=>o.value===id))||![...destinationSelect.options].some(o=>o.value===item.destinationId))return pending('Los productos o el destino archivados no están disponibles en los selectores. Conserva el borrador de trabajo.');
  const basket=edDeliveryQuoteDemoBasket(item.productIds,edDeliveryOriginsRead(),edDeliverySuppliersRead());
  if(!basket||basket.origins.length!==item.warehouseIds.length||basket.origins.some(o=>!item.warehouseIds.includes(o.id)))return pending('Los almacenes de la versión ya no son compatibles.');
  if(!confirm('Restaurar «'+item.name+'» como borrador de trabajo? Sustituirá el borrador actual; las dependencias se verificarán al recuperarlo.'))return false;
