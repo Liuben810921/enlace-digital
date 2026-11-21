@@ -1289,7 +1289,7 @@ async function edOfficialRecipientCheckout(selectedId=null){
  const c=edCustomerProfile;
  const habitual=c.residencia==='cuba'&&c.direccion_habitual?'<label style="display:block;margin:9px 0"><input type="radio" name="edDirectAddress" value="self" checked> Mi dirección habitual · '+esc([c.municipio,c.direccion_habitual].filter(Boolean).join(', '))+'</label>':'';
  const selfLocations=edCustomerDeliveryLocations.filter(r=>r.nombre_receptor===c.nombre);
- const past=selfLocations.map((r,i)=>r.nombre_receptor===c.nombre).map(r=>'<label style="display:block;margin:9px 0"><input type="radio" name="edDirectAddress" value="location:'+Number(r.id)+'" '+(!habitual&&i===0?'checked':'')+'> '+esc([r.municipio,r.direccion].filter(Boolean).join(', '))+'</label>').join('');
+ const past=selfLocations.map((r,i)=>'<label style="display:block;margin:9px 0"><input type="radio" name="edDirectAddress" value="location:'+Number(r.id)+'" '+(!habitual&&i===0?'checked':'')+'> '+esc([r.municipio,r.direccion].filter(Boolean).join(', '))+'</label>').join('');
  const recipients=edCustomerRecipients.map(r=>'<label style="display:block;margin:9px 0"><input type="radio" name="edDirectRecipient" value="'+Number(r.id)+'"> '+esc(r.nombre)+' · '+esc([r.municipio,r.direccion].filter(Boolean).join(', '))+'</label>').join('');
  modal('<h2>Finalizar compra · Prueba</h2><p class="alert">SIMULACIÓN: los pedidos reales están desactivados. No se realizan cobros, envíos ni descuentos de inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(c.nombre)+'</p><p><strong>¿Quién recibirá la compra?</strong></p>'+
