@@ -22,6 +22,8 @@ test("clones all four current RPCs only after checking their security contract",
  assert.match(migration,/position\('SECURITY DEFINER' in upper\(v_definition\)\)=0/);
  assert.match(migration,/position\('SET search_path TO/);
  assert.match(migration,/replace\(v_definition,'auth\.uid\(\)','ed_delivery_private\.current_uid\(\)'\)/);
+ assert.ok(migration.includes("v_definition:=replace(v_definition,v_old_name,v_new_name);"));
+ assert.ok(!migration.includes("v_new_name||'('"));
 });
 
 test("new APIs are closed to public and anon and granted only to signed-in callers",()=>{
