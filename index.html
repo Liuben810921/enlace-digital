@@ -1544,6 +1544,7 @@ function edDeliveryPreparationConfirm(){
 function edCheckoutDeliveryContextRead(){
  const pending=reason=>({ok:false,reason});
  if(edDeliveryIsQuarantined())return pending('DELIVERY_CONTEXT_QUARANTINED');
+ if(typeof window!=='undefined'&&window.EDDeliveryStagingBridge?.isConnected?.())return pending('REMOTE_DELIVERY_CONTEXT_NOT_JOINED_TO_INVENTORY');
  if(!edInventoryLoaded||edInventoryPendingSaves>0||!Array.isArray(state.products)||JSON.stringify(state.products)!==edInventorySnapshot)return pending('INVENTORY_SOURCE_MISMATCH');
  let revision,snapshot;
  try{
