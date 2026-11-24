@@ -19,6 +19,7 @@ const values={
  'ed_delivery_destinations_demo_v1':'[]'
 };
 function makeContext(overrides={}){
+ const localValues={...values};
  const state={products:JSON.parse(JSON.stringify(products))};
  const ctx={
   ED_PRODUCT_ORIGINS_KEY:'ed_product_origins_demo_v1',
@@ -30,8 +31,8 @@ function makeContext(overrides={}){
   edDeliveryIsQuarantined:()=>false,
   edDeliveryContextRevision:()=>1,
   localStorage:{
-   getItem:key=>Object.prototype.hasOwnProperty.call(values,key)?values[key]:null,
-   setItem:(key,value)=>{values[key]=String(value);}
+   getItem:key=>Object.prototype.hasOwnProperty.call(localValues,key)?localValues[key]:null,
+   setItem:(key,value)=>{localValues[key]=String(value);}
   },
   ...overrides
  };
@@ -49,11 +50,12 @@ assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',pending).reason,'
 const malformed=makeContext();
 malformed.localStorage.setItem('ed_product_origins_demo_v1','[]');
 assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',malformed).reason,'DELIVERY_CONTEXT_INVALID');
-let revisionCalls=0;
+let revisionCalls=0,raceContext;
 const raced=makeContext({edDeliveryContextRevision:()=>{
  revisionCalls++;
- if(revisionCalls===2){values['ed_product_origins_demo_v1']=JSON.stringify({p1:['w2']});return 2}
+ if(revisionCalls===2){raceContext.localStorage.setItem('ed_product_origins_demo_v1',JSON.stringify({p1:['w2']}));return 2}
  return 1;
 }});
+raceContext=raced;
 assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',raced).reason,'DELIVERY_CONTEXT_CHANGED');
 console.log('PASS checkout delivery context: coherent snapshot, stale inventory, pending writes, invalid shape, mid-read change');
