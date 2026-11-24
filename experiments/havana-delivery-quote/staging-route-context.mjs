@@ -27,13 +27,22 @@ export function resolveStagingRouteContext(input={}){
  }
  const links=new Set();
  for(const link of snapshot.links){
-  if(!link||typeof link.source_kind!=="string"||typeof link.source_id!=="string"||
-     typeof link.target_kind!=="string"||typeof link.target_id!=="string")
+  if(!link||typeof link.source_kind!=="string"||typeof link.source_id!=="string"||!ID.test(link.source_id)||
+     typeof link.target_kind!=="string"||typeof link.target_id!=="string"||!ID.test(link.target_id))
+   return PENDING("INVALID_STAGING_LINK");
+  const allowed=(link.source_kind==="warehouse"&&link.target_kind==="supplier")||
+   (link.source_kind==="product_origin"&&link.target_kind==="warehouse")||
+   (link.source_kind==="shipment_draft"&&["destination","product_origin"].includes(link.target_kind));
+  if(!allowed||!entities.has(entityKey(link.source_kind,link.source_id))||!entities.has(entityKey(link.target_kind,link.target_id)))
    return PENDING("INVALID_STAGING_LINK");
   const key=[link.source_kind,link.source_id,link.target_kind,link.target_id].join("\u0000");
   if(links.has(key))return PENDING("DUPLICATE_STAGING_LINK");
   links.add(key);
  }
+ const targets=(sourceKind,sourceId,targetKind)=>[...links].filter(key=>{
+  const [sk,si,tk]=key.split("\u0000");
+  return sk===sourceKind&&si===sourceId&&tk===targetKind;
+ }).map(key=>key.split("\u0000")[3]);
  const destination=entities.get(entityKey("destination",destinationId));
  if(!destination||destination.payload.active===false||!point(destination.payload.lat,destination.payload.lng))
   return PENDING("DESTINATION_NOT_ROUTABLE");
@@ -49,12 +58,13 @@ export function resolveStagingRouteContext(input={}){
    const warehouse=entities.get(entityKey("warehouse",id));
    if(!warehouse||warehouse.payload.active!==true||!["propio","proveedor"].includes(warehouse.payload.type))
     return PENDING("WAREHOUSE_NOT_ACTIVE");
+   const supplierLinks=targets("warehouse",id,"supplier");
    if(warehouse.payload.type==="proveedor"){
     const supplierId=warehouse.payload.supplierId;
     const supplier=typeof supplierId==="string"?entities.get(entityKey("supplier",supplierId)):null;
-    if(!supplier||supplier.payload.active!==true||!links.has(["warehouse",id,"supplier",supplierId].join("\u0000")))
+    if(!supplier||supplier.payload.active!==true||supplierLinks.length!==1||supplierLinks[0]!==supplierId)
      return PENDING("SUPPLIER_NOT_ACTIVE_OR_LINKED");
-   }else if(warehouse.payload.supplierId!=null||links.has(["warehouse",id,"supplier",String(warehouse.payload.supplierId)].join("\u0000"))){
+   }else if(warehouse.payload.supplierId!=null||supplierLinks.length!==0){
     return PENDING("OWN_WAREHOUSE_HAS_SUPPLIER");
    }
    if(!point(warehouse.payload.lat,warehouse.payload.lng))return PENDING("WAREHOUSE_COORDINATES_INVALID");
