@@ -434,5 +434,6 @@ grant execute on function public.ed_delivery_staging_batch(jsonb) to authenticat
 alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
 revoke create on schema public from ed_delivery_staging_rpc;
 
+create index ed_delivery_private_links_target_idx on ed_delivery_private.links(target_kind,target_id,source_kind,source_id);
 revoke ed_delivery_staging_rpc from postgres;
 commit;
