@@ -138,3 +138,11 @@ Mensaje recomendado:
 - No calcula distancia, tarifa ni cuota, no llama servicios externos y no cambia el checkout. Es un bloque offline listo para conectar cuando la lectura autenticada del panel pueda entregar una instantánea fiable.
 - **Prueba ejecutada:** `node --test experiments/havana-delivery-quote/staging-route-context.test.mjs`: 7/7 PASS, 0 fallidas.
 - **Límite vigente:** la lectura autenticada de RPC en staging sigue bloqueada por USAGE efectivo en `auth`; la migración auxiliar fue rechazada por el control de migraciones. No se eludió ese control. Checkout y rutas siguen PENDIENTE; sin despliegues, llamadas Geoapify ni consumo de créditos.
+
+
+## 16. Diagnóstico de permisos Auth en RPC de staging — 24 de noviembre de 2026
+
+- Asesores de Supabase revisados antes del diagnóstico: sin avisos de salud; permanecen avisos previos de linter RLS/SECURITY DEFINER previstos para el panel.
+- Lectura del catálogo PostgreSQL confirmó que las cuatro RPC vigentes todavía llaman a `auth.uid()`, pertenecen a `ed_delivery_staging_rpc`, y ese rol tiene `USAGE=false` sobre el esquema `auth`. La función alternativa `ed_delivery_private.current_uid()` no está creada en la base.
+- Una migración formal `grant_auth_uid_to_delivery_rpc_20261124` devolvió éxito, pero la consulta de ACL posterior todavía mostró `USAGE=false`. La prueba de lectura autenticada volvió a fallar con `permission denied for schema auth`. No se afirmó que el permiso estuviera corregido y no se usó `execute_sql` para hacer cambios ni eludir el control de migraciones.
+- **Conclusión vigente:** queda identificado el bloqueo real; checkout y rutas siguen PENDIENTE. Hace falta corregir por la vía de migraciones que aplique efectivamente el permiso mínimo o sustituya las referencias a `auth.uid()` por el helper JWT ya preparado, y luego repetir la lectura autenticada. La instantánea/resolvedor offline sí está probado 7/7.
