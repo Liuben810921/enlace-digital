@@ -4,6 +4,18 @@ revoke all on function ed_delivery_private.current_uid() from public,anon,authen
 
 grant execute on function ed_delivery_private.current_uid() to ed_delivery_staging_rpc;
 
+alter policy ed_admin_self_read on ed_delivery_private.admin_members using (user_id=(select ed_delivery_private.current_uid()) and enabled);
+
+alter policy ed_entities_admin on ed_delivery_private.entities using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+
+alter policy ed_links_admin on ed_delivery_private.links using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+
+alter policy ed_operations_admin on ed_delivery_private.operations using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+
+grant create on schema public to ed_delivery_staging_rpc;
+
+set local role ed_delivery_staging_rpc;
+
 create or replace function public.ed_delivery_staging_read()
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
@@ -333,10 +345,8 @@ begin
  return v_results;
 end $$;;
 
-alter policy ed_admin_self_read on ed_delivery_private.admin_members using (user_id=(select ed_delivery_private.current_uid()) and enabled);
+reset role;
 
-alter policy ed_entities_admin on ed_delivery_private.entities using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+revoke create on schema public from ed_delivery_staging_rpc;
 
-alter policy ed_links_admin on ed_delivery_private.links using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
-
-alter policy ed_operations_admin on ed_delivery_private.operations using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+revoke ed_delivery_staging_rpc from postgres;
