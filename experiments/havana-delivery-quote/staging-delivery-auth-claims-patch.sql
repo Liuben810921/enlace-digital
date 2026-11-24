@@ -333,27 +333,13 @@ begin
  return v_results;
 end $$;;
 
-drop policy if exists ed_admin_self_read on ed_delivery_private.admin_members;
-create policy ed_admin_self_read on ed_delivery_private.admin_members
- for select to ed_delivery_staging_rpc using (user_id = (select ed_delivery_private.current_uid()) and enabled);
+alter policy ed_admin_self_read on ed_delivery_private.admin_members using (user_id=(select ed_delivery_private.current_uid()) and enabled);
 
-drop policy if exists ed_entities_admin on ed_delivery_private.entities;
-create policy ed_entities_admin on ed_delivery_private.entities
- for all to ed_delivery_staging_rpc
- using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
- with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+alter policy ed_entities_admin on ed_delivery_private.entities using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 
-drop policy if exists ed_links_admin on ed_delivery_private.links;
-create policy ed_links_admin on ed_delivery_private.links
- for all to ed_delivery_staging_rpc
- using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
- with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+alter policy ed_links_admin on ed_delivery_private.links using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 
-drop policy if exists ed_operations_admin on ed_delivery_private.operations;
-create policy ed_operations_admin on ed_delivery_private.operations
- for all to ed_delivery_staging_rpc
- using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
- with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
+alter policy ed_operations_admin on ed_delivery_private.operations using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 
 alter function public.ed_delivery_staging_read() owner to ed_delivery_staging_rpc;
 
