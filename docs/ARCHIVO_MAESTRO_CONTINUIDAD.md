@@ -110,3 +110,11 @@ Mensaje recomendado:
 - **Rama:** se añadieron los archivos espejo del despliegue en commits d5f5e91c87dd0ffea09c8b1f55ac62c80e02d108 y 96a79b7db14966d6301d6f86afff0a310248f477. El núcleo coincide con el código offline probado previamente (14/14 casos).
 - **Límite funcional:** el checkout permanece PENDIENTE. Staging no tiene almacenes, asociaciones producto-almacén ni un contexto de destino confiable suficiente para reconstruir la selección de origen más lejano desde servidor. No se inventaron estos datos ni se aplicó una migración especulativa.
 - **Siguiente fase autónoma:** preparar el modelo mínimo para sincronizar productos, asociaciones, almacenes y coordenadas autorizadas con el servidor; implementarlo primero en rama y probar con datos sintéticos. La activación de rutas reales seguirá deshabilitada mientras no se autoricen llamadas Geoapify y su consumo de créditos.
+
+
+## 13. Aplicación de esquema staging bloqueada — 24 de noviembre de 2026
+
+- Se intentó aplicar, con autorización expresa del fundador, el esquema administrativo de staging ya versionado en experiments/havana-delivery-quote/staging-delivery-schema.sql. La herramienta de migraciones devolvió status declined sin indicar motivo detallado. No se intentó eludir la revisión mediante SQL directo.
+- **Comprobación posterior de solo lectura:** ed_delivery_private, sus tablas y las RPC ed_delivery_staging_read/ed_delivery_staging_batch siguen ausentes; no hubo aplicación parcial. Las RPC heredadas de Geoapify continúan presentes, pero la Edge Function fue reemplazada por la versión 2 sin transporte ni adaptadores.
+- **Bloqueo operativo restante:** staging tiene cero usuarios activos de Supabase Auth, por lo que no hay identidad a quien asignar el allowlist admin_members sin crear primero una cuenta de pruebas autorizada. El adaptador del panel de administración seguirá sin conexión hasta que el esquema pase revisión y exista esa cuenta de staging.
+- **Estado de seguridad:** no se invocó la Edge Function, no se consultaron secretos, no se llamó Geoapify ni se consumieron créditos. La respuesta de checkout permanece PENDIENTE.
