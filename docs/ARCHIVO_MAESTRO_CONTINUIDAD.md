@@ -68,3 +68,15 @@ Mensaje recomendado:
 - **Confirmado por el usuario:** autonomía limitada por permisos; prioridades de lanzamiento; Geoapify principal; OSRM futuro; mapa ya aportado; prohibición de activar servicios y costos sin autorización.
 - **Histórico sujeto a reconfirmación:** estado legal, configuración de servicios, planes comerciales y cuotas de terceros, precios, correo/dominio.
 - **No afirmar:** que pruebas no ejecutadas estén superadas, que Geoapify esté conectado en producción, que existan distancias reales verificadas, que haya 3.000 entregas garantizadas, ni que este archivo se cargue automáticamente en todos los chats.
+
+
+## 9. Checkpoint Work — 24 de noviembre de 2026
+
+- **Rama activa:** `fix/delivery-batch-deactivation-order-20261120`.
+- **HEAD de referencia al cierre:** `9dfeaa744db03544ccf1b97166d3fce0447caed2`. Verificar HEAD antes de editar y conservar cualquier commit posterior.
+- **Fase checkout — consistencia de fuentes, completada:** restaurada la constante faltante `ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1'`; el checkout toma una sola instantánea coherente de inventario, asociaciones, almacenes, proveedores y destinos; fija esa instantánea a la vista previa y vuelve a verificarla al confirmar; impide confirmar si detecta datos locales/remotos mezclados o cambios durante la revisión. El puente de staging expone si la sesión está conectada para evitar combinar asociaciones remotas con inventario local.
+- **Comprobaciones:** compilación de los cinco scripts inline de `index.html` y ambos scripts externos del puente; seis casos focalizados de fuentes coherentes, inventario desfasado, guardados pendientes, sesión staging, esquema inválido y cambio durante lectura. Resultado: PASS. Sin GitHub Actions.
+- **Geoapify staging:** `supabase/functions/ed-staging-geoapify-route/index.ts` permanece fail-closed: variables de habilitación/red desactivadas, identidad del operador y reserva atómica no conectadas, sin llamada al proveedor. Checkout y rutas continúan **PENDIENTE** hasta implementar y verificar contexto de servidor, autenticación real y ledger/cuota transaccional. No desplegar ni hacer llamadas reales sin autorización expresa.
+- **Restricciones vigentes:** no producción, no despliegues, no pedidos reales, no llamadas Geoapify, no costos. Persistencia compartida segura y atomicidad entre pestañas continúan pendientes.
+- **Regla de trabajo del fundador:** avanzar autónomamente en cada fase autorizada; al cerrar una fase entregar commit/evidencias y una acción clara para pasar a la siguiente. Solicitar intervención únicamente cuando exista una decisión, credencial o autorización que realmente haga falta; no reiniciar auditorías ni repetir tareas cerradas.
+- **Siguiente fase:** preparar offline el adaptador de identidad y la reserva transaccional para el intermediario staging, junto con pruebas focalizadas. Mantenerlo sin habilitar, sin despliegue ni tráfico real mientras falten los gates de servidor.
