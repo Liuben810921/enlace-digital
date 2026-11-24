@@ -122,3 +122,10 @@ Mensaje recomendado:
 - **Prueba de acceso:** un SELECT simulado como authenticated con el JWT sub de esa cuenta falló porque la función propietaria ed_delivery_staging_rpc no tiene USAGE efectivo sobre el esquema auth, aunque la migración de grant se registró. No se permitió lectura ni escritura de entidades.
 - **Corrección preparada pero bloqueada:** la identidad auxiliar que replica exactamente auth.uid() leyendo request.jwt.claim.sub/request.jwt.claims está en experiments/havana-delivery-quote/staging-delivery-auth-claims-patch.sql. El control automático de apply_migration devolvió declined. Se revocó la membresía temporal postgres -> ed_delivery_staging_rpc; CREATE temporal nunca llegó a aplicarse. No se usó execute_sql para eludir el control.
 - **Rutas:** ed-geoapify-routing permanece en versión 2 fail-closed, sin transporte Geoapify ni adaptadores. Checkout queda PENDIENTE; no se invocó la función, no hubo tráfico al proveedor y no se gastaron créditos.
+
+
+## 14. Pruebas offline del parche de identidad — 24 de noviembre de 2026
+
+- Se añadió tests/staging-delivery-claims-contract.test.cjs para comprobar que el reemplazo preparado replica la extracción del sub JWT de auth.uid(), conserva las cuatro políticas de allowlist, limita el helper al rol RPC y revoca los privilegios temporales en la misma migración.
+- **Resultados ejecutados desde la rama actual:** 5/5 pruebas del contrato offline PASS; 14/14 pruebas de supabase/functions/ed-staging-geoapify-route/gateway.test.mjs PASS con Node 24.22.3.
+- **Staging sin cambios adicionales:** apply_migration rechazó la sustitución de funciones, así que el helper sigue sin aplicarse y la prueba Auth read permanece bloqueada por USAGE en auth. La membresía temporal postgres → ed_delivery_staging_rpc quedó revocada; checkout PENDIENTE; sin llamadas Geoapify ni pedidos.
