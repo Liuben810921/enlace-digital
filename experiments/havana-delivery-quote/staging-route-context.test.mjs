@@ -44,6 +44,15 @@ test("requires provider warehouses and destinations to be active and linked",()=
  const inactiveDestination={...snapshot,entities:snapshot.entities.map(x=>x.kind==="destination"?{...x,payload:{...x.payload,active:false}}:x)};
  assert.equal(resolve({snapshot:inactiveDestination}).reason,"DESTINATION_NOT_ROUTABLE");
 });
+test("rejects extra supplier links and dangling relations",()=>{
+ const ownWithSupplier={...snapshot,entities:[...snapshot.entities,{kind:"supplier",id:"s1",revision:1,payload:{active:true}}],links:[...snapshot.links,link("warehouse","w1","supplier","s1")]};
+ assert.equal(resolve({productIds:["p2"],snapshot:ownWithSupplier}).reason,"OWN_WAREHOUSE_HAS_SUPPLIER");
+ const providerWarehouse=warehouse("w1",{type:"proveedor",supplierId:"s1"});
+ const providerSnap={...snapshot,entities:[...snapshot.entities.filter(x=>!(x.kind==="warehouse"&&x.id==="w1")),providerWarehouse,{kind:"supplier",id:"s1",revision:1,payload:{active:true}},{kind:"supplier",id:"s2",revision:1,payload:{active:true}}],links:[...snapshot.links,link("warehouse","w1","supplier","s1"),link("warehouse","w1","supplier","s2")]};
+ assert.equal(resolve({productIds:["p2"],snapshot:providerSnap}).reason,"SUPPLIER_NOT_ACTIVE_OR_LINKED");
+ const dangling={...snapshot,links:[...snapshot.links,link("warehouse","w1","supplier","missing")]};
+ assert.equal(resolve({productIds:["p2"],snapshot:dangling}).reason,"INVALID_STAGING_LINK");
+});
 test("rejects duplicate or malformed snapshots",()=>{
  assert.equal(resolve({snapshot:{...snapshot,entities:[...snapshot.entities,snapshot.entities[0]]}}).reason,"DUPLICATE_STAGING_ENTITY");
  assert.equal(resolve({snapshot:{...snapshot,links:[...snapshot.links,link("product_origin","p1","warehouse","w1")]}}).reason,"DUPLICATE_STAGING_LINK");
