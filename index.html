@@ -1546,8 +1546,8 @@ function edDeliveryCheckoutPreview(lines){
  if(typeof contract!=='function')return pending('Cotizador offline no disponible');
  let map,origins,suppliers;
  try{
-  const raw=localStorage.getItem(ED_PRODUCT_ORIGINS_KEY);
-  map=JSON.parse(raw===null?'{}':raw);
+  // Use the same active data source for all delivery dependencies.
+  map=edProductOriginsRead();
   origins=edDeliveryOriginsRead();suppliers=edDeliverySuppliersRead();
  }catch(e){return pending('Asociaciones ilegibles')}
  if(!map||typeof map!=='object'||Array.isArray(map))return pending('Asociaciones inválidas');
