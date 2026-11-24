@@ -52,10 +52,6 @@ begin
 end
 $migration$;
 
-revoke all on function public.ed_delivery_staging_read() from public, anon, authenticated;
-revoke all on function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) from public, anon, authenticated;
-revoke all on function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) from public, anon, authenticated;
-revoke all on function public.ed_delivery_staging_batch(jsonb) from public, anon, authenticated;
 
 revoke all on function public.ed_delivery_staging_read_v2() from public, anon, authenticated;
 revoke all on function public.ed_delivery_staging_write_v2(uuid,text,text,jsonb,bigint,jsonb) from public, anon, authenticated;
