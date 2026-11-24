@@ -43,7 +43,7 @@ begin
    raise exception 'source RPC is missing required auth, allowlist, or search_path guard: %',v_source;
   end if;
   v_definition:=replace(v_definition,'auth.uid()','ed_delivery_private.current_uid()');
-  v_definition:=replace(v_definition,v_old_name,v_new_name||'(');
+  v_definition:=replace(v_definition,v_old_name,v_new_name);
   if v_target='public.ed_delivery_staging_batch_v2' then
    v_definition:=replace(v_definition,'public.ed_delivery_staging_write(','public.ed_delivery_staging_write_v2(');
   end if;
