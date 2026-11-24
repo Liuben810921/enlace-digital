@@ -22,8 +22,8 @@ test("resolves server snapshot to deduplicated warehouse legs without a tariff",
  assert.equal("feeCup" in result,false);
 });
 test("rejects client supplied coordinates or identity claims",()=>{
- assert.equal(resolve({origin:{lat:23.1,lon:-82.3}}).reason,"INVALID_SELECTION");
- assert.equal(resolve({customerId:"forged"}).reason,"INVALID_SELECTION");
+ assert.equal(resolve({origin:{lat:23.1,lon:-82.3}}).reason,"UNEXPECTED_CONTEXT_FIELDS");
+ assert.equal(resolve({customerId:"forged"}).reason,"UNEXPECTED_CONTEXT_FIELDS");
 });
 test("requires associations and relational links to match exactly",()=>{
  assert.equal(resolve({snapshot:{...snapshot,links:snapshot.links.slice(1)}}).reason,"PRODUCT_ORIGIN_LINK_MISMATCH");
@@ -47,5 +47,5 @@ test("requires provider warehouses and destinations to be active and linked",()=
 test("rejects duplicate or malformed snapshots",()=>{
  assert.equal(resolve({snapshot:{...snapshot,entities:[...snapshot.entities,snapshot.entities[0]]}}).reason,"DUPLICATE_STAGING_ENTITY");
  assert.equal(resolve({snapshot:{...snapshot,links:[...snapshot.links,link("product_origin","p1","warehouse","w1")]}}).reason,"DUPLICATE_STAGING_LINK");
- assert.equal(resolve({snapshot:{entities:[],links:[]}}).reason,"PRODUCT_ORIGINS_INVALID");
+ assert.equal(resolve({snapshot:{entities:[destination],links:[]}}).reason,"PRODUCT_ORIGINS_INVALID");
 });
