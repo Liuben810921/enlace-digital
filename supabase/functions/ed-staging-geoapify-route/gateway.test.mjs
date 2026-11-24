@@ -52,9 +52,9 @@ test("rejects missing and forged operator identity",()=>{
  assert.equal(authorizeOperator(operator).ok,true);
 });
 test("requires committed, operation-bound, payload-bound atomic reservation",()=>{
- const hash="a".repeat(64),base={committed:true,status:"reserved",verifiedBy:"postgres-atomic-rpc",userId:operator.userId,operationId:input.operationId,requestId:"request_123456",contextRevision:7,payloadHash:hash};
+ const hash="a".repeat(64),base={committed:true,status:"reserved",verifiedBy:"postgres-atomic-rpc",contextVerified:true,contextSource:"staging-postgres",userId:operator.userId,operationId:input.operationId,requestId:"request_123456",contextRevision:7,payloadHash:hash};
  assert.equal(authorizeRoutePreflight({operator,request:input,quotaReservation:base,payloadHash:hash}).ok,true);
- for(const patch of [{committed:false},{verifiedBy:"client"},{userId:"other"},{operationId:"other_123456"},{requestId:"short"},{contextRevision:8},{payloadHash:"b".repeat(64)}])
+ for(const patch of [{committed:false},{verifiedBy:"client"},{contextVerified:false},{contextSource:"client"},{userId:"other"},{operationId:"other_123456"},{requestId:"short"},{contextRevision:8},{payloadHash:"b".repeat(64)}])
   assert.equal(authorizeRoutePreflight({operator,request:input,quotaReservation:{...base,...patch},payloadHash:hash}).ok,false);
 });
 test("auth precedes quota reservation and unverified identities cannot spend",async()=>{
