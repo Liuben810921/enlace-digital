@@ -80,3 +80,13 @@ Mensaje recomendado:
 - **Restricciones vigentes:** no producción, no despliegues, no pedidos reales, no llamadas Geoapify, no costos. Persistencia compartida segura y atomicidad entre pestañas continúan pendientes.
 - **Regla de trabajo del fundador:** avanzar autónomamente en cada fase autorizada; al cerrar una fase entregar commit/evidencias y una acción clara para pasar a la siguiente. Solicitar intervención únicamente cuando exista una decisión, credencial o autorización que realmente haga falta; no reiniciar auditorías ni repetir tareas cerradas.
 - **Siguiente fase:** preparar offline el adaptador de identidad y la reserva transaccional para el intermediario staging, junto con pruebas focalizadas. Mantenerlo sin habilitar, sin despliegue ni tráfico real mientras falten los gates de servidor.
+
+
+## 10. Intermediario de rutas — 24 de noviembre de 2026
+
+- **Fase offline completada en la rama actual:** `supabase/functions/ed-staging-geoapify-route/index.ts` delega al núcleo Node/Deno `gateway.mjs`; nuevas pruebas focalizadas en `gateway.test.mjs`.
+- **Controles:** flags cerrados por defecto; body JSON estricto con límite; CORS exacto por entorno staging; operación idempotente y hash canónico; identidad solo por adaptador servidor validado; reserva solo si RPC confirma commit, usuario/operación/revisión/hash y contexto de staging. Respuesta sigue PENDIENTE; ningún transporte Geoapify, ruta confiable, tarifa ni pedido.
+- **Evidencia:** 14/14 pruebas Node PASS; arnés local de `Deno.serve` confirma que flags activas sin adaptadores dan `GATEWAY_NOT_CONFIGURED`; `node --check` PASS. Deno no está disponible; no se afirma despliegue ni empaquetado Supabase.
+- **Artefacto:** `docs/plan-perfeccionamiento-posterior/geoapify-edge-gateway-offline-20261124.md` contiene detalles, límites y evidencia.
+- **Intervención requerida antes de la fase de conexión real:** confirmar ACL/tabla administrativa y RPC atómica existentes del proyecto staging, o autorizar diseño y aplicación de cambios en esa base. También será necesaria autorización explícita para habilitar/desplegar la función. Hasta entonces mantener flags cerradas; no consultar servicios externos ni hacer llamadas Geoapify.
+- **Flujo de trabajo:** seguir autónomamente en tareas offline autorizadas; al cerrar una fase dejar commit y evidencia. Pausar solo ante una autorización, credencial o decisión técnica que no pueda inferirse con seguridad. No entregar instrucciones para que el usuario copie y pegue como sustituto de continuar el trabajo.
