@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {handleGatewayRequest,validateRequest,hashRequest,authorizeOperator,authorizeRoutePreflight} from "./gateway.mjs";
+import {handleGatewayRequest,validateRequest,hashRequest,parseRouteResponse,authorizeOperator,authorizeRoutePreflight} from "./gateway.mjs";
 
 const input={origin:{lat:23.12,lon:-82.4},destination:{lat:23.13,lon:-82.37},originId:"warehouse_1",destinationId:"destination_1",contextRevision:7,operationId:"operation_123456"};
 const operator={userId:"123e4567-e89b-42d3-a456-426614174000",role:"principal",verifiedBy:"supabase-auth-and-db"};
@@ -32,6 +32,13 @@ test("rejects invalid region, revision, and idempotency key",()=>{
  assert.equal(validateRequest({...input,destination:{lat:25,lon:-82}}).reason,"OUTSIDE_HAVANA_TEST_BOUNDS");
  assert.equal(validateRequest({...input,contextRevision:-1}).reason,"INVALID_CONTEXT");
  assert.equal(validateRequest({...input,operationId:"short"}).reason,"INVALID_CONTEXT");
+});
+test("route payloads never become trusted route distances",()=>{
+ const valid={features:[{properties:{distance:2400},geometry:{type:"LineString"}}]};
+ const result=parseRouteResponse(valid);
+ assert.equal(result.status,"PENDIENTE");assert.equal(result.reason,"PROVIDER_ROUTE_REQUIRES_TRUST_VALIDATION");assert.equal(result.roadKm,2.4);
+ assert.equal(parseRouteResponse({features:[]}).reason,"AMBIGUOUS_PROVIDER_RESPONSE");
+ assert.equal(parseRouteResponse({features:[{properties:{distance:999999},geometry:{type:"LineString"}}]}).reason,"INVALID_ROUTE_DISTANCE");
 });
 test("hash is canonical and changes with context",async()=>{
  const first=await hashRequest(input),same=await hashRequest({...input,destination:{lon:-82.37,lat:23.13}});
