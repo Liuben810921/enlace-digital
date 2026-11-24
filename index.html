@@ -1527,6 +1527,8 @@ function edDeliveryCreateCheckoutShipmentDraft(){
 function edDeliveryPreparationConfirm(){
  const review=edSimulatedCheckoutReview;
  if(!review)return edOfficialRecipientCheckout();
+ const deliveryContext=edCheckoutDeliveryContextRead();
+ if(!deliveryContext.ok||!review.deliverySnapshot||JSON.stringify(deliveryContext.snapshot)!==JSON.stringify(review.deliverySnapshot)){alert('El inventario o las asociaciones de almacenes cambiaron desde la vista previa. Revisa nuevamente la compra.');return edOfficialOrderPreview(review.choice)}
  const current=edDeliveryCheckoutPreview(cart.map(line=>({line,product:state.products.find(p=>p.id===line.id)})).filter(x=>x.product));
  const choices=current.preparation?.choices||[];
  if(choices.length!==cart.length)return alert('No se pudo verificar la preparación. Revisa el carrito.');
@@ -1539,18 +1541,55 @@ function edDeliveryPreparationConfirm(){
  review.assignments=assignments;
  edConfirmSimulatedCheckout();
 }
+function edCheckoutDeliveryContextRead(){
+ const pending=reason=>({ok:false,reason});
+ if(edDeliveryIsQuarantined())return pending('DELIVERY_CONTEXT_QUARANTINED');
+ if(!edInventoryLoaded||edInventoryPendingSaves>0||!Array.isArray(state.products)||JSON.stringify(state.products)!==edInventorySnapshot)return pending('INVENTORY_SOURCE_MISMATCH');
+ let revision,snapshot;
+ try{
+  revision=edDeliveryContextRevision();
+  if(revision===null)return pending('DELIVERY_CONTEXT_REVISION_INVALID');
+  snapshot={
+   inventory:localStorage.getItem('enlace_demo_v1'),
+   associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),
+   origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),
+   suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),
+   destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),
+   revision
+  };
+  const shared=JSON.parse(snapshot.inventory||'null');
+  const associations=JSON.parse(snapshot.associations||'{}');
+  const origins=JSON.parse(snapshot.origins||'[]');
+  const suppliers=JSON.parse(snapshot.suppliers||'[]');
+  const destinations=JSON.parse(snapshot.destinations||'[]');
+  if(!shared||!Array.isArray(shared.products)||JSON.stringify(shared.products)!==JSON.stringify(state.products))return pending('INVENTORY_SOURCE_MISMATCH');
+  if(!associations||typeof associations!=='object'||Array.isArray(associations)||!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(destinations))return pending('DELIVERY_CONTEXT_INVALID');
+  const stable=revision===edDeliveryContextRevision()&&
+   snapshot.inventory===localStorage.getItem('enlace_demo_v1')&&
+   snapshot.associations===localStorage.getItem(ED_PRODUCT_ORIGINS_KEY)&&
+   snapshot.origins===localStorage.getItem(ED_DELIVERY_ORIGINS_KEY)&&
+   snapshot.suppliers===localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY)&&
+   snapshot.destinations===localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY)&&
+   JSON.stringify(state.products)===edInventorySnapshot&&edInventoryPendingSaves===0;
+  if(!stable)return pending('DELIVERY_CONTEXT_CHANGED');
+  return {ok:true,snapshot};
+ }catch(e){return pending('DELIVERY_CONTEXT_UNREADABLE')}
+}
 function edDeliveryCheckoutPreview(lines){
  const pending=reason=>({status:'PENDIENTE',reason,rows:[]});
- if(edDeliveryIsQuarantined())return pending('Asociaciones en cuarentena');
+ const context=edCheckoutDeliveryContextRead();
+ if(!context.ok)return {...pending('Inventario, asociaciones y almacenes sin sincronizar: '+context.reason),snapshot:null};
  const contract=window.EDOfflineQuote?.quoteProductDelivery;
- if(typeof contract!=='function')return pending('Cotizador offline no disponible');
+ if(typeof contract!=='function')return {...pending('Cotizador offline no disponible'),snapshot:context.snapshot};
  let map,origins,suppliers;
  try{
-  // Use the same active data source for all delivery dependencies.
-  map=edProductOriginsRead();
-  origins=edDeliveryOriginsRead();suppliers=edDeliverySuppliersRead();
- }catch(e){return pending('Asociaciones ilegibles')}
- if(!map||typeof map!=='object'||Array.isArray(map))return pending('Asociaciones inválidas');
+  map=JSON.parse(context.snapshot.associations||'{}');
+  const savedOrigins=JSON.parse(context.snapshot.origins||'[]');
+  const savedSuppliers=JSON.parse(context.snapshot.suppliers||'[]');
+  origins=Array.isArray(savedOrigins)?savedOrigins.filter(x=>x&&typeof x==='object'&&typeof x.id==='string').slice(0,200):[];
+  suppliers=Array.isArray(savedSuppliers)?savedSuppliers.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):[];
+ }catch(e){return {...pending('Asociaciones ilegibles'),snapshot:null}}
+ if(!map||typeof map!=='object'||Array.isArray(map))return {...pending('Asociaciones inválidas'),snapshot:null};
  const preparation=edDeliveryPreparationGroups(lines,map,origins,suppliers);
  preparation.choices=edDeliveryPreparationChoices(lines,map,origins,suppliers);
  const rows=[];
@@ -1564,7 +1603,9 @@ function edDeliveryCheckoutPreview(lines){
   const labels=ids.map(originId=>origins.find(o=>o.id===originId)?.name||'Punto no disponible');
   rows.push({name:entry.product.name||id,origins:labels,status:'PENDIENTE',reason:routeState.reason||quote.reason||'Distancia vial no verificada'});
  }
- return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows,preparation};
+ const current=edCheckoutDeliveryContextRead();
+ if(!current.ok||JSON.stringify(current.snapshot)!==JSON.stringify(context.snapshot))return {...pending('El contexto de almacenes o inventario cambió durante la vista previa'),snapshot:null};
+ return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows,preparation,snapshot:context.snapshot};
 }
 async function edOfficialOrderPreview(selectedId=null){
  const availability=validateCart();
@@ -1597,7 +1638,7 @@ async function edOfficialOrderPreview(selectedId=null){
  if(!Number.isFinite(total)){alert('El importe total no es válido. Revisa los precios y cantidades.');return;}
  const deliveryPreview=edDeliveryCheckoutPreview(lines);
  const reviewFingerprint=JSON.stringify({cart:cart.map(c=>({id:c.id,qty:c.qty,color:c.color||''})),products:lines.map(x=>({id:x.product.id,price:x.product.price,qty:x.product.qty,colors:x.product.colors||[],origen_producto:x.product.origen_producto,disponible:x.product.disponible,archivado:x.product.archivado})),recipient,choice,profile:edCustomerProfile});
- edSimulatedCheckoutReview={fingerprint:reviewFingerprint,choice};
+ edSimulatedCheckoutReview={fingerprint:reviewFingerprint,choice,deliverySnapshot:deliveryPreview.snapshot||null};
  modal('<h2>Finalizar compra</h2><p class="alert">MODO PRUEBA: no se registran ni envían pedidos reales, no se cobra y no se descuenta inventario.</p>'+
  '<p><strong>Cliente:</strong> '+esc(edCustomerProfile.nombre)+'</p><p><strong>Destinatario:</strong> '+esc(recipient.nombre)+' · '+esc(recipient.telefono)+'</p>'+
  '<p><strong>Entrega:</strong> '+esc([recipient.provincia,recipient.municipio,recipient.barrio,recipient.direccion].filter(Boolean).join(', '))+'</p>'+
@@ -1620,6 +1661,8 @@ function edConfirmSimulatedCheckout(){
   return modal('<h2>Revisión necesaria</h2><p class="alert">La disponibilidad del carrito cambió. Revisa nuevamente la compra antes de confirmar la prueba.</p><button class="secondary" style="width:100%" onclick="edOfficialRecipientCheckout()">Volver a revisar</button>');
  }
  const review=edSimulatedCheckoutReview;
+ const deliveryContext=edCheckoutDeliveryContextRead();
+ if(!deliveryContext.ok||!review?.deliverySnapshot||JSON.stringify(deliveryContext.snapshot)!==JSON.stringify(review.deliverySnapshot)){edSimulatedCheckoutReview=null;return modal('<h2>Revisión necesaria</h2><p class="alert">El inventario o las asociaciones de almacenes cambiaron. Revisa nuevamente la compra antes de confirmar.</p><button class="primary" style="width:100%" onclick="edOfficialOrderPreview()">Revisar compra</button>')}
  edSimulatedCheckoutReview=null;
  const choice=review?.choice;
  const profile=edCustomerProfile;
