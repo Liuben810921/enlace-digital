@@ -83,7 +83,7 @@ test("even a valid synthetic reservation produces no route or tariff",async()=>{
  const hash=await hashRequest(input);
  const response=await handleGatewayRequest(makeRequest(),{env,authenticate:async()=>operator,reserveAtomic:async request=>{
   reservation=request;
-  return {committed:true,status:"reserved",verifiedBy:"postgres-atomic-rpc",userId:request.userId,operationId:request.operationId,requestId:"request_123456",contextRevision:request.contextRevision,payloadHash:request.payloadHash};
+  return {committed:true,status:"reserved",verifiedBy:"postgres-atomic-rpc",contextVerified:true,contextSource:"staging-postgres",userId:request.userId,operationId:request.operationId,requestId:"request_123456",contextRevision:request.contextRevision,payloadHash:request.payloadHash};
  },provider:async()=>{providerCalls++}});
  const result=await body(response);
  assert.equal(response.status,503);assert.equal(result.status,"PENDIENTE");assert.equal(result.reason,"PROVIDER_NOT_CONNECTED");
