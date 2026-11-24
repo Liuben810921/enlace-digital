@@ -15,7 +15,7 @@ const ctx={
  document:{getElementById:el},cart:[{id:5,qty:2,color:'Azul'}],
  state:{products:[{id:5,name:'Equipo',price:100}]},
  edCustomerSession:{token:'x'},edCustomerProfile:{nombre:'Comprador Uno',residencia:'extranjero'},
- edCustomerRecipients:[recipient],edCustomerDeliveryLocations:[],validateCart:()=>stock,renderFloatingCart:()=>{},
+ edCustomerRecipients:[recipient],edCustomerDeliveryLocations:[],validateCart:()=>stock,edDeliveryCheckoutPreview:()=>({status:'PENDIENTE',reason:'Sin rutas verificadas en prueba aislada',rows:[],preparation:{choices:[]},snapshot:{testOnly:true}}),renderFloatingCart:()=>{},
  edOfficialCustomerLogin:()=>{rendered='LOGIN';},alert:x=>{rendered=String(x);},
  modal:x=>{rendered=x;},esc:x=>String(x),money:x=>String(x),
  edCubanPhone:x=>x,edCustomerToken:async()=> {if(!ctx.edCustomerSession?.token)throw Error('Sesión no disponible');return ctx.edCustomerSession.token;},
