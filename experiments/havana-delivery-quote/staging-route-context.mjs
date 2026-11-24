@@ -5,7 +5,10 @@ function point(lat,lon){
  return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=BOUNDS.latMin&&lat<=BOUNDS.latMax&&lon>=BOUNDS.lonMin&&lon<=BOUNDS.lonMax;
 }
 function entityKey(kind,id){return kind+"\u0000"+id}
-export function resolveStagingRouteContext({productIds,destinationId,snapshot}={}){
+export function resolveStagingRouteContext(input={}){
+ if(!input||typeof input!=="object"||Array.isArray(input)||Object.keys(input).some(key=>!["productIds","destinationId","snapshot"].includes(key)))
+  return PENDING("UNEXPECTED_CONTEXT_FIELDS");
+ const {productIds,destinationId,snapshot}=input;
  if(!Array.isArray(productIds)||productIds.length<1||productIds.length>100||
     productIds.some(x=>typeof x!=="string"||!ID.test(x))||new Set(productIds).size!==productIds.length||
     typeof destinationId!=="string"||!ID.test(destinationId))
