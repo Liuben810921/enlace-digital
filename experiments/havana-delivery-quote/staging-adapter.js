@@ -17,7 +17,7 @@ function create({publishableKey,getAccessToken}={}){
   return body;
  }
  return Object.freeze({
-  async readAll(){const result=await rpc('ed_delivery_staging_read',{});if(!result||!Array.isArray(result.entities)||!Array.isArray(result.links))throw Error('Estructura de staging inválida');return result},
+  async readAll(){const result=await rpc('ed_delivery_staging_read_v2',{});if(!result||!Array.isArray(result.entities)||!Array.isArray(result.links))throw Error('Estructura de staging inválida');return result},
   async batch(changes){
    if(!Array.isArray(changes)||changes.length<1||changes.length>100)throw Error('Lote inválido');
    const items=changes.map(x=>{
@@ -26,18 +26,18 @@ function create({publishableKey,getAccessToken}={}){
     return {kind,id:x.id,payload:x.payload,expected_revision:x.expectedRevision,links:x.links,operation_id:x.operationId};
    }).sort((a,b)=>{const x=a.kind+':'+a.id,y=b.kind+':'+b.id;return x<y?-1:x>y?1:0});
    if(items.some((x,i)=>i>0&&x.kind===items[i-1].kind&&x.id===items[i-1].id))throw Error('Entidad duplicada en lote');
-   return rpc('ed_delivery_staging_batch',{p_items:items});
+   return rpc('ed_delivery_staging_batch_v2',{p_items:items});
   },
   async deactivate(collection,id,expectedRevision,operationId){
    const kind=KINDS[collection];
    if(!['supplier','warehouse','destination'].includes(kind)||!Number.isSafeInteger(expectedRevision)||expectedRevision<1||typeof id!=='string'||!id||typeof operationId!=='string')throw Error('Desactivación inválida');
-   return rpc('ed_delivery_staging_deactivate',{p_kind:kind,p_id:id,p_expected_revision:expectedRevision,p_operation_id:operationId});
+   return rpc('ed_delivery_staging_deactivate_v2',{p_kind:kind,p_id:id,p_expected_revision:expectedRevision,p_operation_id:operationId});
   },
   async save(collection,id,payload,expectedRevision,links=[],operationId){
    const kind=KINDS[collection];
    if(!kind||typeof id!=='string'||!id||!payload||Array.isArray(payload)||typeof payload!=='object'||!Number.isSafeInteger(expectedRevision)||expectedRevision<0||!Array.isArray(links))throw Error('Datos de guardado inválidos');
    if(typeof operationId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId))throw Error('Identificador de operación UUID requerido');
-   return rpc('ed_delivery_staging_write',{p_operation_id:operationId,p_kind:kind,p_id:id,p_payload:payload,p_expected_revision:expectedRevision,p_links:links});
+   return rpc('ed_delivery_staging_write_v2',{p_operation_id:operationId,p_kind:kind,p_id:id,p_payload:payload,p_expected_revision:expectedRevision,p_links:links});
   }
  });
 }
