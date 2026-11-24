@@ -221,6 +221,7 @@ function bulkDeleteWarehouses(){
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
+window.EDDeliveryStagingBridge=Object.freeze({isConnected:enabled,projectRef:'xqahthghvozeigbojhyi'});
 function init(){
  wrap('edDeliverySuppliersRead',()=>read('supplier'));
  wrap('edDeliveryOriginsRead',()=>read('warehouse'));
