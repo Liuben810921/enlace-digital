@@ -65,6 +65,7 @@ export function authorizeRoutePreflight({operator,request,quotaReservation,paylo
  const reservation=quotaReservation;
  if(!reservation||typeof reservation!=="object"||reservation.committed!==true||
     reservation.status!=="reserved"||reservation.verifiedBy!=="postgres-atomic-rpc"||
+    reservation.contextVerified!==true||reservation.contextSource!=="staging-postgres"||
     reservation.userId!==identity.userId||reservation.operationId!==valid.data.operationId||
     typeof reservation.requestId!=="string"||!REQUEST_ID.test(reservation.requestId)||
     reservation.contextRevision!==valid.data.contextRevision||reservation.payloadHash!==payloadHash)
