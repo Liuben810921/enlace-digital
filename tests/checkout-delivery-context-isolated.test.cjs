@@ -29,7 +29,7 @@ function makeContext(overrides={}){
   edInventoryLoaded:true,edInventoryPendingSaves:0,
   edInventorySnapshot:JSON.stringify(state.products),state,
   edDeliveryIsQuarantined:()=>false,
-  edDeliveryContextRevision:()=>1,
+  edDeliveryContextRevision:()=>1,window:{},
   localStorage:{
    getItem:key=>Object.prototype.hasOwnProperty.call(localValues,key)?localValues[key]:null,
    setItem:(key,value)=>{localValues[key]=String(value);}
@@ -47,6 +47,8 @@ const stale=makeContext({state:{products:[{id:'p1',name:'Remote newer',qty:3,ori
 assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',stale).reason,'INVENTORY_SOURCE_MISMATCH');
 const pending=makeContext({edInventoryPendingSaves:1});
 assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',pending).reason,'INVENTORY_SOURCE_MISMATCH');
+const remote=makeContext({window:{EDDeliveryStagingBridge:{isConnected:()=>true}}});
+assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',remote).reason,'REMOTE_DELIVERY_CONTEXT_NOT_JOINED_TO_INVENTORY');
 const malformed=makeContext();
 malformed.localStorage.setItem('ed_product_origins_demo_v1','[]');
 assert.equal(vm.runInContext('edCheckoutDeliveryContextRead()',malformed).reason,'DELIVERY_CONTEXT_INVALID');
