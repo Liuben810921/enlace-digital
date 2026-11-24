@@ -2,6 +2,12 @@
 -- Requiere identidad Supabase Auth real; las sesiones locales de clientes NO autorizan administración.
 begin;
 create schema if not exists ed_delivery_private;
+create or replace function ed_delivery_private.current_uid()
+returns uuid language sql stable set search_path = ''
+as $
+ select coalesce(nullif(current_setting('request.jwt.claim.sub',true),''),(nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub'))::uuid
+$;
+revoke all on function ed_delivery_private.current_uid() from public,anon,authenticated;
 revoke all on schema ed_delivery_private from public, anon, authenticated;
 create table ed_delivery_private.admin_members (
  user_id uuid primary key references auth.users(id) on delete cascade,
@@ -46,7 +52,7 @@ revoke all on all tables in schema ed_delivery_private from public, anon, authen
 create or replace function public.ed_delivery_staging_read()
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_user uuid := auth.uid(); v_result jsonb;
+declare v_user uuid := ed_delivery_private.current_uid(); v_result jsonb;
 begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
@@ -58,7 +64,7 @@ end $$;
 create or replace function public.ed_delivery_staging_write(p_operation_id uuid,p_kind text,p_id text,p_payload jsonb,p_expected_revision bigint,p_links jsonb default '[]'::jsonb)
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_user uuid:=auth.uid(); v_old bigint; v_revision bigint; v_existing record; v_result jsonb; v_link jsonb; v_target_kind text; v_target_id text;
+declare v_user uuid:=ed_delivery_private.current_uid(); v_old bigint; v_revision bigint; v_existing record; v_result jsonb; v_link jsonb; v_target_kind text; v_target_id text;
 begin
  if v_user is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_user and enabled) then
   raise exception 'not authorized' using errcode='42501';
@@ -274,8 +280,7 @@ do $$ begin
  end if;
 end $$;
 grant usage on schema ed_delivery_private to ed_delivery_staging_rpc;
-grant usage on schema auth to ed_delivery_staging_rpc;
-grant execute on function auth.uid() to ed_delivery_staging_rpc;
+grant execute on function ed_delivery_private.current_uid() to ed_delivery_staging_rpc;
 grant select on ed_delivery_private.admin_members to ed_delivery_staging_rpc;
 grant usage,create on schema public to ed_delivery_staging_rpc; -- temporary, revoked before commit
 grant select,insert,update on ed_delivery_private.entities to ed_delivery_staging_rpc;
@@ -291,26 +296,26 @@ do $$ begin
  end if;
 end $$;
 create policy ed_admin_self_read on ed_delivery_private.admin_members
- for select to ed_delivery_staging_rpc using (user_id = (select auth.uid()) and enabled);
+ for select to ed_delivery_staging_rpc using (user_id = (select ed_delivery_private.current_uid()) and enabled);
 create policy ed_entities_admin on ed_delivery_private.entities
  for all to ed_delivery_staging_rpc
- using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
- with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+ using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
+ with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 create policy ed_links_admin on ed_delivery_private.links
  for all to ed_delivery_staging_rpc
- using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
- with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+ using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
+ with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 create policy ed_operations_admin on ed_delivery_private.operations
  for all to ed_delivery_staging_rpc
- using (actor_id=(select auth.uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled))
- with check (actor_id=(select auth.uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select auth.uid()) and m.enabled));
+ using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled))
+ with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 alter function public.ed_delivery_staging_read() owner to ed_delivery_staging_rpc;
 alter function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) owner to ed_delivery_staging_rpc;
 -- Explicit soft deactivation avoids breaking linked warehouses and historical drafts.
 create or replace function public.ed_delivery_staging_deactivate(p_kind text,p_id text,p_expected_revision bigint,p_operation_id uuid)
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_actor uuid:=auth.uid(); v_entity ed_delivery_private.entities%rowtype; v_previous ed_delivery_private.operations%rowtype; v_args jsonb; v_result jsonb;
+declare v_actor uuid:=ed_delivery_private.current_uid(); v_entity ed_delivery_private.entities%rowtype; v_previous ed_delivery_private.operations%rowtype; v_args jsonb; v_result jsonb;
 begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
   raise exception 'not authorized' using errcode='42501';
@@ -354,7 +359,7 @@ alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owne
 create or replace function public.ed_delivery_staging_batch(p_items jsonb)
 returns jsonb language plpgsql security definer set search_path = ''
 as $$
-declare v_actor uuid:=auth.uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb; v_phase integer;
+declare v_actor uuid:=ed_delivery_private.current_uid(); v_item jsonb; v_previous text:=''; v_key text; v_results jsonb:='[]'::jsonb; v_phase integer;
 begin
  if v_actor is null or not exists(select 1 from ed_delivery_private.admin_members where user_id=v_actor and enabled) then
   raise exception 'not authorized' using errcode='42501';
