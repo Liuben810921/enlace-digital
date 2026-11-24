@@ -134,7 +134,7 @@ Mensaje recomendado:
 ## 15. Resolución offline del contexto de rutas — 24 de noviembre de 2026
 
 - Se añadieron `experiments/havana-delivery-quote/staging-route-context.mjs` y sus pruebas focalizadas. El resolvedor acepta únicamente selección de productos, destino e instantánea de staging; rechaza campos extra del cliente (incluidas coordenadas e identidad).
-- Valida IDs y revisiones, entidades/vínculos duplicados, coincidencia exacta entre asociación y relaciones producto→almacén, almacenes y proveedores activos, y coordenadas de origen/destino dentro de la cobertura configurada de La Habana. Consolida una ruta por almacén y agrupa los productos que comparten origen.
+- Valida IDs y revisiones, entidades/vínculos duplicados, coincidencia exacta entre asociación y relaciones producto→almacén, vínculos sin referencias huérfanas, almacenes y proveedores activos, y coordenadas de origen/destino dentro de la cobertura configurada de La Habana. También rechaza vínculos de proveedor sobrantes o de un proveedor distinto al declarado. Consolida una ruta por almacén y agrupa los productos que comparten origen.
 - No calcula distancia, tarifa ni cuota, no llama servicios externos y no cambia el checkout. Es un bloque offline listo para conectar cuando la lectura autenticada del panel pueda entregar una instantánea fiable.
-- **Prueba ejecutada:** `node --test experiments/havana-delivery-quote/staging-route-context.test.mjs`: 6/6 PASS, 0 fallidas.
+- **Prueba ejecutada:** `node --test experiments/havana-delivery-quote/staging-route-context.test.mjs`: 7/7 PASS, 0 fallidas.
 - **Límite vigente:** la lectura autenticada de RPC en staging sigue bloqueada por USAGE efectivo en `auth`; la migración auxiliar fue rechazada por el control de migraciones. No se eludió ese control. Checkout y rutas siguen PENDIENTE; sin despliegues, llamadas Geoapify ni consumo de créditos.
