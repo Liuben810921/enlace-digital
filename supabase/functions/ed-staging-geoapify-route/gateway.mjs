@@ -26,6 +26,16 @@ export function validateRequest(input){
   return {ok:false,reason:"INVALID_CONTEXT"};
  return {ok:true,data:{origin:input.origin,destination:input.destination,originId:input.originId,destinationId:input.destinationId,contextRevision:input.contextRevision,operationId:input.operationId}};
 }
+export function parseRouteResponse(payload){
+ if(!payload||typeof payload!=="object"||Array.isArray(payload))return {status:"PENDIENTE",reason:"INVALID_PROVIDER_RESPONSE"};
+ const features=payload.features;
+ if(!Array.isArray(features)||features.length!==1)return {status:"PENDIENTE",reason:"AMBIGUOUS_PROVIDER_RESPONSE"};
+ const feature=features[0],meters=feature?.properties?.distance;
+ if(typeof meters!=="number"||!Number.isFinite(meters)||meters<0||meters>300000||
+    !["LineString","MultiLineString"].includes(feature?.geometry?.type))
+  return {status:"PENDIENTE",reason:"INVALID_ROUTE_DISTANCE"};
+ return {status:"PENDIENTE",reason:"PROVIDER_ROUTE_REQUIRES_TRUST_VALIDATION",roadKm:meters/1000,provider:"geoapify"};
+}
 function canonical(value){
  if(value===null||typeof value==="string"||typeof value==="boolean")return JSON.stringify(value);
  if(typeof value==="number"){if(!Number.isFinite(value))throw Error("NON_FINITE_NUMBER");return JSON.stringify(value)}
