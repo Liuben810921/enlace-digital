@@ -1807,6 +1807,7 @@ function toggleNewProduct(open){if(open){pendingNewPhotos=[];newPhotosBusy=false
 
 /* Prototipo aislado: puntos de salida almacenados solo en este navegador.
    No escribir en Supabase ni usar coordenadas para pedidos reales. */
+const ED_PRODUCT_ORIGINS_KEY='ed_product_origins_demo_v1';
 const ED_DELIVERY_ORIGINS_KEY='ed_delivery_origins_demo_v1';
 function edDeliveryOriginsRead(){
  try{
