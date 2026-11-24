@@ -340,11 +340,3 @@ alter policy ed_entities_admin on ed_delivery_private.entities using (exists(sel
 alter policy ed_links_admin on ed_delivery_private.links using (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
 
 alter policy ed_operations_admin on ed_delivery_private.operations using (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled)) with check (actor_id=(select ed_delivery_private.current_uid()) and exists(select 1 from ed_delivery_private.admin_members m where m.user_id=(select ed_delivery_private.current_uid()) and m.enabled));
-
-alter function public.ed_delivery_staging_read() owner to ed_delivery_staging_rpc;
-
-alter function public.ed_delivery_staging_write(uuid,text,text,jsonb,bigint,jsonb) owner to ed_delivery_staging_rpc;
-
-alter function public.ed_delivery_staging_deactivate(text,text,bigint,uuid) owner to ed_delivery_staging_rpc;
-
-alter function public.ed_delivery_staging_batch(jsonb) owner to ed_delivery_staging_rpc;
