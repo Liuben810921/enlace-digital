@@ -140,10 +140,21 @@ Mensaje recomendado:
 - **Límite vigente:** la lectura autenticada de RPC en staging sigue bloqueada por USAGE efectivo en `auth`; la migración auxiliar fue rechazada por el control de migraciones. No se eludió ese control. Checkout y rutas siguen PENDIENTE; sin despliegues, llamadas Geoapify ni consumo de créditos.
 
 
+
 ## 16. Diagnóstico de permisos Auth en RPC de staging — 24 de noviembre de 2026
 
-- Asesores de Supabase revisados antes del diagnóstico: sin avisos de salud; permanecen avisos previos de linter RLS/SECURITY DEFINER previstos para el panel.
-- Lectura del catálogo PostgreSQL confirmó que las cuatro RPC vigentes todavía llaman a `auth.uid()`, pertenecen a `ed_delivery_staging_rpc`, y ese rol tiene `USAGE=false` sobre el esquema `auth`. La función alternativa `ed_delivery_private.current_uid()` no está creada en la base.
-- Una migración formal `grant_auth_uid_to_delivery_rpc_20261124` devolvió éxito, pero la ACL posterior todavía mostró `USAGE=false`; la lectura autenticada siguió fallando con `permission denied for schema auth`. No se usó `execute_sql` para cambiar privilegios.
-- **Hallazgo de privilegios persistentes:** el catálogo muestra una membresía `postgres` → `ed_delivery_staging_rpc` otorgada por `supabase_admin`, con `ADMIN OPTION=true`, `SET OPTION=false`, `INHERIT OPTION=false`. El estado contradice el checkpoint previo que afirmaba que la membresía temporal estaba revocada. Una revocación formal con grantor explícito `supabase_admin` fue rechazada por Postgres con `permission denied to revoke privileges granted by role supabase_admin`; el ejecutor disponible es `postgres` y no puede asumir `supabase_admin`. No se logró retirar esa membresía.
-- **Conclusión vigente:** staging requiere una sesión/migrador con privilegios efectivos de `supabase_admin` para quitar esa membresía persistente y para aplicar el acceso Auth mínimo o sustituir las RPC por las versiones que usan el helper JWT. No hubo despliegues ni llamadas Geoapify. Checkout y rutas siguen PENDIENTE. El resolvedor offline está probado 7/7 y los contratos anteriores gateway/claims, 19/19.
+- Las RPC originales eran propiedad de `ed_delivery_staging_rpc` y llamaban a `auth.uid()`. El propietario tenía `USAGE=false` en `auth`; por ello la lectura de staging fallaba con `permission denied for schema auth`.
+- Supabase confirma que `supabase_admin` posee el esquema `auth`; `postgres` puede tener `USAGE` sin `GRANT OPTION`. Un `GRANT USAGE ON SCHEMA auth` ejecutado por `postgres` termina sin cambiar la ACL. No repetir ese GRANT.
+- La membresía `postgres` → `ed_delivery_staging_rpc` con `ADMIN OPTION=true`, `SET=false`, `INHERIT=false`, otorgada por `supabase_admin`, es una membresía interna esperada al crear roles en Supabase; no se puede quitar como `postgres`. No describirla como una elevación de usuario de la API ni volver a intentar revocarla. Referencias oficiales: guías de roles y KB de privilegios Auth / membresías administradas de Supabase.
+- Checkout/rutas seguían PENDIENTE hasta reemplazar la dependencia directa de las RPC con un helper seguro; la corrección aplicada se detalla a continuación.
+  
+## 17. Frontera de identidad v2 aplicada en staging — 24 de noviembre de 2026
+
+- Migración aplicada: `staging_delivery_auth_boundary_v2_20261124b`.
+- Se creó `ed_delivery_private.current_uid()` como `SECURITY DEFINER`, propiedad de `postgres`, `search_path` vacío, cuerpo limitado a `auth.uid()`; no expone acceso directo al esquema `auth`.
+- Se crearon las RPC v2 de lectura, guardado, desactivación y lote. La migración copia las definiciones activas, verifica antes que cada fuente mantenga `SECURITY DEFINER`, `search_path` vacío y la comprobación allowlist/enabled, luego sustituye `auth.uid()` por el helper. Las cuatro funciones v2 son propiedad de `postgres`, conservan la validación explícita en `admin_members`, tienen ejecución revocada a `PUBLIC` y `anon`, y concedida a `authenticated`. El lote llama a `write_v2`. Las RPC antiguas se conservan durante la transición.
+- `experiments/havana-delivery-quote/staging-adapter.js` usa los nombres v2; `index.html` ya carga el adaptador y el puente de staging. El cambio web está en la rama; no se desplegó la página.
+- **Pruebas reales de staging:** lectura simulada como la cuenta allowlisted devolvió JSON válido con 0 entidades y 0 vínculos; usuario UUID sintético no allowlisted fue rechazado con `not authorized`. Catálogo confirmó las cuatro RPC v2 `SECURITY DEFINER` propiedad de `postgres`, sin ejecución para `anon`, disponibles a `authenticated`, y lote conectado al writer v2.
+- **Datos/tráfico:** no se escribieron entidades; no se invocó Geoapify ni se consumieron créditos. La ruta vial y la tarifa siguen PENDIENTE.
+- **Pruebas offline:** resolvedor de contexto 7/7 PASS; contrato de migración/auth v2 4/4 PASS; gateway 14/14 PASS; contrato claims 5/5 PASS. Total focalizado: 30/30 PASS.
+- **Siguiente paso:** desplegar el cambio de la página solo en el destino de staging, verificar conexión desde el panel móvil con la sesión administrativa y guardar solo datos ficticios. Sin producción ni llamadas Geoapify.
