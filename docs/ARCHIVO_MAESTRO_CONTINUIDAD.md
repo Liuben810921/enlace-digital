@@ -159,3 +159,15 @@ Mensaje recomendado:
 - **Pruebas offline:** resolvedor de contexto 7/7 PASS; contrato de migración/auth v2 4/4 PASS; gateway 14/14 PASS; contrato claims 5/5 PASS. Total focalizado: 30/30 PASS.
 - **Publicación web:** `main` es la rama por defecto; el workflow visible solo valida el storefront y no despliega. No se encontró una rama/host separado para publicar staging. No se integró a `main`, no se desplegó y no se publicaron cambios en el sitio.
 - **Siguiente paso:** identificar o habilitar un destino de preview/publicación separado de producción; entonces actualizarlo con la rama actual y verificar en el panel móvil usando la sesión administrativa. Sin publicar a `main`, sin producción ni llamadas Geoapify.
+
+
+## Continuidad 2026-11-25 — checkout aislado contra staging
+
+- Se resolvió la procedencia mezclada de asociaciones: al estar conectada la Administración de entregas a Supabase staging, `edCheckoutDeliveryContextRead()` toma únicamente asociaciones, almacenes, proveedores y destinos del snapshot remoto; no lee ni combina claves locales de asociaciones/destinos.
+- El inventario de productos sigue procediendo del estado visible del catálogo, y se comprueba contra `enlace_demo_v1` y el snapshot de inventario antes de aceptar el contexto. Si cambia o falta el snapshot, el checkout queda `PENDIENTE`.
+- Nuevo módulo `experiments/havana-delivery-quote/staging-checkout-context.js`: valida unicidad de entidades, existencia de extremos en vínculos, correspondencia exacta entre `product_origin.warehouseIds` y vínculos, y dependencia almacén-proveedor. Publica procedencia explícita `supabase-staging` y una revisión remota reproducible.
+- El bridge expone `checkoutContext()`; ante errores o incoherencias no hay fallback a datos locales. El bloqueo local de asociaciones se mantiene independiente del modo staging.
+- Pruebas nuevas: 5 del normalizador + 2 de integración del lector de checkout; todas pasan. También pasan `tests/customer-order-flow.cjs`, `node --check` de adaptador/bridge y sintaxis JS inline de `index.html`.
+- El workflow `verify-storefront.yml` ahora ejecuta pruebas focalizadas de procedencia de staging en cambios relacionados.
+- No se solicitan rutas ni tarifas reales: Geoapify queda sin llamada, los resultados continúan `PENDIENTE`, y `ED_REAL_CHECKOUT_ENABLED=false`.
+- Estado al cerrar: cambios en la rama `fix/delivery-batch-deactivation-order-20261120`, listos para avance fast-forward a `main` y validación CI/Pages.
