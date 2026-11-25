@@ -9,8 +9,10 @@ on:
       - docs/ARCHIVO_MAESTRO_CONTINUIDAD.md
       - tests/staging-checkout-context.test.cjs
       - tests/staging-checkout-integration.test.cjs
+      - tests/staging-supplier-onboarding.test.cjs
       - experiments/havana-delivery-quote/staging-checkout-context.js
       - experiments/havana-delivery-quote/staging-form-bridge.js
+      - experiments/havana-delivery-quote/staging-supplier-onboarding.js
   pull_request:
     paths:
       - index.html
@@ -68,7 +70,7 @@ jobs:
       - name: Execute mocked customer order flow tests
         run: node tests/customer-order-flow.cjs
       - name: Verify staging checkout data provenance
-        run: node --test tests/staging-checkout-context.test.cjs tests/staging-checkout-integration.test.cjs
+        run: node --test tests/staging-checkout-context.test.cjs tests/staging-checkout-integration.test.cjs tests/staging-supplier-onboarding.test.cjs
       - name: Verify deployed customer endpoint rejects invalid sessions
         shell: bash
         run: |
