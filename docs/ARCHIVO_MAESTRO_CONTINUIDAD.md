@@ -171,3 +171,11 @@ Mensaje recomendado:
 - El workflow `verify-storefront.yml` ahora ejecuta pruebas focalizadas de procedencia de staging en cambios relacionados.
 - No se solicitan rutas ni tarifas reales: Geoapify queda sin llamada, los resultados continúan `PENDIENTE`, y `ED_REAL_CHECKOUT_ENABLED=false`.
 - Estado al cerrar: cambios en la rama `fix/delivery-batch-deactivation-order-20261120`, listos para avance fast-forward a `main` y validación CI/Pages.
+
+
+### Cierre y verificación de esta fase (2026-11-25)
+- La integración anterior se incorporó a `main` por avance fast-forward; commit funcional verificado: `dc81eb4480551b5a126e3335d34a89904da30c2d`.
+- CI de storefront y pruebas de procedencia: SUCCESS; flujo simulado del cliente y verificación de rechazo de sesiones inválidas también SUCCESS.
+- GitHub Pages build y deploy: SUCCESS en el mismo SHA.
+- Una corrida previa falló por un fixture que no registraba los argumentos del bridge; el fixture se corrigió en `dc81eb4` y la corrida completa posterior pasó.
+- Próximo trabajo: observar desde el teléfono la vista previa del checkout con la cuenta administrativa de staging y datos sintéticos; confirmar que almacenes/asociaciones elegibles se reflejan en preparación, mientras el precio de ruta permanece PENDIENTE. No se requiere ninguna llamada Geoapify para esa fase.
