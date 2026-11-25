@@ -181,6 +181,17 @@ function supplierToggle(id){
  if(row.payload.active!==false)return deactivate('supplier',id);
  return save('supplier',id,{...row.payload,active:true});
 }
+function originToggle(id){
+ const row=get('warehouse',id);if(!row)return false;
+ if(row.payload.active!==false)return deactivate('warehouse',id);
+ if(row.payload.supplierId&&get('supplier',row.payload.supplierId)?.payload.active===false){tell('Activa primero el proveedor');return false}
+ return save('warehouse',id,{...row.payload,active:true});
+}
+function duplicateWarehouse(id){
+ const row=get('warehouse',id);if(!row)return false;
+ const p=row.payload;
+ return batch([{kind:'warehouse',id:'origin-copy-'+crypto.randomUUID(),create:true,payload:{...p,name:p.name+' (copia)',active:false,defaultForSupplier:false,lat:null,lng:null},links:p.supplierId?[{target_kind:'supplier',target_id:p.supplierId}]:[]}]);
+}
 function archive(){
  const name=field('edQuoteDraftName');if(!name||name.length>80){tell('Nombre de archivo inválido');return false}
  const latest=rows('shipment_draft').filter(x=>x.payload.status==='PENDIENTE'&&!x.payload.archivedAt).sort((a,b)=>String(b.payload.createdAt||'').localeCompare(String(a.payload.createdAt||'')))[0];
@@ -299,6 +310,8 @@ function init(){
  wrap('edDeliverySupplierToggle',supplierToggle);
  wrap('edDeliveryArchiveShipmentDraft',archive);
  wrap('edDeliveryOriginDelete',id=>deactivate('warehouse',id));
+ wrap('edDeliveryOriginToggle',originToggle);
+ wrap('edDeliveryOriginDuplicate',duplicateWarehouse);
  wrap('edDeliverySupplierDelete',id=>deactivate('supplier',id));
  wrap('edDeliveryOriginSave',origin);
  wrap('edDeliveryDestinationSave',destination);
