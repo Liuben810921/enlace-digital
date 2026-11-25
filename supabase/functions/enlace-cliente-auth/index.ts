@@ -97,6 +97,8 @@ Deno.serve(async req=>{
   if(authError||!customer?.numero)return reply(401,{error:"Sesion caducada"});
   const r=body?.recipient||{};
   const name=String(r.name||"").trim(),phone=String(r.phone||"").trim(),province=String(r.province||"").trim(),municipality=String(r.municipality||"").trim(),neighborhood=String(r.neighborhood||"").trim(),address=String(r.address||"").trim(),references=String(r.references||"").trim();
+  const coordinates=r.coordinates==null?null:havanaCoordinates(r.coordinates);
+  if(coordinates===undefined)return reply(400,{error:"Las coordenadas deben señalar una ubicación válida de La Habana."});
   if(name.length<2||name.length>150||!/^(?:\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||address.length<8||address.length>500||neighborhood.length>150||references.length>500)return reply(400,{error:"Revisa el destinatario y la direccion"});
   const id=body?.id==null?null:Number(body.id);
   if(id!==null&&(!Number.isSafeInteger(id)||id<=0))return reply(400,{error:"Destinatario invalido"});
@@ -105,11 +107,13 @@ Deno.serve(async req=>{
    const {data,error}=await db.from("clientes_destinatarios").update(record).eq("id",id).eq("cliente_numero",customer.numero).select("id").maybeSingle();
    if(error)return reply(500,{error:"No se pudo actualizar el destinatario"});
    if(!data)return reply(404,{error:"Destinatario no encontrado"});
-   return reply(200,{id:data.id});
+   const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address},coordinates,name,phone):null;
+   return reply(200,{id:data.id,coordinates_saved:coordinates?coordinatesSaved===true:null});
   }
   const {data,error}=await db.from("clientes_destinatarios").insert({...record,cliente_numero:customer.numero}).select("id").single();
   if(error)return reply(500,{error:"No se pudo guardar el destinatario"});
-  return reply(201,{id:data.id});
+  const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address},coordinates,name,phone):null;
+  return reply(201,{id:data.id,coordinates_saved:coordinates?coordinatesSaved===true:null});
  }
  if(action==="session"||action==="logout"||action==="profile"){
   const token=String(body?.token||"");
