@@ -8,11 +8,11 @@ async function sha(s:string){const b=await crypto.subtle.digest("SHA-256",new Te
 function havanaCoordinates(value:any){if(value==null)return null;const lat=Number(value.lat),lon=Number(value.lon);if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<22.7||lat>23.3||lon< -83||lon> -81.9)return undefined;return {lat,lon}}
 async function saveAddressCoordinates(customer:any,address:any,coordinates:any,name:string,phone:string){
  if(!coordinates)return null;
- const query=db.from("clientes_direcciones_entrega").select("id").eq("cliente_numero",customer.numero).eq("provincia",address.province).eq("municipio",address.municipality).eq("barrio",address.neighborhood).eq("direccion",address.street).limit(1).maybeSingle();
+ const query=db.from("clientes_direcciones_entrega").select("id").eq("cliente_numero",customer.numero).eq("provincia",address.province).eq("municipio",address.municipality).eq("barrio",address.neighborhood).eq("direccion",address.street).eq("referencias",String(address.references||"")).limit(1).maybeSingle();
  const {data:found,error:lookupError}=await query;if(lookupError)return false;
  const row={nombre_receptor:name,telefono_receptor:phone,latitud:coordinates.lat,longitud:coordinates.lon};
  if(found){const {error}=await db.from("clientes_direcciones_entrega").update(row).eq("id",found.id).eq("cliente_numero",customer.numero);return !error}
- const {error}=await db.from("clientes_direcciones_entrega").insert({cliente_numero:customer.numero,nombre_receptor:name,telefono_receptor:phone,provincia:address.province,municipio:address.municipality,barrio:address.neighborhood,direccion:address.street,referencias:"",latitud:coordinates.lat,longitud:coordinates.lon});
+ const {error}=await db.from("clientes_direcciones_entrega").insert({cliente_numero:customer.numero,nombre_receptor:name,telefono_receptor:phone,provincia:address.province,municipio:address.municipality,barrio:address.neighborhood,direccion:address.street,referencias:String(address.references||""),latitud:coordinates.lat,longitud:coordinates.lon});
  return !error;
 }
 Deno.serve(async req=>{
@@ -37,7 +37,7 @@ Deno.serve(async req=>{
   if(!["cuba","extranjero"].includes(residence)||(residence==="cuba"&&(province.length<2||municipality.length<2||street.length<8))||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Selecciona tu residencia y completa la direccion habitual si resides en Cuba."});
   const {data,error}=await db.rpc("ed_cliente_registrar_residencia_privado",{p_nombre:name,p_telefono:phone,p_password:password,p_correo:email||null,p_residencia:residence,p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
   if(error){if(error.message?.includes("Telefono ya registrado")||error.code==="23505")return reply(409,{error:"Este telefono ya esta registrado. Si es tu cuenta, inicia sesion."});console.error("Registration error",error.code);return reply(400,{error:"No se pudo completar el registro. Comprueba tus datos."})}
-  const coordinatesSaved=coordinates?await saveAddressCoordinates(data,{province,municipality,neighborhood,street},coordinates,name,phone):null;
+  const coordinatesSaved=coordinates?await saveAddressCoordinates(data,{province,municipality,neighborhood,street,references:""},coordinates,name,phone):null;
   return reply(201,{cliente:data,coordinates_saved:coordinates?coordinatesSaved===true:null,notice:"Cuenta creada. El correo de recuperacion requiere verificacion antes de habilitarse."});
  }
 
@@ -63,7 +63,7 @@ Deno.serve(async req=>{
   if(province.length<2||municipality.length<2||street.length<8||province.length>100||municipality.length>100||neighborhood.length>150||street.length>500)return reply(400,{error:"Completa una direccion habitual valida."});
   const {data,error}=await db.rpc("ed_cliente_direccion_privada",{p_token_hash:await sha(token),p_provincia:province,p_municipio:municipality,p_barrio:neighborhood,p_direccion:street});
   if(error||!data)return reply(500,{error:"No se pudo guardar la direccion habitual."});
-  const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street},coordinates,String(customer.nombre||""),String(customer.telefono||"")):null;
+  const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street,references:""},coordinates,String(customer.nombre||""),String(customer.telefono||"")):null;
   return reply(200,{saved:true,coordinates_saved:coordinates?coordinatesSaved===true:null});
  }
  if(action==="delivery-location-save"){
@@ -78,7 +78,7 @@ Deno.serve(async req=>{
   if(coordinates===undefined)return reply(400,{error:"Las coordenadas deben señalar una ubicación válida de La Habana."});
   if(name.length<2||name.length>150||!/^(?:\\+53)?[0-9]{8}$/.test(phone)||province.length<2||province.length>100||municipality.length<2||municipality.length>100||neighborhood.length>150||address.length<8||address.length>500||references.length>500)return reply(400,{error:"Revisa los datos de la direccion ocasional"});
   const base=db.from("clientes_direcciones_entrega");
-  const {data:found,error:lookupError}=await base.select("id").eq("cliente_numero",customer.numero).eq("provincia",province).eq("municipio",municipality).eq("barrio",neighborhood).eq("direccion",address).limit(1).maybeSingle();
+  const {data:found,error:lookupError}=await base.select("id").eq("cliente_numero",customer.numero).eq("provincia",province).eq("municipio",municipality).eq("barrio",neighborhood).eq("direccion",address).eq("referencias",references).limit(1).maybeSingle();
   if(lookupError)return reply(500,{error:"No se pudo consultar la direccion"});
   if(found){
    const updates={nombre_receptor:name,telefono_receptor:phone,referencias:references,usado_en:new Date().toISOString(),...(coordinates?{latitud:coordinates.lat,longitud:coordinates.lon}:{})};
@@ -107,12 +107,12 @@ Deno.serve(async req=>{
    const {data,error}=await db.from("clientes_destinatarios").update(record).eq("id",id).eq("cliente_numero",customer.numero).select("id").maybeSingle();
    if(error)return reply(500,{error:"No se pudo actualizar el destinatario"});
    if(!data)return reply(404,{error:"Destinatario no encontrado"});
-   const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address},coordinates,name,phone):null;
+   const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address,references},coordinates,name,phone):null;
    return reply(200,{id:data.id,coordinates_saved:coordinates?coordinatesSaved===true:null});
   }
   const {data,error}=await db.from("clientes_destinatarios").insert({...record,cliente_numero:customer.numero}).select("id").single();
   if(error)return reply(500,{error:"No se pudo guardar el destinatario"});
-  const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address},coordinates,name,phone):null;
+  const coordinatesSaved=coordinates?await saveAddressCoordinates(customer,{province,municipality,neighborhood,street:address,references},coordinates,name,phone):null;
   return reply(201,{id:data.id,coordinates_saved:coordinates?coordinatesSaved===true:null});
  }
  if(action==="session"||action==="logout"||action==="profile"){
