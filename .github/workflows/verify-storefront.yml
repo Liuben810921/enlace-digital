@@ -6,6 +6,7 @@ on:
       - index.html
       - .github/workflows/verify-storefront.yml
       - tests/customer-order-flow.cjs
+      - docs/ARCHIVO_MAESTRO_CONTINUIDAD.md
       - tests/staging-checkout-context.test.cjs
       - tests/staging-checkout-integration.test.cjs
       - experiments/havana-delivery-quote/staging-checkout-context.js
