@@ -744,7 +744,7 @@ body:has(#overlay:not(.hidden)) .float-cart{display:none!important}
 #modal.modal:has(#edDeliverySave) #edDeliverySave{max-width:100%;white-space:normal;min-height:48px}
 
 </style><dialog id="aboutDialog" class="about-dialog"><button class="about-close" type="button" aria-label="Cerrar ventana" onclick="document.getElementById(&quot;aboutDialog&quot;).close()">✕</button><section class="philosophy" id="nuestra-filosofia" aria-labelledby="filosofia-titulo"><div class="philosophy-intro"><span class="philosophy-eyebrow">QUIÉNES SOMOS · NUESTRA FILOSOFÍA</span><h2 id="filosofia-titulo">La confianza es nuestra primera conexión.</h2><p>En ENLACE DIGITAL creemos que una buena relación comercial comienza con algo fundamental: <strong>la confianza.</strong></p><p>Nuestra filosofía nace de años de experiencia atendiendo personalmente a nuestros clientes, construyendo relaciones basadas en la honestidad, el respeto y la profesionalidad.</p><p>Creemos en hablar con claridad, ofrecer información verdadera y ayudar a cada persona a encontrar lo que realmente necesita.</p><p>Para nosotros, vender un producto o prestar un servicio no es simplemente completar una operación. Es establecer una conexión que puede convertirse en una relación de confianza duradera.</p><p>Hoy acercamos tecnología, productos y soluciones a nuestros clientes. Mañana seguiremos ampliando nuestras posibilidades, pero manteniendo siempre los mismos principios.</p><strong class="philosophy-signature">Todo comienza con una conexión.</strong></div><div class="philosophy-values"><div><span>01</span><strong>Honestidad</strong><small>Información clara y verdadera, siempre.</small></div><div><span>02</span><strong>Confianza</strong><small>Relaciones que perduran más allá de una compra.</small></div><div><span>03</span><strong>Compromiso</strong><small>Atención profesional antes y después de cada venta.</small></div></div></section></dialog><div class="category-drawer" id="categoryDrawer" onclick="if(event.target===this)closeCategories()"><div class="category-panel"><div class="category-head"><div><h2>Todos los departamentos</h2><p style="color:#667b84;margin:7px 0 0">Encuentra rápidamente lo que necesitas</p></div><button class="category-close" onclick="closeCategories()" aria-label="Cerrar departamentos">✕</button></div><div class="category-grid-modal" id="categoryGridModal"></div></div></div><div id="overlay" class="modalback hidden" onclick="if(event.target===this)closeModal()"><div id="modal" class="modal"></div></div>
-<script src="experiments/havana-delivery-quote/staging-adapter.js"></script><script defer src="experiments/havana-delivery-quote/staging-form-bridge.js"></script><script src="experiments/havana-delivery-quote/quote.js"></script><script src="experiments/havana-delivery-quote/geoapify-offline.js"></script><script>
+<script src="experiments/havana-delivery-quote/staging-checkout-context.js"></script><script src="experiments/havana-delivery-quote/staging-adapter.js"></script><script defer src="experiments/havana-delivery-quote/staging-form-bridge.js"></script><script src="experiments/havana-delivery-quote/quote.js"></script><script src="experiments/havana-delivery-quote/geoapify-offline.js"></script><script>
 
 const ED_URL='https://ubrvuplslconfxwpfzxj.supabase.co',ED_KEY='sb_publishable_HofeIvey6J9qHynCjYNUQw_A6sfXTR5',ED_AUTH_KEY='ed_admin_session_v1';
 let edSession=null,edLastCategories='',edSaving=Promise.resolve(),edReady=false,edAdminAuthorized=false,edAdminRole=null;
@@ -1543,27 +1543,40 @@ function edDeliveryPreparationConfirm(){
 }
 function edCheckoutDeliveryContextRead(){
  const pending=reason=>({ok:false,reason});
- if(edDeliveryIsQuarantined())return pending('DELIVERY_CONTEXT_QUARANTINED');
- if(typeof window!=='undefined'&&window.EDDeliveryStagingBridge?.isConnected?.())return pending('REMOTE_DELIVERY_CONTEXT_NOT_JOINED_TO_INVENTORY');
  if(!edInventoryLoaded||edInventoryPendingSaves>0||!Array.isArray(state.products)||JSON.stringify(state.products)!==edInventorySnapshot)return pending('INVENTORY_SOURCE_MISMATCH');
- let revision,snapshot;
+ let inventorySnapshot,shared;
  try{
-  revision=edDeliveryContextRevision();
-  if(revision===null)return pending('DELIVERY_CONTEXT_REVISION_INVALID');
+  inventorySnapshot=localStorage.getItem('enlace_demo_v1');
+  shared=JSON.parse(inventorySnapshot||'null');
+ }catch(e){return pending('LOCAL_INVENTORY_UNREADABLE')}
+ if(!shared||!Array.isArray(shared.products)||JSON.stringify(shared.products)!==JSON.stringify(state.products))return pending('INVENTORY_SOURCE_MISMATCH');
+ const revision=edDeliveryContextRevision();
+ if(revision===null)return pending('DELIVERY_CONTEXT_REVISION_INVALID');
+ const bridge=window.EDDeliveryStagingBridge;
+ if(typeof bridge?.isConnected==='function'&&bridge.isConnected()){
+  if(typeof bridge.checkoutContext!=='function')return pending('STAGING_CHECKOUT_CONTEXT_UNAVAILABLE');
+  const remote=bridge.checkoutContext({products:state.products,inventorySnapshot,baseRevision:revision});
+  if(!remote?.ok||!remote.snapshot)return pending('STAGING_DELIVERY_CONTEXT_INVALID: '+(remote?.reason||'unknown'));
+  if(remote.snapshot.source!=='supabase-staging'||remote.snapshot.inventory!==inventorySnapshot)return pending('STAGING_DELIVERY_CONTEXT_PROVENANCE_INVALID');
+  const stable=revision===edDeliveryContextRevision()&&inventorySnapshot===localStorage.getItem('enlace_demo_v1')&&JSON.stringify(state.products)===edInventorySnapshot&&edInventoryPendingSaves===0;
+  if(!stable)return pending('STAGING_DELIVERY_CONTEXT_CHANGED');
+  return {ok:true,snapshot:remote.snapshot};
+ }
+ if(edDeliveryIsQuarantined())return pending('DELIVERY_CONTEXT_QUARANTINED');
+ let snapshot;
+ try{
   snapshot={
-   inventory:localStorage.getItem('enlace_demo_v1'),
+   inventory:inventorySnapshot,
    associations:localStorage.getItem(ED_PRODUCT_ORIGINS_KEY),
    origins:localStorage.getItem(ED_DELIVERY_ORIGINS_KEY),
    suppliers:localStorage.getItem(ED_DELIVERY_SUPPLIERS_KEY),
    destinations:localStorage.getItem(ED_DELIVERY_DESTINATIONS_KEY),
    revision
   };
-  const shared=JSON.parse(snapshot.inventory||'null');
   const associations=JSON.parse(snapshot.associations||'{}');
   const origins=JSON.parse(snapshot.origins||'[]');
   const suppliers=JSON.parse(snapshot.suppliers||'[]');
   const destinations=JSON.parse(snapshot.destinations||'[]');
-  if(!shared||!Array.isArray(shared.products)||JSON.stringify(shared.products)!==JSON.stringify(state.products))return pending('INVENTORY_SOURCE_MISMATCH');
   if(!associations||typeof associations!=='object'||Array.isArray(associations)||!Array.isArray(origins)||!Array.isArray(suppliers)||!Array.isArray(destinations))return pending('DELIVERY_CONTEXT_INVALID');
   const stable=revision===edDeliveryContextRevision()&&
    snapshot.inventory===localStorage.getItem('enlace_demo_v1')&&
@@ -1600,7 +1613,7 @@ function edDeliveryCheckoutPreview(lines){
   const routeAdapter=window.EDGeoapifyOffline?.adaptGeoapifyRoutes;
   const routeState=typeof routeAdapter==='function'?routeAdapter({responses:[],originIds:ids,destinationId:'checkout-unverified',contextRevision:edDeliveryContextRevision()}):{status:'PENDIENTE',reason:'GEOAPIFY_ADAPTER_UNAVAILABLE',routes:[]};
   // Only a pending state is allowed here; never forward synthetic/untrusted distances into a tariff.
-  const quote=contract({productOriginIds:ids,origins,suppliers,routes:[],destinationId:'checkout-unverified',rateCupPerKm:200,minKm:3,contextRevision:edDeliveryContextRevision(),quarantined:edDeliveryIsQuarantined()});
+  const quote=contract({productOriginIds:ids,origins,suppliers,routes:[],destinationId:'checkout-unverified',rateCupPerKm:200,minKm:3,contextRevision:edDeliveryContextRevision(),quarantined:context.snapshot.source==='supabase-staging'?false:edDeliveryIsQuarantined()});
   const labels=ids.map(originId=>origins.find(o=>o.id===originId)?.name||'Punto no disponible');
   rows.push({name:entry.product.name||id,origins:labels,status:'PENDIENTE',reason:routeState.reason||quote.reason||'Distancia vial no verificada'});
  }
