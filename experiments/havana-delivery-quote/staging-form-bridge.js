@@ -30,6 +30,14 @@ function stagingWarehouseRow(index){
  field('edStagingWarehouseName'+index,'Nombre del almacén');
  field('edStagingWarehouseMunicipality'+index,'Municipio (La Habana)','select');
  field('edStagingWarehouseAddress'+index,'Dirección','textarea');
+ const location=document.createElement('div');location.className='field';
+ const gpsLabel=document.createElement('label');gpsLabel.htmlFor='edStagingWarehouseGps'+index;gpsLabel.textContent='Coordenadas GPS de OsmAnd';
+ const gps=document.createElement('input');gps.id='edStagingWarehouseGps'+index;gps.placeholder='23.13024 -82.36028';gps.dataset.stagingWarehouseField='gps';
+ const lat=document.createElement('input');lat.type='hidden';lat.dataset.stagingWarehouseField='lat';
+ const lng=document.createElement('input');lng.type='hidden';lng.dataset.stagingWarehouseField='lng';
+ const status=document.createElement('small');status.textContent='Pega las coordenadas una vez; se guardarán automáticamente.';
+ gps.addEventListener('input',()=>{const point=edParseOsmAndCoordinates(gps.value);if(point){lat.value=String(point.lat);lng.value=String(point.lng);status.textContent='Ubicación lista: '+point.lat+', '+point.lng}else{lat.value='';lng.value='';status.textContent=gps.value.trim()?'Formato no reconocido. Usa latitud y longitud, por ejemplo 23.13024 -82.36028.':'Pega las coordenadas una vez; se guardarán automáticamente.'}});
+ location.append(gpsLabel,gps,status,lat,lng);row.append(location);
  if(index>0){
   const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Quitar este almacén';remove.onclick=()=>row.remove();row.append(remove);
  }
@@ -108,7 +116,9 @@ function supplier(){
   id:'warehouse-'+crypto.randomUUID(),
   name:row.querySelector('[data-staging-warehouse-field="name"]')?.value||'',
   municipality:row.querySelector('[data-staging-warehouse-field="municipality"]')?.value||'',
-  address:row.querySelector('[data-staging-warehouse-field="address"]')?.value||''
+  address:row.querySelector('[data-staging-warehouse-field="address"]')?.value||'',
+  lat:row.querySelector('[data-staging-warehouse-field="lat"]')?.value||null,
+  lng:row.querySelector('[data-staging-warehouse-field="lng"]')?.value||null
  }));
  let changes;
  try{changes=helper({supplierId,name,warehouses})}catch(e){tell(e.message);return false}
