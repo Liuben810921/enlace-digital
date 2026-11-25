@@ -2723,7 +2723,7 @@ function edDeliverySupplierSelectionSet(checked){
 }
 function edDeliverySelectionSet(panel,checked){
  if(edDeliveryIsQuarantined()||!panel||panel.tagName!=='FIELDSET'||panel.disabled)return false;
- if(!/^ed(TransferWarehouses|ReassignProducts)-/.test(panel.id))return false;
+ if(!/^ed(TransferWarehouses|ReassignProducts)-/.test(panel.id)&&panel.id!=='edOriginBulkSelection')return false;
  const boxes=[...panel.querySelectorAll('input[type="checkbox"]')];
  if(!boxes.length)return false;
  for(const box of boxes)if(!box.disabled)box.checked=checked;
