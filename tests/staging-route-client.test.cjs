@@ -10,7 +10,7 @@ test('sends the authenticated buyer request only to the staging route function',
  global.fetch=async(url,options)=>{sent={url,options};return {ok:true,json:async()=>({status:'RUTAS_VIALES_REALES',destination:{lat:23.1,lon:-82.3,formatted:'Destino de prueba'},routes:[{originId:'origin-1',originName:'Almacén Principal',km:4.2,durationSeconds:600,status:'verified'}]})}};
  const r=await calculate({token,destination,assignments});
  assert.equal(sent.url,endpoint);assert.match(endpoint,/xqahthghvozeigbojhyi/);assert.equal(sent.options.credentials,'omit');
- assert.equal(sent.options.headers.Authorization,'Bearer '+token);assert.equal(r.routes[0].km,4.2);
+ assert.equal(sent.options.headers.Authorization,'Bearer '+token);assert.match(sent.options.headers.apikey,/^sb_publishable_/);assert.equal(r.routes[0].km,4.2);
 });
 test('rejects invalid address and does not issue a request',async()=>{
  let called=false;global.fetch=async()=>{called=true;throw Error('must not call')};
