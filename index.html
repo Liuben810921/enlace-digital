@@ -1654,8 +1654,9 @@ async function edStagingRouteCheckoutCalculate(){
  if(output)output.textContent='Consultando la ruta vial en staging…';
  try{
   const result=await window.EDStagingRouteClient.calculate({token:edCustomerSession.token,destination:{province:recipient.provincia,municipality:recipient.municipio,address:[recipient.barrio,recipient.direccion].filter(Boolean).join(', ')},assignments});
-  if(result.status!=='RUTAS_VIALES_REALES')return pending(result.reason||'No se pudo confirmar la ruta.');
-  output.textContent='RUTA VIAL REAL · '+result.routes.map(r=>r.originName+': '+r.km.toFixed(2)+' km'+(r.durationSeconds?' · '+Math.round(r.durationSeconds/60)+' min estimados':'')).join(' | ')+' · Destino reconocido: '+result.destination.formatted+' · La tarifa se mostrará cuando quede conectada la configuración de mensajería.';
+  if(!['RUTAS_VIALES_REALES','RUTAS_VIALES_APROXIMADAS'].includes(result.status))return pending(result.reason||'No se pudo confirmar la ruta.');
+  const approximate=result.status==='RUTAS_VIALES_APROXIMADAS';
+  output.textContent=(approximate?'RUTA VIAL APROXIMADA · ':'RUTA VIAL REAL · ')+result.routes.map(r=>r.originName+': '+r.km.toFixed(2)+' km'+(r.durationSeconds?' · '+Math.round(r.durationSeconds/60)+' min estimados':'')).join(' | ')+' · Destino reconocido: '+result.destination.formatted+(approximate?' · Referencia de calle; el portal exacto no quedó confirmado.':'')+' · La tarifa se mostrará cuando quede conectada la configuración de mensajería.';
   return true;
  }catch(e){return pending(String(e?.message||'Servicio de rutas no disponible.'))}
  finally{if(button)button.disabled=false}
