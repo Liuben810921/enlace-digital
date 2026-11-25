@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
   geocodeUrl.searchParams.set("text", addressText);
   geocodeUrl.searchParams.set("filter", "rect:-83,22.7,-81.9,23.3|countrycode:cu");
   geocodeUrl.searchParams.set("format", "json");
-  geocodeUrl.searchParams.set("limit", "3");
+  geocodeUrl.searchParams.set("limit", "1");
   geocodeUrl.searchParams.set("apiKey", GEOAPIFY_KEY);
   let geocoded: any;
   try {
@@ -93,10 +93,10 @@ Deno.serve(async (req: Request) => {
     geocoded = await response.json();
   } catch { return reply(502, pending("GEOCODING_UNAVAILABLE"), cors); }
   const matches = Array.isArray(geocoded?.results) ? geocoded.results : [];
-  if (matches.length !== 1) return reply(200, pending(matches.length ? "DESTINATION_AMBIGUOUS" : "DESTINATION_NOT_FOUND"), cors);
+  if (!matches.length) return reply(200, pending("DESTINATION_NOT_FOUND"), cors);
   const place = matches[0];
   const lat = Number(place.lat), lon = Number(place.lon), confidence = Number(place.rank?.confidence);
-  if (!inBounds(lat, lon) || (Number.isFinite(confidence) && confidence < 0.6)) return reply(200, pending("DESTINATION_NOT_CONFIRMED_IN_HAVANA"), cors);
+  if (!inBounds(lat, lon) || !Number.isFinite(confidence) || confidence < 0.6) return reply(200, pending("DESTINATION_NOT_CONFIRMED_IN_HAVANA"), cors);
 
   const routes = [];
   for (const point of origins.values()) {
