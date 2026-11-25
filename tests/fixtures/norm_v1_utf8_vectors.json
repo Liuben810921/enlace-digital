@@ -1,0 +1,36 @@
+{
+  "contract": "NORM-v1",
+  "unicode_whitespace_hex": ["0009","000A","000B","000C","000D","0020","0085","00A0","1680","2000","2001","2002","2003","2004","2005","2006","2007","2008","2009","200A","2028","2029","202F","205F","3000"],
+  "cases": [
+    {"id":"V01","input":"Á","output_hex":"c381"},
+    {"id":"V02","input":"Á","output_hex":"c381"},
+    {"id":"V03","input":" La \t Habana\r\n ","output_hex":"4c6120486162616e61"},
+    {"id":"V04","input":"a b","output_hex":"612062"},
+    {"id":"V05","input":"a b","output_hex":"612062"},
+    {"id":"V06","input":"a b","output_hex":"612062"},
+    {"id":"V07","input":"a　b","output_hex":"612062"},
+    {"id":"V08","input":"ab","output_hex":"612062"},
+    {"id":"V09","input":"a b","output_hex":"612062"},
+    {"id":"V10","input":"a b","output_hex":"612062"},
+    {"id":"V11","input":"Peña","output_hex":"5065c3b161"},
+    {"id":"V12","input":"Pena","output_hex":"50656e61"},
+    {"id":"V13","input":"Apto 01","output_hex":"4170746f203031"},
+    {"id":"V14","input":"Apto 1","output_hex":"4170746f2031"},
+    {"id":"V15","input":"Calle","output_hex":"43616c6c65"},
+    {"id":"V16","input":"calle","output_hex":"63616c6c65"},
+    {"id":"V17","input":"a​b","reject":true},
+    {"id":"V18","input":"a﻿b","reject":true},
+    {"id":"V19","input":"a\u0000b","reject":true},
+    {"id":"V20","input":"ab","reject":true},
+    {"id":"V21","input":"a\ud800b","reject":true},
+    {"id":"V22","input":"a\udfffb","reject":true},
+    {"id":"V23","input":"   ","output_hex":""},
+    {"id":"V24","input":"C/1","output_hex":"432f31"},
+    {"id":"V25","input":"C 1","output_hex":"432031"},
+    {"id":"V26","input":"a\tb","output_hex":"612062"},
+    {"id":"V27","input":"a\u000bb","output_hex":"612062"},
+    {"id":"V28","input":"a\u000cb","output_hex":"612062"},
+    {"id":"V29","input":"a\u200ab","output_hex":"612062"},
+    {"id":"V30","input":"a\u205fb","output_hex":"612062"}
+  ]
+}

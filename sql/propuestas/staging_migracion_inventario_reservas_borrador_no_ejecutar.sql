@@ -1,0 +1,99 @@
+-- DOCUMENTARY STAGING MIGRATION DRAFT. ALL LINES COMMENTED: NOT EXECUTABLE.
+-- Base: cc7895c33005c17451c3f1f1e1712217eb83eeae.
+-- Never paste into SQL editor as an approved migration. Requires schema/ACL review and authorization.
+-- Preconditions: staging-only environment, backup, zero real orders, explicit approval.
+-- PRECHECK read-only: inspect public.productos column types, FK target, JSON shapes, duplicate colors,
+-- inconsistent cantidad versus sum(variantes_color[*].qty), archived and supplier rows.
+-- STOP if unknown schema, invalid quantity, duplicate canonical names or existing active reservations.
+--
+-- PHASE 1 (proposed DDL, not runnable)
+-- CREATE TABLE public.inventario_variantes (
+--   variant_id uuid PRIMARY KEY,
+--   producto_id bigint NOT NULL REFERENCES public.productos(id) ON DELETE RESTRICT,
+--   nombre_visible text NOT NULL,
+--   nombre_normalizado text NOT NULL,
+--   sin_color boolean NOT NULL DEFAULT false,
+--   activo boolean NOT NULL DEFAULT true,
+--   stock_fisico integer NOT NULL CHECK (stock_fisico >= 0),
+--   stock_reservado integer NOT NULL DEFAULT 0 CHECK (stock_reservado >= 0),
+--   version bigint NOT NULL DEFAULT 0 CHECK (version >= 0),
+--   CHECK (stock_reservado <= stock_fisico),
+--   UNIQUE (producto_id, nombre_normalizado),
+--   UNIQUE (producto_id, variant_id)
+-- );
+-- Proposed partial uniqueness for one sin_color variant per product.
+-- Future backend must reject variant stock rows for supplier products; enforce with trigger or
+-- restricted service API (cross-table origin cannot be enforced by simple CHECK).
+--
+-- CREATE TABLE public.inventario_reservas (
+--   reserva_id uuid PRIMARY KEY,
+--   pedido_id bigint NOT NULL REFERENCES public.pedidos_oficiales(id) ON DELETE RESTRICT,
+--   producto_id bigint NOT NULL,
+--   variant_id uuid NOT NULL,
+--   cantidad integer NOT NULL CHECK (cantidad > 0),
+--   estado text NOT NULL CHECK (estado IN ('activa','consumida','liberada','expirada')),
+--   version bigint NOT NULL DEFAULT 0,
+--   created_at timestamptz NOT NULL,
+--   expires_at timestamptz,
+--   UNIQUE (pedido_id, producto_id, variant_id),
+--   FOREIGN KEY (producto_id, variant_id)
+--     REFERENCES public.inventario_variantes(producto_id, variant_id) ON DELETE RESTRICT
+-- );
+-- The order table is proposed separately, not yet deployed: do not run this DDL before it exists.
+--
+-- CREATE TABLE public.inventario_movimientos (
+--   movement_id uuid PRIMARY KEY,
+--   reserva_id uuid REFERENCES public.inventario_reservas(reserva_id) ON DELETE RESTRICT,
+--   producto_id bigint NOT NULL,
+--   variant_id uuid NOT NULL,
+--   tipo text NOT NULL CHECK (tipo IN ('reservar','consumir','liberar','expirar','ajustar','devolver')),
+--   delta_fisico integer NOT NULL DEFAULT 0,
+--   delta_reservado integer NOT NULL DEFAULT 0,
+--   idempotency_key uuid NOT NULL,
+--   actor_id text NOT NULL,
+--   motivo text NOT NULL,
+--   created_at timestamptz NOT NULL,
+--   UNIQUE (idempotency_key, tipo, variant_id),
+--   FOREIGN KEY (producto_id, variant_id)
+--     REFERENCES public.inventario_variantes(producto_id, variant_id) ON DELETE RESTRICT
+-- );
+-- Append-only audit, revoke UPDATE/DELETE for all runtime roles, prevent mutation via trigger.
+-- If several movement types share a logical request key, uniqueness must be scoped by operation ID.
+--
+-- PHASE 2 (proposed migration/backfill; never run without data audit)
+-- For each own product with colors: parse variantes_color JSON, normalize names using documented
+-- Unicode NFC + trim + case policy, reject collisions, allocate permanent UUID per legacy color.
+-- Preserve photos, hex and display name in existing JSON during compatibility window.
+-- For own product without colors: create one synthetic sin_color variant and migrate cantidad.
+-- For suppliers: create no own-stock variants; keep cantidad=0 as legacy convention, not availability.
+-- Require integer nonnegative qty, and compare sum per-color against productos.cantidad.
+-- Reject discrepancies for manual reconciliation; do not silently rewrite stock.
+-- Keep mapping (producto_id, legacy_color_name, variant_id) immutable and audited.
+--
+-- PHASE 3 (proposed transactional contracts)
+-- Lock product and variant rows in deterministic ascending IDs FOR UPDATE.
+-- Own: available = stock_fisico - stock_reservado; reserve if available >= requested.
+-- Reservation: +cantidad reserved, physical unchanged; append reservar once.
+-- Consumption: -cantidad reserved AND -cantidad physical; append consumir once.
+-- Cancellation before consumption: -cantidad reserved, physical unchanged; append liberar once.
+-- Expiration: terminal release only after checking policy and order state; no cron enabled.
+-- After consumption: return requires inspected receipt, separate devolver event, not auto-restock.
+-- Supplier: procurement_pending until verified; no stock reservation, no stock deduction.
+-- Idempotency claim and order snapshots must be in the same transaction as reservations.
+-- Failure in any line rolls back order, stock, reservations and audit together.
+--
+-- PHASE 4 (proposed security and compatibility)
+-- REVOKE ALL ON proposed tables/functions FROM PUBLIC, anon, authenticated.
+-- ENABLE ROW LEVEL SECURITY; no broad client write policies; least-privilege backend only.
+-- Restrict SECURITY DEFINER functions to trusted backend with fixed search_path.
+-- Server verifies principal/general/operativo capabilities; supervisor read-only.
+-- Existing staging-preview/index.html remains unchanged; never switch stock authority
+-- until transactional backend and migration consistency checks are approved.
+-- Do not enable ED_REAL_CHECKOUT_ENABLED or real email, services, orders.
+--
+-- ROLLBACK PLAN (future authorization required)
+-- Before cutover: abandon proposed schema without touching existing catalog or orders.
+-- After cutover: disable writes/checkout, preserve all historical rows and append-only ledger;
+-- reconcile reservations and stock, use compensating movements, never DROP audit tables.
+-- Do not downgrade to legacy JSON writes while reservations exist.
+-- NO-GO: no SQL execution, no Supabase modification, no deployment, no production changes.

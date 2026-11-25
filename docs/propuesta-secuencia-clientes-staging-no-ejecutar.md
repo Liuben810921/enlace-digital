@@ -1,0 +1,98 @@
+# Propuesta NO EJECUTAR — secuencia de clientes staging
+
+**Estado:** revisión de diseño; no es migración autorizada. Solo staging. No ejecutar SQL de este documento ni en SQL Editor ni en producción.
+
+## Riesgo comprobado
+
+La propuesta de esquema crea `public.clientes_oficiales_numero_seq AS integer START WITH 1`, mientras la tabla `public.clientes_oficiales` ya existe y su `numero` es clave primaria. Si hay registros con identificadores positivos, el primer `nextval` podría reutilizar un número. La existencia de un índice UNIQUE no evita el fallo de registro; solamente impide la colisión silenciosa. `CREATE SEQUENCE IF NOT EXISTS` por sí solo tampoco sincroniza el contador.
+
+## Procedimiento de futura instalación, sujeto a aprobación
+
+1. Deshabilitar nuevas altas y cualquier otro escritor que asigne `numero`; confirmar que el bloqueo de escritura se mantiene hasta terminar la inicialización. No confiar únicamente en una lectura previa de MAX.
+2. Abrir una ventana de mantenimiento y verificar en catálogo la secuencia, su propietario, dependencias, incremento, mínimo/máximo y valor de estado, además de `MAX(numero)` y la posibilidad de números asignados fuera del contador.
+3. Bajo exclusión de escrituras concurrentes, crear o inspeccionar la secuencia. Calcular un siguiente número seguro **mayor que el máximo de la tabla y que cualquier valor ya reservado por la secuencia**. Si está vacía, respetar el mínimo y comenzar por 1. Si existe, no retrocederla. Confirmar capacidad del tipo `integer`.
+4. Ajustar la secuencia únicamente mediante una operación autorizada, teniendo en cuenta que `setval` y `nextval` no se revierten con ROLLBACK. Una migración SQL idempotente debe comparar el estado real cada vez y jamás reiniciar el contador a 1 en una repetición.
+5. Validar los permisos de USAGE/SELECT y propietario, que `nextval` sea invocable por el propietario efectivo de la RPC SECURITY DEFINER, y que las tablas mantengan RLS y restricciones. Rehabilitar altas solo después de pruebas controladas y aprobación.
+
+**No se incluye aquí un bloque `setval` ejecutable**: la implementación concreta requiere confirmar la estrategia de exclusión de concurrencia y el estado real de la secuencia en la ventana de migración. Se evita una receta que pudiera bajar el contador o colisionar.
+
+## Aislamiento y verificación
+
+El script `scripts/check_staging_isolation.py` y GitHub Actions inspeccionan las rutas de destinatarios y direcciones sin conectarse a una base de datos. Las pruebas de integración negativas futuras deben incluir: token de A con ID de destinatario de B (404 y ninguna modificación), perfil de A sin registros de B, token revocado o caducado (401 y ninguna escritura), dirección ocasional de B no reutilizada ni actualizada por A, y registro con teléfono duplicado. Las comprobaciones de código no sustituyen esas pruebas.
+
+No se ha ejecutado ningún SQL de efectos, migración ni despliegue.
+
+## Evidencia de staging vacío (2026-11-09; lectura solamente)
+
+- Consulta directa a `public.clientes_oficiales`: `COUNT(*) = 0`, `MAX(numero) = NULL`.
+- Consulta de catálogo `to_regclass('public.clientes_oficiales_numero_seq')`: `NULL` (no instalada).
+- El borrado de clientes ficticios ocurrió **solo en la base anterior**, no en staging; no se transfirieron datos.
+- En este estado observado, `CREATE SEQUENCE ... START WITH 1` es compatible con la tabla vacía. **No autoriza ejecutarlo aún**: la ausencia de datos y secuencia debe volver a comprobarse en la misma ventana de instalación, bajo exclusión de escritores. Si cambia cualquiera de esas condiciones, detener y aplicar el procedimiento conservador anterior.
+- El control estático de CI rechaza reinicios destructivos de la secuencia en la propuesta y exige sus privilegios explícitos; **no demuestra** ausencia de concurrencia ni compila los cuerpos PL/pgSQL.
+
+**Puerta de aprobación:** migración y despliegue continúan prohibidos hasta autorización explícita y verificación de prerrequisitos. No activar pedidos ni correo reales.
+
+## Preflight incorporado al borrador (commit 230b13a)
+
+El archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` ahora inicia su transacción con un bloque `DO $preflight$` que aborta si (1) ya existen clientes, (2) ya existe la secuencia de clientes o (3) existe una restricción Cuba con el nombre reservado que requiere comprobar equivalencia. Esto evita aplicar a ciegas el `START WITH 1` sobre un estado distinto del observado y evita ignorar un CHECK no equivalente. El preflight **no sustituye** la exclusión operativa de escritores concurrentes: una transacción sola no impide que otro proceso registre clientes entre las verificaciones. La instalación sigue sin autorización.
+
+## Orden de instalación controlada — NO EJECUTAR
+
+1. Obtener autorización específica para **staging** y confirmar proyecto `xqahthghvozeigbojhyi`. Mantener la Edge Function deshabilitada, sin correo ni pedidos reales. Prohibir escritores concurrentes de clientes durante toda la operación.
+2. Antes de modificar datos, consultar catálogo y comprobar que `public.clientes_oficiales` está vacía, que la secuencia no existe y que no hay una restricción `ed_cliente_cuba_direccion_ck` previa. Verificar propietario de las tres tablas y que `pgcrypto` está en `extensions`. Si alguna condición falla, abortar y revisar, sin reiniciar contadores.
+3. Revisar el SQL completo de `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql`, incluyendo su preflight transaccional, columnas, CHECK, RLS, GRANT de tablas nuevas y secuencias. La ejecución real requiere autorización adicional. No aplicar automáticamente sobre un esquema existente con definiciones diferentes.
+4. Solo después de validar el esquema, revisar `sql/propuestas/staging_rpc_unico_v4_no_ejecutar.sql` y el propietario efectivo de las cinco funciones `SECURITY DEFINER`. La función auxiliar `ed_cliente_registrar_privado` **no debe tener EXECUTE para `service_role`**; únicamente el wrapper de residencia puede registrar clientes desde Edge. `anon` y `authenticated` no deben ejecutar ninguna de las cinco RPC.
+5. Verificar tras instalación autorizada los permisos efectivos mediante `has_function_privilege`, las columnas y CHECK con `pg_get_constraintdef`, el estado de secuencia y que el propietario puede acceder a las tablas RLS. No habilitar Edge todavía.
+6. Con autorización separada para pruebas, ejecutar la batería ficticia con ROLLBACK, confirmar sus aserciones y comprobar aislamiento entre dos clientes. **Advertencia:** operaciones `nextval` no se revierten con ROLLBACK; la secuencia puede avanzar aunque se reviertan filas. No prometer estado numérico idéntico.
+7. No desplegar ni habilitar la Edge Function hasta revisar los resultados de integración, origen CORS, controles de tasa y ausencia de accesos entre clientes. El despliegue requiere autorización propia.
+
+**Estado de esta guía:** preparación y análisis de GitHub solamente; no se ha ejecutado la instalación.
+
+## Preflight actualizado — comprobación de solo lectura, 2026-11-09
+
+- Staging `xqahthghvozeigbojhyi`: clientes `COUNT(*)=0`, `MAX(numero)=NULL`; secuencia `to_regclass(...)=NULL`; restricción `ed_cliente_cuba_direccion_ck`: 0; cinco RPC privadas propuestas instaladas: 0.
+- Las tablas `public.clientes_oficiales`, `enlace_auth.cliente_credenciales` y `enlace_auth.cliente_sesiones` tienen RLS activo y propietario `postgres`.
+- Los requisitos de catálogo observados son compatibles con una instalación inicial **solo en staging**. No demuestran que el SQL sea seguro para ejecutar ni garantizan que el estado permanezca igual.
+- CI del commit `d3f0ab3` falló por una aserción textual heredada sobre el mensaje de permisos; el borrador de prueba conserva ahora el marcador esperado sin retirar las verificaciones ampliadas (commit `cc4bd50`). Confirmar CI verde antes de proponer autorización.
+
+**Autorización pendiente (no concedida):** una vez que CI esté verde y se haya completado revisión manual de las cinco RPC, solicitar permiso explícito para ejecutar exclusivamente el esquema revisado en staging, sin Edge Function, correo ni pedidos reales. Antes de cualquier ejecución, volver a comprobar catálogo y exclusión de escritores. La instalación de RPC, pruebas con datos ficticios y despliegue se autorizarán por separado.
+
+## Protección de concurrencia y preparación final — 2026-11-09
+
+- El borrador de esquema ahora toma `LOCK TABLE public.clientes_oficiales IN SHARE ROW EXCLUSIVE MODE` **dentro de BEGIN, antes del preflight**. El bloqueo impide inserciones/actualizaciones concurrentes de esa tabla mientras dure la transacción; el preflight vuelve a comprobar que sigue vacía y que no existe la secuencia ni la restricción reservada. No sustituye revisar otros escritores, transacciones de larga duración ni el comportamiento del servicio antes de abrir mantenimiento.
+- Consultas read-only recientes: clientes 0, `MAX(numero)=NULL`, secuencia ausente, CHECK reservado ausente, cinco RPC propuestas ausentes, `pgcrypto` presente en `extensions`.
+- La función existente `public.ed_cliente_limite_privado` tiene propietario `postgres`, `SECURITY DEFINER`, `search_path` vacío; EXECUTE para `service_role`, no para `anon` ni `authenticated`.
+- CI del commit `ec6590e` aprobado (#42693371763); los commits posteriores con bloqueo deben obtener CI verde antes de solicitar la autorización.
+- **Alcance de la futura autorización**: instalar únicamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en proyecto staging `xqahthghvozeigbojhyi`, con preflight en la misma transacción, bloqueo de escritores, revisión del SQL exacto y validación posterior. Las cinco RPC, pruebas con datos ficticios, Edge Function, correo y pedidos reales quedan fuera de esa autorización y requerirán pasos separados.
+
+## Dictamen previo a autorización de esquema — 2026-11-09
+
+**CI:** commit `dfae530` aprobado, GitHub Actions #42693793144. No equivale a ejecución ni compilación de funciones PL/pgSQL en staging.
+
+**Lecturas recientes del proyecto staging**: clientes 0; secuencia ausente; CHECK de residencia ausente; cinco RPC propuestas ausentes; `pgcrypto` disponible; tablas de destinatarios y direcciones de entrega ausentes; `service_role` tiene USAGE de esquema `public`. Las tres tablas de clientes/credenciales/sesiones existentes tienen propietario `postgres`, RLS activo y carecen de SELECT/INSERT/UPDATE directos para `service_role`. Este último hecho es **intencional** para las RPC futuras `SECURITY DEFINER`; dichas RPC no forman parte de la autorización de esquema.
+
+**Evaluación**: las precondiciones observadas permiten solicitar autorización **solo para el esquema**. El SQL contiene transacción, bloqueo de clientes antes del preflight, secuencia nueva, columnas, CHECK de residencia, tablas auxiliares con RLS y permisos de acceso directo limitados al rol de servicio. Debe ejecutarse exclusivamente desde una sesión administrativa autorizada, nunca mediante un rol público. Se mantiene desactivada la Edge Function y no se habilita autenticación ni compras reales.
+
+**Condiciones obligatorias inmediatamente antes de ejecutar**: reconfirmar el ID de proyecto, CI verde del commit exacto, contenido y checksum del archivo, ausencia de clientes/secuencia/CHECK/tablas auxiliares, no concurrencia de escritores y disponibilidad de ventana de mantenimiento. Si cambia cualquier precondición, detenerse. Después de instalar, verificar columnas, restricciones, RLS, permisos, índices y secuencias por consultas de lectura. No ejecutar las RPC ni las pruebas de integración sin autorizaciones separadas.
+
+**Solicitud propuesta (aún no autorizada):** «Autorizo ejecutar exclusivamente `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` en Supabase staging `xqahthghvozeigbojhyi`, sujeto a la repetición del preflight, a su bloqueo transaccional y a la verificación posterior. No autorizo instalar RPC, desplegar Edge Functions, enviar correos, activar pedidos reales ni modificar producción, productos, departamentos o administradores».
+
+## Revisión independiente del esquema — 2026-11-09
+
+Se corrigió el encabezado que decía `INCOMPLETE: DO NOT APPLY`: se refería a la funcionalidad integral de autenticación (RPC y Edge), no a dependencias necesarias para crear el **esquema aislado**. El archivo mantiene la prohibición expresa de ejecución sin **nueva autorización para su revisión exacta**. No contiene definiciones ni llamadas a las cinco RPC y no activa pedidos ni correos.
+
+**Seguridad adicional:** preflight transaccional ahora aborta si detecta tablas auxiliares existentes o alguna de las siete columnas propuestas ya creada, además de clientes, secuencia y CHECK reservada. Se evita que `IF NOT EXISTS` oculte una instalación parcial. El bloqueo `SHARE ROW EXCLUSIVE` se toma antes del preflight. Las tablas nuevas mantienen RLS y permisos de acceso previstos para `service_role`; el rol público queda revocado. Se requiere verificación posterior de privilegios efectivos y RLS antes de considerar lista cualquier RPC.
+
+**Último preflight de solo lectura:** clientes 0; tablas auxiliares ausentes; siete columnas propuestas ausentes; secuencia ausente; CHECK ausente. El resultado debe reconfirmarse en el proyecto `xqahthghvozeigbojhyi` inmediatamente antes de cualquier futura ejecución. Los archivos cambiaron después de `f9b296e`: **la autorización anterior no cubre esta nueva versión**.
+
+**Limitación:** CI estático y comprobación de catálogo no equivalen a ensayo de ejecución SQL en una base de datos aislada. No se ha ejecutado DDL ni una migración de prueba. Solicitar nueva autorización únicamente cuando el CI del último commit esté verde y se haya revisado el archivo exacto.
+
+## Instalación autorizada y verificada del esquema en staging — 2026-11-09
+
+**Autorización explícita:** instalar solo el archivo `sql/propuestas/staging_esquema_unico_v4_no_ejecutar.sql` del commit `302190629bff06e983d5563cabf8b2f4b1903a4a`, blob `8f9c00a2a60edcc1ef926e37ec41144d81c511b6`, en proyecto `xqahthghvozeigbojhyi` (`enlace-digital-staging`).
+
+**Ejecución:** `apply_migration` con nombre `enlace_digital_staging_schema_only_v4_20261109` devolvió `success: true`. Antes de ejecutar se verificaron el ID/nombre del proyecto, el blob exacto, el bloqueo transaccional anterior al preflight, ausencia de clientes, secuencia, CHECK, tablas auxiliares, columnas y RPC propuestas.
+
+**Comprobaciones posteriores (consultas de solo lectura):** clientes 0; secuencia de numeración creada; ambas tablas auxiliares creadas; siete columnas nuevas en `clientes_oficiales`; CHECK `ed_cliente_cuba_direccion_ck` presente con `convalidated=false` (`NOT VALID` por diseño); ambas claves foráneas hacia clientes válidas; índices PK y por cliente en ambas tablas; RLS habilitado en las dos tablas nuevas; `anon` y `authenticated` sin SELECT directo; `service_role` con SELECT/INSERT/UPDATE en las tablas auxiliares y USAGE/SELECT en las tres secuencias; roles públicos sin USAGE de esas secuencias. Cinco RPC propuestas instaladas: 0.
+
+**Fuera de alcance y no ejecutado:** instalación de RPC, Edge Function, correos, pedidos reales, cambios de producción, productos, departamentos o administradores. El esquema está instalado, pero el registro y el checkout no están habilitados. La siguiente etapa es revisión y autorización separada de las RPC y de las pruebas controladas.

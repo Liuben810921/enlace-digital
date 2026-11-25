@@ -1,0 +1,23 @@
+-- PREPARED TEST PLAN, NOT EXECUTABLE UNTIL RPC MIGRATIONS ARE REVIEWED.
+-- Do not run in production. Operator must use a SINGLE PostgreSQL SESSION.
+-- Before any run: verify project ID staging, email flags false, no external effects,
+-- approved SQL channel preserves BEGIN/ROLLBACK and returns every assertion.
+--
+-- BEGIN;
+-- SELECT ... assert registration Cuba with mandatory address;
+-- SELECT ... assert registration abroad without Cuban address;
+-- SELECT ... assert duplicate E.164 phone rejected;
+-- SELECT ... assert password hash starts with bcrypt marker and != plaintext;
+-- SELECT ... assert wrong password increments attempts, lockout after threshold;
+-- SELECT ... assert valid login yields session hash and expiry ~30 days;
+-- SELECT ... assert replay of revoked session fails;
+-- SELECT ... assert expired session fails;
+-- SELECT ... assert another customer cannot update address or recipients;
+-- SELECT ... assert Cuba address requires province, municipality and street;
+-- SELECT ... assert foreign account cannot change Cuba habitual address;
+-- SELECT ... assert anon/authenticated lack EXECUTE on privileged RPCs;
+-- SELECT ... assert email flags remain false and no real order created;
+-- ROLLBACK;
+--
+-- NOTE: placeholders are intentional; do NOT treat this file as runnable tests.
+-- Real fixtures must be isolated and assertions authored after final contract review.

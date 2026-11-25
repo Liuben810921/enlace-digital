@@ -1,0 +1,7 @@
+# Configuration proposal only; no function is deployed by committing this file.
+# Registration/login accepts callers without a Supabase Auth user JWT.
+# The Edge handler validates the default entry in SUPABASE_PUBLISHABLE_KEYS
+# against the request apikey and checks its own hashed customer session token.
+# Never place a privileged Supabase key in the browser.
+[functions.enlace-cliente-auth-staging]
+verify_jwt = false
