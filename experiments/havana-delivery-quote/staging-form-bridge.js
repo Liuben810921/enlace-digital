@@ -5,6 +5,38 @@
 'use strict';
 let api=null,items=[],links=[],busy=false;
 const map={supplier:'suppliers',warehouse:'warehouses',product_origin:'associations',destination:'destinations',shipment_draft:'drafts'};
+const STAGING_REFRESH_KEY='ed_staging_refresh_v1';
+function storedRefresh(){try{return sessionStorage.getItem(STAGING_REFRESH_KEY)||''}catch(e){return ''}}
+function saveRefresh(token){try{sessionStorage.setItem(STAGING_REFRESH_KEY,token);return true}catch(e){return false}}
+function clearRefresh(){try{sessionStorage.removeItem(STAGING_REFRESH_KEY)}catch(e){}}
+function stagingClient(key,data){
+ let access=data.access_token,refreshToken=data.refresh_token,expires=Date.now()+Math.max(0,(Number(data.expires_in)||300)-60)*1000;
+ return EDDeliveryStaging.create({publishableKey:key,getAccessToken:async()=>{
+  if(Date.now()<expires)return access;
+  if(!refreshToken)throw Error('Sesión staging caducada; vuelve a conectar');
+  const renewal=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+  const next=await renewal.json();if(!renewal.ok||!next.access_token||!next.refresh_token){clearRefresh();throw Error('No se pudo renovar la sesión staging')}
+  access=next.access_token;refreshToken=next.refresh_token;expires=Date.now()+Math.max(0,(Number(next.expires_in)||300)-60)*1000;saveRefresh(refreshToken);
+  return access;
+ }});
+}
+let restoring=false;
+async function restoreStagingSession(){
+ if(restoring||api)return;
+ const token=storedRefresh(),key=document.getElementById('ed-staging-key')?.value.trim();
+ if(!token||!key)return;
+ restoring=true;busy=true;
+ try{
+  const res=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:token})});
+  const data=await res.json();if(!res.ok||!data.access_token||!data.refresh_token){clearRefresh();throw Error('La sesión venció')}
+  saveRefresh(data.refresh_token);
+  const candidate=stagingClient(key,data),check=await candidate.readAll();
+  if(!Array.isArray(check.entities)||!Array.isArray(check.links)){clearRefresh();throw Error('Permiso administrativo no confirmado')}
+  api=candidate;items=check.entities;links=check.links;enhanceSupplierForm();
+  tell('Staging reconectado automáticamente. Guardados remotos activos.');
+ }catch(e){api=null;items=[];links=[];clearRefresh();tell('La sesión de staging expiró. Conecta de nuevo para continuar.')}
+ finally{restoring=false;busy=false}
+}
 const rows=kind=>items.filter(x=>x.kind===kind);
 const get=(kind,id)=>rows(kind).find(x=>x.id===id);
 const enabled=()=>!!api;
@@ -66,9 +98,10 @@ function panel(){
  div.innerHTML='<details><summary style="cursor:pointer;font-weight:700">Conexión técnica de pruebas · staging</summary><p>Opcional: al conectar, estos formularios guardarán en staging. No se importarán registros locales.</p><p>La contraseña puede estar guardada para supabase.com. Como esta página está en GitHub Pages, Chrome quizá no la sugiera automáticamente.</p><p><a href="https://passwords.google.com/" target="_blank" rel="noopener noreferrer">Abrir Contraseñas de Google</a> y buscar supabase.com.</p><label style="display:block;margin:12px 0;line-height:1.4">Clave pública de staging (configurada) <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-key" type="password" autocomplete="off" readonly value="sb_publishable_Avgid8eO64Xm2SFuJ7c_EA_l6LG0lCX"></label><label style="display:block;margin:12px 0;line-height:1.4">Correo administrativo staging <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-email" type="email" autocomplete="username"></label><label style="display:block;margin:12px 0;line-height:1.4">Contraseña staging <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-password" type="password" autocomplete="current-password"></label><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ed-staging-connect" style="padding:11px 16px;border:0;border-radius:9px;background:#087f7a;color:white;font-weight:700">Conectar</button><button type="button" id="ed-staging-disconnect" style="padding:11px 16px;border:1px solid #cbd8e1;border-radius:9px;background:#eef4f6;color:#173343">Desconectar</button></div></details><p id="ed-staging-status" role="status">Modo local. No conectado.</p>';
  root.append(div);
  div.querySelector('#ed-staging-connect').onclick=connect;
- div.querySelector('#ed-staging-disconnect').onclick=()=>{api=null;items=[];links=[];tell('Desconectado. Modo local.');adminTab('delivery')};
+ div.querySelector('#ed-staging-disconnect').onclick=()=>{clearRefresh();api=null;items=[];links=[];tell('Desconectado. Modo local.');adminTab('delivery')};
  }
  enhanceSupplierForm();
+ if(!api)restoreStagingSession();
 }
 async function connect(){
  if(busy)return;busy=true;
@@ -76,19 +109,14 @@ async function connect(){
  const key=document.getElementById('ed-staging-key').value.trim(),email=document.getElementById('ed-staging-email').value.trim(),password=document.getElementById('ed-staging-password').value;
  if(!key.startsWith('sb_publishable_')||!email||!password)throw Error('Faltan credenciales de staging');
  const res=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
- const data=await res.json();if(!res.ok||!data.access_token)throw Error('Autenticación rechazada por staging');
- let access=data.access_token,refreshToken=data.refresh_token,expires=Date.now()+Math.max(0,(Number(data.expires_in)||300)-60)*1000;
- const candidate=EDDeliveryStaging.create({publishableKey:key,getAccessToken:async()=>{
-  if(Date.now()<expires)return access;
-  if(!refreshToken)throw Error('Sesión staging caducada; vuelve a conectar');
-  const renewal=await fetch('https://xqahthghvozeigbojhyi.supabase.co/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
-  const next=await renewal.json();if(!renewal.ok||!next.access_token)throw Error('No se pudo renovar la sesión staging');
-  access=next.access_token;refreshToken=next.refresh_token;expires=Date.now()+Math.max(0,(Number(next.expires_in)||300)-60)*1000;
-  return access;
- }});
- const check=await candidate.readAll();if(!Array.isArray(check.entities)||!Array.isArray(check.links))throw Error('Permiso administrativo no confirmado');
+ const data=await res.json();if(!res.ok||!data.access_token||!data.refresh_token)throw Error('Autenticación rechazada por staging');
+ const candidate=stagingClient(key,data),check=await candidate.readAll();
+ if(!Array.isArray(check.entities)||!Array.isArray(check.links))throw Error('Permiso administrativo no confirmado');
  api=candidate;items=check.entities;links=check.links;
- adminTab('delivery');tell('Conectado a staging. Los guardados de los formularios son remotos.');
+ const remembered=saveRefresh(data.refresh_token);
+ document.getElementById('ed-staging-password').value='';
+ adminTab('delivery');
+ tell(remembered?'Conectado a staging. Se mantendrá conectado al recargar esta pestaña.':'Conectado a staging. Los guardados son remotos; la sesión no se pudo conservar en esta pestaña.');
  }catch(e){api=null;tell('No conectado: '+e.message)}finally{busy=false}
 }
 async function save(kind,id,payload,targets=[]){
