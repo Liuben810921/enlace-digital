@@ -10,14 +10,17 @@
   if(typeof name!=='string'||!name.trim()||name.trim().length>120)throw Error('Nombre de proveedor inválido');
   if(!Array.isArray(warehouses)||warehouses.length>10)throw Error('Lista de almacenes inválida');
   const changes=[{kind:'supplier',id:supplierId,create:true,payload:{name:name.trim(),active:true},links:[]}];
-  const nonempty=warehouses.filter(w=>[w?.name,w?.municipality,w?.address].some(v=>typeof v==='string'&&v.trim()));
+  const nonempty=warehouses.filter(w=>[w?.name,w?.municipality,w?.address,w?.lat,w?.lng].some(v=>v!==null&&v!==undefined&&(typeof v!=='string'||v.trim()!=='')));
+  if(!nonempty.length)throw Error('Añade el almacén principal con nombre, municipio y dirección');
   const ids=new Set();
   for(let i=0;i<nonempty.length;i++){
    const w=nonempty[i];
    if(typeof w.name!=='string'||!w.name.trim()||w.name.trim().length>120||typeof w.municipality!=='string'||!w.municipality.trim()||typeof w.address!=='string'||!w.address.trim()||w.address.trim().length>300)throw Error('Completa nombre, municipio y dirección de cada almacén');
    if(typeof w.id!=='string'||!/^warehouse-[0-9a-f-]{36}$/i.test(w.id)||ids.has(w.id))throw Error('ID de almacén inválido o repetido');
    ids.add(w.id);
-   changes.push({kind:'warehouse',id:w.id,create:true,payload:{name:w.name.trim(),type:'proveedor',municipality:w.municipality.trim(),address:w.address.trim(),supplierId,lat:null,lng:null,active:true,defaultForSupplier:i===0},links:[{target_kind:'supplier',target_id:supplierId}]});
+   const lat=w.lat===null||w.lat===undefined||w.lat===''?null:Number(w.lat),lng=w.lng===null||w.lng===undefined||w.lng===''?null:Number(w.lng);
+   if((lat===null)!==(lng===null)||lat!==null&&(!Number.isFinite(lat)||lat< -90||lat>90||!Number.isFinite(lng)||lng< -180||lng>180))throw Error('Coordenadas inválidas: revisa latitud y longitud');
+   changes.push({kind:'warehouse',id:w.id,create:true,payload:{name:w.name.trim(),type:'proveedor',municipality:w.municipality.trim(),address:w.address.trim(),supplierId,lat,lng,active:true,defaultForSupplier:i===0},links:[{target_kind:'supplier',target_id:supplierId}]});
   }
   return changes;
  }
