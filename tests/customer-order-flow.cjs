@@ -12,6 +12,7 @@ const elements={};const el=id=>elements[id]||(elements[id]={value:'',textContent
 let rendered='',requests=[],stock={removed:0,adjusted:0};
 const recipient={id:7,nombre:'Entrega Uno',telefono:'+5350000001',provincia:'La Habana',municipio:'Playa',barrio:'Vedado',direccion:'Calle Uno 100',referencias:''};
 const ctx={
+ ED_CUSTOMER_STAGING_MODE:false,
  document:{getElementById:el},cart:[{id:5,qty:2,color:'Azul'}],
  state:{products:[{id:5,name:'Equipo',price:100}]},
  edCustomerSession:{token:'x'},edCustomerProfile:{nombre:'Comprador Uno',residencia:'extranjero'},
@@ -45,3 +46,4 @@ ctx.edCustomerSession=null;await ctx.edOfficialOrderPreview();assert.equal(rende
  console.log('PASS: test-only preview, invalid recipient, stale stock, invalid price, login gate, recipient save, session restore, no order writes');
 }
 })().catch(e=>{console.error(e);process.exitCode=1});
+
