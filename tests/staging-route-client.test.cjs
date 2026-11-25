@@ -25,3 +25,7 @@ test('surfaces missing Geoapify secret without exposing route credentials',async
  global.fetch=async()=>({ok:false,json:async()=>({reason:'GEOAPIFY_API_KEY_NOT_CONFIGURED'})});
  await assert.rejects(calculate({token,destination,assignments}),/Falta configurar la clave/);
 });
+test('explains an ambiguous geocoded address instead of treating it as a route',async()=>{
+ global.fetch=async()=>({ok:true,json:async()=>({status:'PENDIENTE',reason:'DESTINATION_AMBIGUOUS',routes:[]})});
+ await assert.rejects(calculate({token,destination,assignments}),/varias ubicaciones posibles/);
+});
