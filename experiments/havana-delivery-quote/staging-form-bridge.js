@@ -13,14 +13,54 @@ async function refresh(){
  const r=await api.readAll();items=r.entities;links=r.links;
  if(!Array.isArray(items)||!Array.isArray(links))throw Error('Respuesta de staging inválida');
 }
+function stagingWarehouseRow(index){
+ const row=document.createElement('div');row.dataset.stagingWarehouse='1';row.style.cssText='border:1px solid #dce6ed;border-radius:10px;padding:10px;margin:10px 0';
+ const field=(id,labelText,tag='input')=>{
+  const wrap=document.createElement('div');wrap.className='field';
+  const label=document.createElement('label');label.htmlFor=id;label.textContent=labelText;
+  const control=document.createElement(tag);control.id=id;control.dataset.stagingWarehouseField=tag==='select'?'municipality':tag==='textarea'?'address':'name';
+  if(tag==='input'){control.maxLength=120;control.placeholder='Ej.: Almacén principal'}
+  if(tag==='textarea'){control.maxLength=300;control.rows=2;control.placeholder='Calle, número y referencias'}
+  if(tag==='select'){
+   control.innerHTML='<option value="">Selecciona municipio</option>'+municipios.map(m=>'<option value="'+esc(m)+'">'+esc(m)+'</option>').join('');
+  }
+  wrap.append(label,control);row.append(wrap);
+ };
+ const title=document.createElement('strong');title.textContent='Almacén '+(index+1);row.append(title);
+ field('edStagingWarehouseName'+index,'Nombre del almacén');
+ field('edStagingWarehouseMunicipality'+index,'Municipio (La Habana)','select');
+ field('edStagingWarehouseAddress'+index,'Dirección','textarea');
+ if(index>0){
+  const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Quitar este almacén';remove.onclick=()=>row.remove();row.append(remove);
+ }
+ return row;
+}
+function enhanceSupplierForm(){
+ const input=document.getElementById('edSupplierName'),fieldset=input?.closest('fieldset');
+ if(!enabled()){document.getElementById('edStagingSupplierWarehouses')?.remove();return}
+ if(!input||!fieldset||document.getElementById('edStagingSupplierWarehouses'))return;
+ const details=document.createElement('details');details.id='edStagingSupplierWarehouses';details.open=true;details.style.cssText='margin:12px 0;padding:10px;border:1px solid #dce6ed;border-radius:11px';
+ const summary=document.createElement('summary');summary.textContent='Almacenes del proveedor';summary.style.cssText='font-weight:700;cursor:pointer';details.append(summary);
+ const note=document.createElement('p');note.className='note';note.textContent='Añade aquí el almacén principal y, si quieres, otros. Se guardarán junto con el proveedor en una sola operación.';details.append(note);
+ const list=document.createElement('div');list.id='edStagingSupplierWarehouseRows';list.append(stagingWarehouseRow(0));details.append(list);
+ let count=1;
+ const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent='+ Añadir otro almacén';
+ add.onclick=()=>{if(count>=10){tell('Máximo 10 almacenes por alta');return}list.append(stagingWarehouseRow(count++))};
+ details.append(add);
+ const submit=fieldset.querySelector('button[onclick="edDeliverySupplierAdd()"]');
+ if(submit)fieldset.insertBefore(details,submit);else fieldset.append(details);
+}
 function panel(){
  const root=document.getElementById('admincontent');
- if(!root||!document.getElementById('edDeliveryPanelTitle')||root.querySelector('#ed-staging-connection'))return;
+ if(!root||!document.getElementById('edDeliveryPanelTitle'))return;
+ if(!root.querySelector('#ed-staging-connection')){
  const div=document.createElement('div');div.id='ed-staging-connection';div.className='panel';
  div.innerHTML='<h3>Conexión de Administración de entregas · staging</h3><p>Opcional: al conectar, estos mismos formularios guardarán en staging. No se importarán registros locales.</p><label style="display:block;margin:12px 0;line-height:1.4">Clave pública de staging (configurada) <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-key" type="password" autocomplete="off" readonly value="sb_publishable_Avgid8eO64Xm2SFuJ7c_EA_l6LG0lCX"></label><label style="display:block;margin:12px 0;line-height:1.4">Correo administrativo staging <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-email" type="email" autocomplete="username"></label><label style="display:block;margin:12px 0;line-height:1.4">Contraseña staging <input style="display:block;width:100%;max-width:100%;margin-top:6px;padding:12px;border:1px solid #cbd8e1;border-radius:9px;box-sizing:border-box" id="ed-staging-password" type="password" autocomplete="current-password"></label><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="ed-staging-connect" style="padding:11px 16px;border:0;border-radius:9px;background:#087f7a;color:white;font-weight:700">Conectar</button><button type="button" id="ed-staging-disconnect" style="padding:11px 16px;border:1px solid #cbd8e1;border-radius:9px;background:#eef4f6;color:#173343">Desconectar</button></div><p id="ed-staging-status" role="status">Modo local. No conectado.</p>';
  root.prepend(div);
  div.querySelector('#ed-staging-connect').onclick=connect;
  div.querySelector('#ed-staging-disconnect').onclick=()=>{api=null;items=[];links=[];tell('Desconectado. Modo local.');adminTab('delivery')};
+ }
+ enhanceSupplierForm();
 }
 async function connect(){
  if(busy)return;busy=true;
@@ -61,7 +101,18 @@ function field(id){return document.getElementById(id)?.value.trim()||''}
 function supplier(){
  const name=field('edSupplierName');if(!name){tell('Introduce el nombre del proveedor');return false}
  if(rows('supplier').some(x=>x.payload.name?.toLowerCase()===name.toLowerCase())){tell('El proveedor ya existe');return false}
- return save('supplier','supplier-'+crypto.randomUUID(),{name,active:true});
+ const helper=window.EDStagingSupplierOnboarding?.build;
+ if(typeof helper!=='function'){tell('Formulario de alta de proveedor no disponible');return false}
+ const supplierId='supplier-'+crypto.randomUUID();
+ const warehouses=[...document.querySelectorAll('#edStagingSupplierWarehouseRows [data-staging-warehouse]')].map(row=>({
+  id:'warehouse-'+crypto.randomUUID(),
+  name:row.querySelector('[data-staging-warehouse-field="name"]')?.value||'',
+  municipality:row.querySelector('[data-staging-warehouse-field="municipality"]')?.value||'',
+  address:row.querySelector('[data-staging-warehouse-field="address"]')?.value||''
+ }));
+ let changes;
+ try{changes=helper({supplierId,name,warehouses})}catch(e){tell(e.message);return false}
+ return batch(changes);
 }
 function origin(){
  const id=field('edOriginId')||'origin-'+crypto.randomUUID(),name=field('edOriginName'),type=field('edOriginType'),municipality=field('edOriginMunicipality'),address=field('edOriginAddress'),supplierId=type==='proveedor'?field('edOriginSupplier'):null;
