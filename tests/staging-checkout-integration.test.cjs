@@ -26,7 +26,7 @@ function setup(remoteResult){
 test('connected checkout reads remote staging associations and never local delivery keys',()=>{
  const x=setup({ok:true,snapshot:null});
  const snapshot={source:'supabase-staging',inventory:x.inventory,associations:'{"7":["w1"]}',origins:'[]',suppliers:'[]',destinations:'[]',revision:4,remoteRevision:'rev'};
- x.ctx.window.EDDeliveryStagingBridge.checkoutContext=()=>({ok:true,snapshot});
+ x.ctx.window.EDDeliveryStagingBridge.checkoutContext=input=>{x.args.push(JSON.parse(JSON.stringify(input)));return {ok:true,snapshot}};
  const result=x.ctx.edCheckoutDeliveryContextRead();
  assert.equal(result.ok,true);
  assert.equal(result.snapshot,snapshot);
