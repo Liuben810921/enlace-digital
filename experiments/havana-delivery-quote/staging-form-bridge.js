@@ -220,8 +220,14 @@ function bulkDeleteWarehouses(){
 }
 function read(kind){return rows(kind).map(x=>({...x.payload,id:x.id}))}
 function associations(){return Object.fromEntries(rows('product_origin').map(x=>[x.id,x.payload.warehouseIds||[]]))}
+function checkoutContext({products,inventorySnapshot,baseRevision}={}){
+ if(!enabled())return {ok:false,reason:'STAGING_NOT_CONNECTED'};
+ const builder=window.EDStagingCheckoutContext?.build;
+ if(typeof builder!=='function')return {ok:false,reason:'STAGING_CHECKOUT_CONTEXT_UNAVAILABLE'};
+ return builder({entities:items,links,products,inventorySnapshot,baseRevision});
+}
 function wrap(name,fn){const original=window[name];if(typeof original!=='function')throw Error('No existe '+name);window[name]=function(...args){return enabled()?fn(...args):original.apply(this,args)}}
-window.EDDeliveryStagingBridge=Object.freeze({isConnected:enabled,projectRef:'xqahthghvozeigbojhyi'});
+window.EDDeliveryStagingBridge=Object.freeze({isConnected:enabled,checkoutContext,projectRef:'xqahthghvozeigbojhyi'});
 function init(){
  wrap('edDeliverySuppliersRead',()=>read('supplier'));
  wrap('edDeliveryOriginsRead',()=>read('warehouse'));
