@@ -1366,6 +1366,7 @@ function edOfficialRecipientEdit(id){
  ['Nombre completo|Name','Teléfono cubano|Phone'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
  edProvinceMunicipalityFields('edDelivery')+
  ['Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ '<div class="field"><label for="edDeliveryGps">Coordenadas GPS (opcional)</label><input id="edDeliveryGps" autocomplete="off" placeholder="Pega coordenadas o enlace de OsmAnd"><div role="note" style="margin-top:7px;padding:10px 12px;border:1px solid #9dc6da;border-radius:9px;background:#edf7fb;color:#23475c;font-size:14px;line-height:1.45">💡 Si puedes añadirlas, nos ayudarán a ubicar mejor la dirección y calcular una distancia más precisa. Es opcional; puedes continuar solo con tu dirección.</div></div>'+
  '<input type="hidden" id="edDeliveryChoice" value="'+Number(recipient.id)+'"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar cambios y revisar compra</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOtherDelivery()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
  const values={Name:recipient.nombre,Phone:recipient.telefono,Neighborhood:recipient.barrio,Address:recipient.direccion,References:recipient.referencias};
  for(const [key,value] of Object.entries(values))document.getElementById('edDelivery'+key).value=value||'';
@@ -1374,11 +1375,14 @@ function edOfficialRecipientEdit(id){
  edMunicipalitiesChange('edDelivery');
  const municipality=document.getElementById('edDeliveryMunicipality');
  if([...municipality.options].some(o=>o.value===recipient.municipio))municipality.value=recipient.municipio;
+ const saved=edCustomerDeliveryLocations.find(r=>r.provincia===recipient.provincia&&r.municipio===recipient.municipio&&r.barrio===recipient.barrio&&r.direccion===recipient.direccion&&Number.isFinite(Number(r.latitud))&&Number.isFinite(Number(r.longitud)));
+ if(saved)document.getElementById('edDeliveryGps').value=saved.latitud+', '+saved.longitud;
 }
 function edOfficialRecipientNew(){
  if(!edCustomerProfile)return edOfficialCustomerLogin();
  modal('<h2>Añadir destinatario</h2><p class="note">Registra a la persona que recibirá los productos en Cuba. No se genera ningún pedido.</p>'+
  ['Nombre completo|Name','Teléfono cubano|Phone'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+edProvinceMunicipalityFields('edDelivery')+['Barrio / reparto|Neighborhood','Dirección completa|Address','Referencias|References'].map(x=>{const [label,key]=x.split('|');return '<div class="field"><label>'+label+'</label><input id="edDelivery'+key+'"></div>'}).join('')+
+ '<div class="field"><label for="edDeliveryGps">Coordenadas GPS (opcional)</label><input id="edDeliveryGps" autocomplete="off" placeholder="Pega coordenadas o enlace de OsmAnd"><div role="note" style="margin-top:7px;padding:10px 12px;border:1px solid #9dc6da;border-radius:9px;background:#edf7fb;color:#23475c;font-size:14px;line-height:1.45">💡 Si puedes añadirlas, nos ayudarán a ubicar mejor la dirección y calcular una distancia más precisa. Es opcional; puedes continuar solo con tu dirección.</div></div>'+
  '<input type="hidden" id="edDeliveryChoice" value="new"><button class="primary" id="edDeliverySave" onclick="edOfficialRecipientSave()">Guardar nuevo destinatario</button><button class="secondary" style="width:100%;margin-top:8px" onclick="edOfficialOtherDelivery()">Volver a destinatarios</button><p id="edDeliveryStatus" class="note" role="status"></p>');
  edMunicipalitiesChange('edDelivery');
  const dialogScroll=document.querySelector('#modal>.modal-scroll');if(dialogScroll)dialogScroll.scrollTop=0;
@@ -1655,7 +1659,7 @@ async function edStagingRouteCheckoutCalculate(){
  const button=document.getElementById('edStagingRouteButton');if(button)button.disabled=true;
  if(output)output.textContent='Consultando la ruta vial en staging…';
  try{
-  const savedAddress=edCustomerDeliveryLocations.find(r=>r.nombre_receptor===recipient.nombre&&r.provincia===recipient.provincia&&r.municipio===recipient.municipio&&r.direccion===recipient.direccion&&Number.isFinite(Number(r.latitud))&&Number.isFinite(Number(r.longitud)));
+  const savedAddress=edCustomerDeliveryLocations.find(r=>r.provincia===recipient.provincia&&r.municipio===recipient.municipio&&r.barrio===recipient.barrio&&r.direccion===recipient.direccion&&Number.isFinite(Number(r.latitud))&&Number.isFinite(Number(r.longitud)));
   const coordinates=recipient.coordinates||savedAddress&&{lat:Number(savedAddress.latitud),lon:Number(savedAddress.longitud)};
   const result=await window.EDStagingRouteClient.calculate({token:edCustomerSession.token,destination:{province:recipient.provincia,municipality:recipient.municipio,address:[recipient.barrio,recipient.direccion].filter(Boolean).join(', '),...(coordinates?{coordinates}:{})},productIds});
   if(!['RUTAS_VIALES_REALES','RUTAS_VIALES_APROXIMADAS'].includes(result.status))return pending(result.reason||'No se pudo confirmar la ruta.');
@@ -1745,9 +1749,11 @@ function edOfficialRecipientSelect(){
 async function edOfficialRecipientSave(){
  const v=k=>document.getElementById('edDelivery'+k).value.trim();
  const choice=document.getElementById('edDeliveryChoice').value;
- const recipient={name:v('Name'),phone:edCubanPhone(v('Phone')),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References')};
+ const gpsRaw=document.getElementById('edDeliveryGps')?.value.trim()||'',coordinates=gpsRaw?edCustomerCoordinates(gpsRaw):null;
+ const recipient={name:v('Name'),phone:edCubanPhone(v('Phone')),province:v('Province'),municipality:v('Municipality'),neighborhood:v('Neighborhood'),address:v('Address'),references:v('References'),...(coordinates?{coordinates}:{})};
  const status=document.getElementById('edDeliveryStatus'),btn=document.getElementById('edDeliverySave');
  if(recipient.name.length<2||!recipient.phone||recipient.province.length<2||recipient.municipality.length<2||recipient.address.length<8){status.textContent='Completa nombre, teléfono cubano, provincia, municipio y dirección.';return}
+ if(gpsRaw&&!coordinates){status.textContent='Revisa las coordenadas o el enlace GPS. Deben señalar La Habana.';return}
  btn.disabled=true;status.textContent='Guardando…';
  try{
   const saved=await edCustomerRequest('recipient-save',{token:await edCustomerToken(),id:choice==='new'||choice==='self'?null:Number(choice),recipient});
