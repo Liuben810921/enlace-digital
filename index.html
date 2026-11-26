@@ -1644,6 +1644,20 @@ function edDeliveryCheckoutPreview(lines){
  if(!current.ok||JSON.stringify(current.snapshot)!==JSON.stringify(context.snapshot))return {...pending('El contexto de almacenes o inventario cambió durante la vista previa'),snapshot:null};
  return {status:'PENDIENTE',reason:'Sin distancias viales verificadas; no hay tarifa de mensajería',rows,preparation,snapshot:context.snapshot};
 }
+function edStagingDeliveryQuote(products,routes,tariff){
+ const pending=reason=>({status:'PENDIENTE',reason});
+ if(!Array.isArray(products)||!products.length||!Array.isArray(routes)||!routes.length)return pending('Faltan productos o rutas para calcular el costo de mensajería.');
+ if(routes.some(r=>!Number.isFinite(Number(r.km))||Number(r.km)<0))return pending('La ruta contiene una distancia inválida.');
+ const tariffTypes=[...new Set(products.map(p=>p?.deliveryTariffType==='special'?'special':'normal'))];
+ if(tariffTypes.length!==1)return pending('El carrito mezcla productos de tarifa regular y especial; el costo para el mensajero queda pendiente hasta definir esa combinación.');
+ const tariffType=tariffTypes[0],rate=tariffType==='special'?Number(tariff?.specialCupPerKm):Number(tariff?.normalCupPerKm??200);
+ if(!Number.isFinite(rate)||rate<=0)return pending(tariffType==='special'?'Falta configurar la tarifa especial de mensajería.':'La tarifa regular configurada no es válida.');
+ const billableKm=Math.max(3,...routes.map(r=>Number(r.billableKm??Math.round(Number(r.km)))));
+ const messengerCostCUP=Math.max(600,Math.round(billableKm*rate));
+ const allFree=products.every(p=>p.freeShipping===true);
+ const customerShippingCUP=allFree?0:messengerCostCUP;
+ return {status:'CALCULATED',tariffType,rateCupPerKm:rate,billableKm,messengerCostCUP,customerShippingCUP,companyShippingExpenseCUP:messengerCostCUP-customerShippingCUP,shippingFree:allFree};
+}
 async function edStagingRouteCheckoutCalculate(){
  const output=document.getElementById('edStagingRouteResult');
  const pending=message=>{if(output)output.textContent='PENDIENTE · '+message;return false};
@@ -1668,21 +1682,12 @@ async function edStagingRouteCheckoutCalculate(){
   if(!routes.length||routes.some(r=>!Number.isFinite(Number(r.km))))return pending('La ruta no devolvió distancias válidas para calcular el estimado.');
   const selectedProducts=cart.map(line=>state.products.find(p=>String(p.id)===String(line.id))).filter(Boolean);
   if(selectedProducts.length!==cart.length)return pending('No se pudieron comprobar las tarifas de todos los productos.');
-  const chargeable=selectedProducts.filter(p=>p.freeShipping!==true);
-  const tariffTypes=[...new Set(chargeable.map(p=>p.deliveryTariffType==='special'?'special':'normal'))];
-  const farthestKm=Math.max(...routes.map(r=>Number(r.billableKm??Math.max(3,Math.round(Number(r.km))))));
-  const normalRate=Number(state.deliveryTariff?.normalCupPerKm??200);
-  const specialRate=Number(state.deliveryTariff?.specialCupPerKm);
-  let quote='Mensajería: GRATIS (asumida por ENLACE DIGITAL).';
-  if(chargeable.length){
-   if(tariffTypes.length>1)return pending('Ruta guardada, pero el carrito mezcla productos de tarifa regular y especial; la regla de combinación está pendiente de definir.');
-   const special=tariffTypes[0]==='special';
-   const rate=special?specialRate:normalRate;
-   if(!Number.isFinite(rate)||rate<=0)return pending(special?'Ruta guardada, pero falta configurar la tarifa especial de mensajería.':'Ruta guardada, pero la tarifa regular configurada no es válida.');
-   const fee=Math.max(600,Math.round(farthestKm*rate));
-   quote='Mensajería estimada: '+fee.toLocaleString('es-ES')+' CUP ('+farthestKm+' km facturables × '+rate.toLocaleString('es-ES')+' CUP/km; mínimo 600 CUP'+(special?'; tarifa especial':'')+').';
-  }
-  output.textContent=(approximate?'RUTA VIAL APROXIMADA · ':'RUTA VIAL REAL · ')+routes.map(r=>r.originName+': '+(r.billableKm??Math.max(3,Math.round(Number(r.km))))+' km para el cálculo ('+Number(r.km).toFixed(2)+' km estimados)'+(r.durationSeconds?' · '+Math.round(r.durationSeconds/60)+' min estimados':'')).join(' | ')+' · '+quote+' · Destino reconocido: '+result.destination.formatted+(approximate?' · Referencia de calle; el portal exacto no quedó confirmado.':'')+(result.cache?.reused?' · Se reutilizó la distancia guardada de esta dirección.':result.cache?.calculated?' · Distancia guardada para futuras compras.':'')+' · Estimado de prueba; no crea pedidos ni cobra.';
+  const quoteData=edStagingDeliveryQuote(selectedProducts,routes,state.deliveryTariff||{normalCupPerKm:200,specialCupPerKm:null});
+  if(quoteData.status!=='CALCULATED')return pending('Ruta guardada, pero '+quoteData.reason);
+  const moneyCUP=value=>Number(value).toLocaleString('es-ES');
+  if(edSimulatedCheckoutReview)edSimulatedCheckoutReview.deliveryQuote={...quoteData,destinationAddress:recipient.direccion,calculatedAt:new Date().toISOString(),approximate};
+  const quote='Costo para mensajero: '+moneyCUP(quoteData.messengerCostCUP)+' CUP · Cliente paga: '+moneyCUP(quoteData.customerShippingCUP)+' CUP · ENLACE DIGITAL asume: '+moneyCUP(quoteData.companyShippingExpenseCUP)+' CUP'+(quoteData.tariffType==='special'?' · tarifa especial':' · tarifa regular')+'.';
+  output.textContent=(approximate?'RUTA VIAL APROXIMADA · ':'RUTA VIAL REAL · ')+routes.map(r=>r.originName+': '+(r.billableKm??Math.max(3,Math.round(Number(r.km))))+' km para el cálculo ('+Number(r.km).toFixed(2)+' km estimados)'+(r.durationSeconds?' · '+Math.round(r.durationSeconds/60)+' min estimados':'')).join(' | ')+' · '+quote+' · Destino reconocido: '+result.destination.formatted+(approximate?' · Referencia de calle; el portal exacto no quedó confirmado.':'')+(result.cache?.reused?' · Se reutilizó la distancia guardada de esta dirección.':result.cache?.calculated?' · Distancia guardada para futuras compras.':'')+' · Este desglose queda adjunto a la revisión de prueba; no crea pedido ni cobra.';
   return true;
  }catch(e){return pending(String(e?.message||'Servicio de rutas no disponible.'))}
  finally{if(button)button.disabled=false}
